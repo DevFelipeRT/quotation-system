@@ -1,0 +1,61 @@
+# Arquivos de ambiente
+.env
+.env.*
+!.env.example
+
+# Arquivos e diretórios do sistema
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Logs e arquivos temporários
+/storage/logs/*
+!/storage/logs/.gitkeep
+/tmp/
+*.log
+*.cache
+
+# Dependências e bibliotecas
+/vendor/
+/node_modules/
+composer.lock
+package-lock.json
+
+# Arquivos de build/compilação
+/public/build/
+/public/hot/
+/public/storage
+/build/
+
+# Arquivos de banco de dados
+*.sqlite
+*.sqlite3
+*.db
+
+# Arquivos de configuração local
+config.local.php
+phpunit.xml
+
+# Arquivos de sessão PHP
+/sessions/
+sess_*
+
+# Arquivos de backup
+*.bak
+*.swp
+*~
+
+# Arquivos de IDE e editores
+*.sublime-project
+*.sublime-workspace
+*.komodoproject
+.komodotools/
+.phpstorm.meta.php
+_ide_helper.php
+.phpunit.result.cache
+
+# Arquivos de deploy
+deploy.php
+deploy.log
+.deploy/
