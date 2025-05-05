@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Database;
+namespace App\Infrastructure\Database\Execution;
 
 use App\Infrastructure\Database\Execution\DatabaseRequestInterface;
 use App\Infrastructure\Database\Execution\PdoDatabaseRequest;

@@ -2,11 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Database\Observers;
+namespace App\Infrastructure\Database\Connection\Observers;
 
-use App\Infrastructure\Database\Connection\ConnectionObserverInterface;
-use App\Infrastructure\Database\Events\ConnectionSucceededEvent;
-use App\Infrastructure\Database\Events\ConnectionFailedEvent;
+use App\Infrastructure\Database\Connection\Events\ConnectionSucceededEvent;
+use App\Infrastructure\Database\Connection\Events\ConnectionFailedEvent;
 use App\Logging\LoggerInterface;
 use App\Logging\Domain\LogEntry;
 use App\Logging\Domain\LogLevelEnum;

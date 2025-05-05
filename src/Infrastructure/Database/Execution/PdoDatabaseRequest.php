@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace App\Infrastructure\Database\Execution;
 
 use App\Infrastructure\Database\Exceptions\QueryExecutionException;
-use App\Infrastructure\Database\Events\QueryExecutedEvent;
-use App\Infrastructure\Database\Events\QueryFailedEvent;
+use App\Infrastructure\Database\Execution\Events\QueryExecutedEvent;
+use App\Infrastructure\Database\Execution\Events\QueryFailedEvent;
+use App\Infrastructure\Database\Execution\Observers\RequestObserverInterface;
 use PDO;
 use PDOException;
 

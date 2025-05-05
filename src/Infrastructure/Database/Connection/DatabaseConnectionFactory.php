@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Database\Connection;
 
+use App\Infrastructure\Database\Connection\Observers\ConnectionObserverInterface;
 use App\Infrastructure\Database\Connection\Resolvers\DriverResolverInterface;
 use App\Infrastructure\Database\Exceptions\UnsupportedDriverException;
 use Config\Database\DatabaseConfig;

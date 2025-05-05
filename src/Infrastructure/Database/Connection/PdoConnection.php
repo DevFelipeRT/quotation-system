@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Database\Connection;
 
-use App\Infrastructure\Database\Events\ConnectionSucceededEvent;
-use App\Infrastructure\Database\Events\ConnectionFailedEvent;
+use App\Infrastructure\Database\Connection\Observers\ConnectionObserverInterface;
+use App\Infrastructure\Database\Connection\Events\ConnectionSucceededEvent;
+use App\Infrastructure\Database\Connection\Events\ConnectionFailedEvent;
 use App\Infrastructure\Database\Exceptions\DatabaseConnectionException;
 use Config\Database\DatabaseConfig;
 use PDO;

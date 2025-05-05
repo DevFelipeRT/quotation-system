@@ -2,11 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Database\Observers;
+namespace App\Infrastructure\Database\Execution\Observers;
 
-use App\Infrastructure\Database\Events\QueryExecutedEvent;
-use App\Infrastructure\Database\Events\QueryFailedEvent;
-use App\Infrastructure\Database\Execution\RequestObserverInterface;
+use App\Infrastructure\Database\Execution\Events\QueryExecutedEvent;
+use App\Infrastructure\Database\Execution\Events\QueryFailedEvent;
 use App\Logging\LoggerInterface;
 use App\Logging\Domain\LogEntry;
 use App\Logging\Domain\LogLevelEnum;
