@@ -15,6 +15,7 @@ Thumbs.db
 /tmp/
 *.log
 *.cache
+*.tmp
 
 # Dependências e bibliotecas
 /vendor/
@@ -45,6 +46,7 @@ sess_*
 *.bak
 *.swp
 *~
+*.zip
 
 # Arquivos de IDE e editores
 *.sublime-project

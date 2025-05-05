@@ -4,32 +4,43 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Database\Exceptions;
 
+use RuntimeException;
 use Throwable;
-use App\Exceptions\Infrastructure\InfrastructureException;
 
 /**
- * Represents a failure during the execution of a SQL statement.
+ * Represents an error that occurred during SQL query execution.
  *
- * This exception is typically thrown when a PDO operation fails due to:
- * - invalid SQL syntax,
- * - parameter binding errors,
- * - driver-specific restrictions,
- * - or database-level constraints.
+ * This exception includes contextual metadata to aid debugging
+ * and supports exception chaining via previous exception.
  */
-final class QueryExecutionException extends InfrastructureException
+final class QueryExecutionException extends RuntimeException
 {
     /**
-     * @param string         $message   Optional error message for logs or user feedback.
-     * @param int            $code      Optional numeric error code.
-     * @param array          $context   Key-value diagnostic data (SQL, parameters, bindings).
-     * @param Throwable|null $previous  The original exception (e.g., PDOException).
+     * @var array<string, mixed>
+     */
+    private array $context;
+
+    /**
+     * @param string $message A descriptive error message.
+     * @param array $context Contextual metadata (e.g., SQL and parameters).
+     * @param Throwable|null $previous Optional previous exception for chaining.
      */
     public function __construct(
-        string $message = 'Database query execution failed.',
-        int $code = 0,
+        string $message,
         array $context = [],
         ?Throwable $previous = null
     ) {
-        parent::__construct($message, $code, $context, $previous);
+        parent::__construct($message, 0, $previous);
+        $this->context = $context;
+    }
+
+    /**
+     * Returns contextual information about the query failure.
+     *
+     * @return array<string, mixed>
+     */
+    public function context(): array
+    {
+        return $this->context;
     }
 }
