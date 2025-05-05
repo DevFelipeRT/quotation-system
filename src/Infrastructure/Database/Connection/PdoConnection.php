@@ -1,31 +1,40 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Infrastructure\Database\Connection;
 
-use App\Infrastructure\Logging\LogEntry;
-use App\Infrastructure\Logging\LogLevelEnum;
-use App\Interfaces\Infrastructure\LoggerInterface;
-use App\Shared\Exceptions\DatabaseConnectionException;
+use App\Infrastructure\Database\Events\ConnectionSucceededEvent;
+use App\Infrastructure\Database\Events\ConnectionFailedEvent;
+use App\Infrastructure\Database\Exceptions\DatabaseConnectionException;
 use Config\Database\DatabaseConfig;
 use PDO;
 use PDOException;
 use RuntimeException;
 
 /**
- * PdoConnection
+ * PDO-based implementation of a database connection.
  *
- * Provides a PDO-based implementation of the database connection interface.
- * Reads parameters securely from configuration and logs diagnostic information.
+ * Responsible for DSN construction and initialization of the PDO connection.
+ * Connection lifecycle events are dispatched to registered observers.
  */
 final class PdoConnection implements DatabaseConnectionInterface
 {
-    private const LOG_CHANNEL = 'database';
-
+    /**
+     * @param DatabaseConfig $config Database connection settings.
+     * @param ConnectionObserverInterface[] $observers Registered observers to notify on connection lifecycle events.
+     */
     public function __construct(
         private readonly DatabaseConfig $config,
-        private readonly LoggerInterface $logger
+        private readonly array $observers = []
     ) {}
 
+    /**
+     * Establishes a PDO connection and notifies observers about the outcome.
+     *
+     * @return PDO
+     * @throws DatabaseConnectionException If the connection attempt fails.
+     */
     public function connect(): PDO
     {
         try {
@@ -36,33 +45,33 @@ final class PdoConnection implements DatabaseConnectionInterface
                 $this->pdoOptions()
             );
 
-            $this->logger->log(new LogEntry(
-                level: LogLevelEnum::INFO,
-                message: 'Database connection established successfully.',
-                context: $this->safeContext(),
-                channel: self::LOG_CHANNEL
+            $this->notify(new ConnectionSucceededEvent(
+                driver: $this->config->driver(),
+                metadata: $this->safeMetadata()
             ));
 
             return $pdo;
         } catch (PDOException $e) {
-            $context = $this->unsafeContext($e->getMessage());
-
-            $this->logger->log(new LogEntry(
-                level: LogLevelEnum::ERROR,
-                message: 'Failed to connect to the database.',
-                context: $context,
-                channel: self::LOG_CHANNEL
+            $this->notify(new ConnectionFailedEvent(
+                driver: $this->config->driver(),
+                error: $e->getMessage(),
+                metadata: $this->failureMetadata()
             ));
 
             throw new DatabaseConnectionException(
                 'Unable to establish database connection.',
                 0,
-                $context,
+                $this->failureMetadata(),
                 $e
             );
         }
     }
 
+    /**
+     * Constructs the DSN based on the configured database driver.
+     *
+     * @return string
+     */
     private function buildDsn(): string
     {
         return match ($this->config->driver()) {
@@ -79,43 +88,73 @@ final class PdoConnection implements DatabaseConnectionInterface
                 $this->config->database()
             ),
             'sqlite' => sprintf('sqlite:%s', $this->config->database()),
-            default => throw new RuntimeException('Unsupported database driver: ' . $this->config->driver())
+            default => throw new RuntimeException('Unsupported driver: ' . $this->config->driver())
         };
     }
 
+    /**
+     * Defines default options for the PDO instance.
+     *
+     * @return array
+     */
     private function pdoOptions(): array
     {
         return [
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_TIMEOUT            => $this->resolveTimeout()
+            PDO::ATTR_TIMEOUT            => $this->resolveTimeout(),
         ];
     }
 
+    /**
+     * Resolves the connection timeout from environment variables.
+     *
+     * @return int
+     */
     private function resolveTimeout(): int
     {
         $timeout = getenv('DB_TIMEOUT');
         return is_numeric($timeout) ? (int) $timeout : 5;
     }
 
-    private function safeContext(): array
+    /**
+     * Notifies all observers of a given connection event.
+     *
+     * @param object $event
+     * @return void
+     */
+    private function notify(object $event): void
+    {
+        foreach ($this->observers as $observer) {
+            $observer->handle($event);
+        }
+    }
+
+    /**
+     * Returns anonymized metadata for public observability.
+     *
+     * @return array
+     */
+    private function safeMetadata(): array
     {
         return [
-            'driver' => $this->config->driver(),
             'host' => '[REDACTED]',
             'port' => '[REDACTED]',
             'database' => '[REDACTED]'
         ];
     }
 
-    private function unsafeContext(string $error): array
+    /**
+     * Returns full diagnostic metadata for error events.
+     *
+     * @return array
+     */
+    private function failureMetadata(): array
     {
         return [
-            'driver' => $this->config->driver(),
             'host' => $this->config->host(),
             'port' => $this->config->port(),
-            'database' => $this->config->database(),
-            'error' => $error
+            'database' => $this->config->database()
         ];
     }
 }

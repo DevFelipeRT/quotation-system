@@ -1,37 +1,37 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Infrastructure\Database;
 
 use App\Infrastructure\Database\Connection\DatabaseConnectionInterface;
 use App\Infrastructure\Database\Connection\PdoConnection;
-use App\Interfaces\Infrastructure\LoggerInterface;
-use Config\Container\ConfigContainer;
-use RuntimeException;
+use App\Infrastructure\Database\Connection\ConnectionObserverInterface;
+use App\Infrastructure\Database\Exceptions\UnsupportedDriverException;
+use Config\Database\DatabaseConfig;
 
 /**
- * DatabaseFactory
- *
- * Factory responsible for selecting and instantiating the appropriate
- * database connection strategy at runtime based on environment configuration.
- *
- * Implements the Factory Method Pattern.
+ * Factory responsible for instantiating the correct database connection strategy
+ * based on runtime configuration. It supports injection of observers for monitoring.
  */
 final class DatabaseFactory
 {
     /**
-     * Selects and returns the appropriate database connection strategy.
+     * Creates a database connection implementation based on the configured driver.
      *
-     * @param ConfigContainer   $config Application configuration container
-     * @param LoggerInterface   $logger Logger for diagnostics
+     * @param DatabaseConfig $config    Structured configuration for database access.
+     * @param ConnectionObserverInterface[] $observers Optional list of observers for connection events.
      * @return DatabaseConnectionInterface
+     *
+     * @throws UnsupportedDriverException If the configured driver is not recognized.
      */
-    public static function make(ConfigContainer $config, LoggerInterface $logger): DatabaseConnectionInterface
-    {
-        $driver = $config->database()->driver();
-
-        return match ($driver) {
-            'mysql', 'pgsql', 'sqlite' => new PdoConnection($config->database(), $logger),
-            default => throw new RuntimeException("Unsupported DB driver: {$driver}")
+    public static function make(
+        DatabaseConfig $config,
+        array $observers = []
+    ): DatabaseConnectionInterface {
+        return match ($config->driver()) {
+            'mysql', 'pgsql', 'sqlite' => new PdoConnection($config, $observers),
+            default => throw new UnsupportedDriverException($config->driver())
         };
     }
 }
