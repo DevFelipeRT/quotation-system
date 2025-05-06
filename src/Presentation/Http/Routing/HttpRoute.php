@@ -3,7 +3,7 @@
 namespace App\Presentation\Http\Routing;
 
 use App\Application\Routing\RoutePath;
-use App\Interfaces\Presentation\Routing\HttpRouteInterface;
+use App\Presentation\Http\Routing\Contracts\HttpRouteInterface;
 
 /**
  * Class HttpRoute

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Interfaces\Infrastructure;
+namespace App\Infrastructure\Http;
 
 /**
  * UrlResolverInterface

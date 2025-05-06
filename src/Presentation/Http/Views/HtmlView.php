@@ -2,8 +2,6 @@
 
 namespace App\Presentation\Http\Views;
 
-use App\Interfaces\Presentation\ViewInterface;
-
 /**
  * HtmlView
  *

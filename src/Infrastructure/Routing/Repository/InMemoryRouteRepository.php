@@ -2,8 +2,8 @@
 
 namespace App\Infrastructure\Routing\Repository;
 
-use App\Interfaces\Application\Routing\RouteRepositoryInterface;
-use App\Interfaces\Presentation\Routing\HttpRouteInterface;
+use App\Infrastructure\Routing\Contracts\RouteRepositoryInterface;
+use App\Presentation\Http\Routing\Contracts\HttpRouteInterface;
 
 /**
  * InMemoryRouteRepository

@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Presentation\Http\Controllers\Item;
 
 use App\Application\UseCases\Item\DeleteUseCase;
-use App\Interfaces\Infrastructure\LoggerInterface;
-use App\Infrastructure\Logging\LogEntry;
-use App\Infrastructure\Logging\LogLevelEnum;
+use App\Logging\Domain\LogEntry;
+use App\Logging\Domain\LogLevelEnum;
+use App\Logging\LoggerInterface;
 use Exception;
 use InvalidArgumentException;
 
@@ -17,7 +17,7 @@ use InvalidArgumentException;
  * Handles the deletion of an item via HTTP POST request.
  * Validates the input ID, delegates to the use case, and logs the result.
  */
-final class DeleteController
+final class DeleteController extends Controller
 {
     private DeleteUseCase $useCase;
     private LoggerInterface $logger;

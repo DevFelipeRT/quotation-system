@@ -2,9 +2,9 @@
 
 namespace App\Infrastructure\Routing\Matcher;
 
-use App\Interfaces\Application\Routing\RouteMatcherInterface;
-use App\Interfaces\Presentation\Routing\HttpRouteInterface;
-use App\Interfaces\Presentation\Routing\RouteRequestInterface;
+use App\Infrastructure\Routing\Contracts\RouteMatcherInterface;
+use App\Presentation\Http\Routing\Contracts\HttpRouteInterface;
+use App\Presentation\Http\Routing\Contracts\RouteRequestInterface;
 
 /**
  * DefaultRouteMatcher

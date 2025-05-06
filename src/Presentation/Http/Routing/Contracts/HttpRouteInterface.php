@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Interfaces\Presentation\Routing;
+namespace App\Presentation\Http\Routing\Contracts;
 
 use App\Application\Routing\RoutePath;
 use App\Presentation\Http\Routing\ControllerAction;

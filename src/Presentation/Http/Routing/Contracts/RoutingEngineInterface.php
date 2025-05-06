@@ -1,8 +1,6 @@
 <?php
 
-namespace App\Interfaces\Application\Routing;
-
-use App\Interfaces\Presentation\Routing\RouteRequestInterface;
+namespace App\Presentation\Http\Routing\Contracts;
 
 /**
  * Interface RoutingEngineInterface

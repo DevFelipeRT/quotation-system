@@ -7,10 +7,10 @@ namespace App\Infrastructure\Persistence\Item;
 use App\Domain\Entities\Item;
 use App\Domain\Repositories\ItemRepositoryInterface;
 use App\Infrastructure\Database\Connection\DatabaseConnectionInterface;
-use App\Infrastructure\Logging\LogEntry;
-use App\Infrastructure\Logging\LogLevelEnum;
-use App\Interfaces\Infrastructure\LoggerInterface;
-use App\Shared\Exceptions\QueryExecutionException;
+use App\Infrastructure\Database\Exceptions\QueryExecutionException;
+use App\Logging\Domain\LogEntry;
+use App\Logging\Domain\LogLevelEnum;
+use App\Logging\LoggerInterface;
 use Config\Database\DatabaseSchemaConfig;
 use PDO;
 use PDOException;
@@ -51,7 +51,7 @@ final class PdoItemRepository implements ItemRepositoryInterface
             DatabaseSchemaConfig::ITEM_DESCRIPTION,
             DatabaseSchemaConfig::ITEM_PRICE,
             DatabaseSchemaConfig::ITEM_CATEGORY_ID,
-            DatabaseSchemaConfig::ITEMS_TABLE
+            DatabaseSchemaConfig::ITEMS_TABLE_NAME
         );
 
         try {
@@ -76,7 +76,7 @@ final class PdoItemRepository implements ItemRepositoryInterface
     {
         $sql = sprintf(
             'INSERT INTO %s (%s, %s, %s, %s) VALUES (:name, :description, :price, :category_id)',
-            DatabaseSchemaConfig::ITEMS_TABLE,
+            DatabaseSchemaConfig::ITEMS_TABLE_NAME,
             DatabaseSchemaConfig::ITEM_NAME,
             DatabaseSchemaConfig::ITEM_DESCRIPTION,
             DatabaseSchemaConfig::ITEM_PRICE,
@@ -123,7 +123,7 @@ final class PdoItemRepository implements ItemRepositoryInterface
             'UPDATE %s 
              SET %s = :name, %s = :description, %s = :price, %s = :category_id 
              WHERE %s = :id',
-            DatabaseSchemaConfig::ITEMS_TABLE,
+            DatabaseSchemaConfig::ITEMS_TABLE_NAME,
             DatabaseSchemaConfig::ITEM_NAME,
             DatabaseSchemaConfig::ITEM_DESCRIPTION,
             DatabaseSchemaConfig::ITEM_PRICE,
@@ -158,7 +158,7 @@ final class PdoItemRepository implements ItemRepositoryInterface
     {
         $sql = sprintf(
             'DELETE FROM %s WHERE %s = :id',
-            DatabaseSchemaConfig::ITEMS_TABLE,
+            DatabaseSchemaConfig::ITEMS_TABLE_NAME,
             DatabaseSchemaConfig::ITEM_ID
         );
 
@@ -193,7 +193,7 @@ final class PdoItemRepository implements ItemRepositoryInterface
             DatabaseSchemaConfig::ITEM_DESCRIPTION,
             DatabaseSchemaConfig::ITEM_PRICE,
             DatabaseSchemaConfig::ITEM_CATEGORY_ID,
-            DatabaseSchemaConfig::ITEMS_TABLE,
+            DatabaseSchemaConfig::ITEMS_TABLE_NAME,
             DatabaseSchemaConfig::ITEM_ID
         );
 

@@ -2,39 +2,52 @@
 
 namespace App\Presentation\Http\Controllers;
 
-use App\Interfaces\Presentation\Routing\RouteRequestInterface;
+use App\Presentation\Http\Routing\Contracts\RouteRequestInterface;
 use App\Presentation\Http\Views\HtmlView;
 
 /**
  * HomeController
  *
- * Handles the HTTP request for the application's home page.
- * Responsible for rendering the dashboard view with context-specific variables.
+ * Handles the request for the application's root (dashboard) page.
+ * Constructs and renders a view with application context and user data.
  */
 final class HomeController extends AbstractController
 {
     /**
-     * Executes the controller logic for the home route.
-     * Prepares user context and view variables, then renders the dashboard.
+     * Executes the logic for the home route.
      *
-     * @param RouteRequestInterface $request Structured HTTP request.
-     * @return string Rendered HTML response.
+     * @param RouteRequestInterface $request
+     * @return string
      */
     protected function execute(RouteRequestInterface $request): string
     {
-        $view = new HtmlView('dashboard.php', [
-            'appName'     => $this->config()->app()->name(),
-            'headerTitle' => 'Dashboard',
-            'baseUrl'     => $this->urlResolver->baseUrl(),
-            'fileName'   => 'dashboard.php',
-            'usuario'     => $this->getUserData(),
-        ]);
-
+        $view = $this->buildDashboardView();
         return $this->render($view);
     }
 
     /**
-     * Retrieves simulated user data for the dashboard.
+     * Constructs the dashboard view with context data.
+     *
+     * @return HtmlView
+     */
+    private function buildDashboardView(): HtmlView
+    {
+        $appConfig = $this->getConfig()->getAppConfig();
+        $baseUrl = $this->urlResolver->baseUrl();
+        $user = $this->getUserData();
+
+        return new HtmlView('dashboard.php', [
+            'appName'     => $appConfig->getName(),
+            'headerTitle' => 'Dashboard',
+            'baseUrl'     => $baseUrl,
+            'fileName'    => 'dashboard.php',
+            'usuario'     => $user,
+        ]);
+    }
+
+
+    /**
+     * Returns mock user data for view context.
      *
      * @return array{name: string, email: string}
      */

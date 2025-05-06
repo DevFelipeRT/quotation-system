@@ -2,10 +2,10 @@
 
 namespace App\Presentation\Http\Routing;
 
-use App\Interfaces\Application\Routing\RoutingEngineInterface;
-use App\Interfaces\Application\Routing\RouteResolverInterface;
-use App\Interfaces\Presentation\Routing\RouteDispatcherInterface;
-use App\Interfaces\Presentation\Routing\RouteRequestInterface;
+use App\Infrastructure\Routing\Contracts\RouteDispatcherInterface;
+use App\Infrastructure\Routing\Contracts\RouteResolverInterface;
+use App\Presentation\Http\Routing\Contracts\RouteRequestInterface;
+use App\Presentation\Http\Routing\Contracts\RoutingEngineInterface;
 use RuntimeException;
 
 /**

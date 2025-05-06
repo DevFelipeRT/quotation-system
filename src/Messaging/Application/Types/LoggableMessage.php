@@ -12,7 +12,7 @@ use DateTimeImmutable;
  * Designed for use with internal logging systems. Supports severity levels,
  * context, timestamp, and channel grouping (e.g., 'auth', 'api', 'billing').
  */
-final class LogMessage extends AbstractMessage implements LoggableMessageInterface
+final class LoggableMessage extends AbstractMessage implements LoggableMessageInterface
 {
     /**
      * Optional grouping channel for logs (e.g. subsystem name).

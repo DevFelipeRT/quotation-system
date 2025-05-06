@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Interfaces\Presentation;
+namespace App\Presentation\Http\Controllers;
 
-use App\Interfaces\Presentation\Routing\RouteRequestInterface;
+use App\Presentation\Http\Routing\Contracts\RouteRequestInterface;
 
 /**
  * ControllerInterface

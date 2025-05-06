@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Presentation\Http\Controllers\Item;
 
 use App\Application\UseCases\Item\ListUseCase;
-use App\Interfaces\Infrastructure\LoggerInterface;
-use App\Presentation\Http\Controllers\AbstractHttpController;
+use App\Logging\LoggerInterface;
+use App\Presentation\Http\Controllers\AbstractController;
 use App\Presentation\Http\Renderers\HtmlViewRenderer;
 use App\Presentation\Http\Views\HtmlView;
 use Exception;
@@ -17,7 +17,7 @@ use Exception;
  * Handles rendering of the item management interface.
  * Loads data via the application use case and renders the corresponding HTML view.
  */
-final class Controller extends AbstractHttpController
+final class Controller extends AbstractController
 {
     private ListUseCase $listItemsUseCase;
     private HtmlViewRenderer $viewRenderer;

@@ -5,101 +5,97 @@ namespace Config\App;
 use Config\Env\EnvLoader;
 
 /**
- * AppConfig
+ * Class AppConfig
  *
- * Provides immutable access to application-level configuration derived from
- * environment variables. Includes metadata such as environment type, debug mode,
- * cookie domain, and application identity.
+ * Provides immutable access to core application configuration, loaded from environment variables.
+ *
+ * @package Config\App
  */
 class AppConfig
 {
-    /**
-     * Human-readable application name.
-     */
+    private const DEFAULT_APP_NAME = 'Quotation System';
+
+    /** @var string */
     private string $applicationName;
 
-    /**
-     * Current execution environment (e.g., 'development', 'production').
-     */
+    /** @var string */
     private string $environment;
 
-    /**
-     * Whether debug mode is enabled.
-     */
+    /** @var bool */
     private bool $debug;
 
-    /**
-     * Cookie domain (for session/cookie scoping).
-     */
+    /** @var string */
     private string $cookieDomain;
 
-    /**
-     * Application locale (for i18n, formatting, etc.).
-     */
+    /** @var string */
     private string $locale;
 
-    /**
-     * Timezone identifier (e.g., 'UTC', 'America/Sao_Paulo').
-     */
+    /** @var string */
     private string $timezone;
 
-    /**
-     * Session prefix to isolate session variables by system instance.
-     */
+    /** @var string */
     private string $sessionPrefix;
 
     /**
-     * Initializes application metadata configuration.
+     * AppConfig constructor.
      *
-     * @param EnvLoader $env Environment loader for secure access.
+     * @param EnvLoader $env Environment variable loader.
      */
     public function __construct(EnvLoader $env)
     {
-        $this->applicationName = 'Quotation System'; // Hardcoded metadata
+        $this->applicationName = self::DEFAULT_APP_NAME;
         $this->environment     = $env->getRequired('APP_ENV');
-        $this->debug           = $env->getRequired('APP_DEBUG') === 'true';
+        $this->debug           = strtolower($env->getRequired('APP_DEBUG')) === 'true';
         $this->cookieDomain    = $env->getRequired('COOKIE_DOMAIN');
         $this->locale          = $env->getRequired('APP_LOCALE');
         $this->timezone        = $env->getRequired('APP_TIMEZONE');
         $this->sessionPrefix   = $env->getRequired('SESSION_PREFIX');
     }
 
-    public function name(): string
+    /** @return string */
+    public function getName(): string
     {
         return $this->applicationName;
     }
 
-    public function env(): string
+    /** @return string */
+    public function getEnvironment(): string
     {
         return $this->environment;
     }
 
+    /** @return bool */
     public function isDevelopment(): bool
     {
         return $this->environment === 'development';
     }
 
-    public function isDebug(): bool
+    /** @return bool */
+    public function isDebugMode(): bool
     {
         return $this->debug;
     }
 
-    public function cookieDomain(): string
+    /** @return string */
+    public function getCookieDomain(): string
     {
         return $this->cookieDomain;
     }
 
-    public function locale(): string
+    /** @return string */
+    public function getLocale(): string
     {
         return $this->locale;
     }
 
-    public function timezone(): string
+    /** @return string */
+    public function getTimezone(): string
     {
         return $this->timezone;
     }
 
-    public function sessionPrefix(): string
+    /** @return string */
+    public function getSessionPrefix(): string
     {
         return $this->sessionPrefix;
     }

@@ -8,7 +8,7 @@ use App\Application\UseCases\Item\ListUseCase;
 use App\Application\UseCases\Item\UpdateUseCase;
 use App\Infrastructure\Persistence\Item\PdoItemRepository;
 use App\Infrastructure\Database\Connection\DatabaseConnectionInterface;
-use App\Interfaces\Infrastructure\LoggerInterface;
+use App\Logging\LoggerInterface;
 
 /**
  * UseCaseKernel

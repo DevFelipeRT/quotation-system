@@ -3,42 +3,25 @@
 namespace Config\Database;
 
 /**
- * DatabaseSchemaConfig
+ * Class DatabaseSchemaConfig
  *
- * Central registry of the database schema structure, including
- * table and column identifiers used throughout the domain and
- * infrastructure layers.
+ * Centralized reference for all table and column identifiers used across
+ * the database layer. This class contains no logic and no sensitive data.
  *
- * This class provides a single source of truth for schema semantics.
- * It contains no logic for credentials or connections.
+ * @package Config\Database
  */
-class DatabaseSchemaConfig
+final class DatabaseSchemaConfig
 {
-    // ───────────────────────────────────────
-    // Table names
-    // ───────────────────────────────────────
+    // ───────────── Tables ─────────────
 
-    /** @var string Name of the clients table. */
-    public const CLIENTS_TABLE = 'cliente';
+    public const CLIENTS_TABLE_NAME       = 'cliente';
+    public const QUOTATIONS_TABLE_NAME    = 'orcamento';
+    public const CATEGORIES_TABLE_NAME    = 'categoria';
+    public const ITEMS_TABLE_NAME         = 'item';
+    public const QUOTATION_ITEMS_TABLE_NAME = 'item_orcamento';
+    public const TYPES_TABLE_NAME         = 'tipos';
 
-    /** @var string Name of the quotations table. */
-    public const QUOTATIONS_TABLE = 'orcamento';
-
-    /** @var string Name of the categories table. */
-    public const CATEGORIES_TABLE = 'categoria';
-
-    /** @var string Name of the items table. */
-    public const ITEMS_TABLE = 'item';
-
-    /** @var string Name of the item_orcamento (quotation items) table. */
-    public const QUOTATION_ITEMS_TABLE = 'item_orcamento';
-
-    /** @var string Name of the types table. */
-    public const TYPES_TABLE = 'tipos';
-
-    // ───────────────────────────────────────
-    // Clients table columns
-    // ───────────────────────────────────────
+    // ─────── Columns: Clients ───────
 
     public const CLIENT_ID        = 'id';
     public const CLIENT_NAME      = 'nome';
@@ -47,9 +30,7 @@ class DatabaseSchemaConfig
     public const CLIENT_CREATED   = 'data_criacao';
     public const CLIENT_UPDATED   = 'data_modificacao';
 
-    // ───────────────────────────────────────
-    // Quotations table columns
-    // ───────────────────────────────────────
+    // ─────── Columns: Quotations ───────
 
     public const QUOTATION_ID           = 'id';
     public const QUOTATION_NAME         = 'nome';
@@ -60,9 +41,7 @@ class DatabaseSchemaConfig
     public const QUOTATION_CREATED      = 'data_criacao';
     public const QUOTATION_UPDATED      = 'data_modificacao';
 
-    // ───────────────────────────────────────
-    // Categories table columns
-    // ───────────────────────────────────────
+    // ─────── Columns: Categories ───────
 
     public const CATEGORY_ID           = 'id';
     public const CATEGORY_NAME         = 'nome';
@@ -70,9 +49,7 @@ class DatabaseSchemaConfig
     public const CATEGORY_CREATED      = 'data_criacao';
     public const CATEGORY_UPDATED      = 'data_modificacao';
 
-    // ───────────────────────────────────────
-    // Items table columns
-    // ───────────────────────────────────────
+    // ─────── Columns: Items ───────
 
     public const ITEM_ID           = 'id';
     public const ITEM_NAME         = 'nome';
@@ -82,9 +59,7 @@ class DatabaseSchemaConfig
     public const ITEM_CREATED      = 'data_criacao';
     public const ITEM_UPDATED      = 'data_modificacao';
 
-    // ───────────────────────────────────────
-    // Quotation Items table columns
-    // ───────────────────────────────────────
+    // ─────── Columns: Quotation Items ───────
 
     public const QITEM_ID             = 'id';
     public const QITEM_QUOTATION_ID   = 'id_orcamento';
@@ -96,9 +71,7 @@ class DatabaseSchemaConfig
     public const QITEM_CREATED        = 'data_criacao';
     public const QITEM_UPDATED        = 'data_modificacao';
 
-    // ───────────────────────────────────────
-    // Types table columns
-    // ───────────────────────────────────────
+    // ─────── Columns: Types ───────
 
     public const TYPE_ID           = 'id';
     public const TYPE_NAME         = 'nome';

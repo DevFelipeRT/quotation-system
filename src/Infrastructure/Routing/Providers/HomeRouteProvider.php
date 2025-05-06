@@ -3,56 +3,50 @@
 namespace App\Infrastructure\Routing\Providers;
 
 use App\Application\Routing\RoutePath;
-use App\Interfaces\Application\Routing\RouteRepositoryInterface;
-use App\Interfaces\Presentation\Routing\RouteProviderInterface;
+use App\Infrastructure\Routing\Contracts\RouteProviderInterface;
 use App\Presentation\Http\Controllers\HomeController;
 use App\Presentation\Http\Routing\ControllerAction;
+use App\Presentation\Http\Routing\Contracts\HttpRouteInterface;
 use App\Presentation\Http\Routing\HttpMethod;
 use App\Presentation\Http\Routing\HttpRoute;
 
 /**
  * HomeRouteProvider
  *
- * Registers HTTP routes related to the Home module.
- * This provider encapsulates route declarations for use during application bootstrap.
- *
- * @implements RouteProviderInterface
+ * Provides all HTTP routes related to the Home module.
+ * Used during application bootstrap to declare route definitions.
  */
 final class HomeRouteProvider implements RouteProviderInterface
 {
     /**
-     * Registers all routes into the provided repository.
+     * Returns all static route definitions provided by this module.
      *
-     * @param RouteRepositoryInterface $repository
-     * @return void
+     * @return HttpRouteInterface[]
      */
-    public function registerRoutes(RouteRepositoryInterface $repository): void
+    public function provideRoutes(): array
     {
-        $route = new HttpRoute(
-            new HttpMethod('GET'),
-            new RoutePath('/'),
-            new ControllerAction(HomeController::class, 'handle'),
-            'home.index'
+        return [
+            $this->makeRoute('GET', '/', HomeController::class, 'handle', 'home.index'),
+            $this->makeRoute('GET', '/home', HomeController::class, 'handle', 'home.index'),
+            $this->makeRoute('GET', '/quotationManager', HomeController::class, 'handle', 'quotationManager.index'),
+        ];
+    }
+
+    /**
+     * Instantiates a route with the given parameters.
+     */
+    private function makeRoute(
+        string $method,
+        string $path,
+        string $controllerClass,
+        string $actionMethod,
+        string $name
+    ): HttpRouteInterface {
+        return new HttpRoute(
+            new HttpMethod($method),
+            new RoutePath($path),
+            new ControllerAction($controllerClass, $actionMethod),
+            $name
         );
-
-        $repository->add($route);
-
-        $route = new HttpRoute(
-            new HttpMethod('GET'),
-            new RoutePath('/home'),
-            new ControllerAction(HomeController::class, 'handle'),
-            'home.index'
-        );
-
-        $repository->add($route);
-
-        $route = new HttpRoute(
-            new HttpMethod('GET'),
-            new RoutePath('/quotationManager'),
-            new ControllerAction(HomeController::class, 'handle'),
-            'quotationManager.index'
-        );
-
-        $repository->add($route);
     }
 }

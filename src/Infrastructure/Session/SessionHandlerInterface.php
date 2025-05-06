@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Interfaces\Infrastructure;
+namespace App\Infrastructure\Session;
 
 use App\Infrastructure\Session\SessionData;
 
 /**
  * Defines the contract for managing user session data.
  */
-interface SessionInterface
+interface SessionHandlerInterface
 {
     /**
      * Starts the session if not already active.

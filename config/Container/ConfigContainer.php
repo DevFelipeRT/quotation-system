@@ -6,112 +6,77 @@ use Config\App\AppConfig;
 use Config\Database\DatabaseConfig;
 use Config\Database\DatabaseSchemaConfig;
 use Config\Env\EnvLoader;
-use Config\Logs\LogsConfig;
 use Config\Paths\PathsConfig;
+use Config\Paths\LogPathsConfig;
 use InvalidArgumentException;
 
 /**
- * ConfigContainer
+ * Class ConfigContainer
  *
  * Aggregates and provides centralized access to all configuration modules
- * used throughout the application. Each configuration segment is responsible
- * for a distinct domain (environment, paths, database, logging, etc.).
+ * used throughout the application. Instantiated once during bootstrap.
  *
- * This container is designed to be instantiated once at application bootstrap.
+ * @package Config\Container
  */
-class ConfigContainer
+final class ConfigContainer
 {
-    /**
-     * Filesystem and structure-related paths.
-     */
-    private PathsConfig $paths;
+    private PathsConfig $pathsConfig;
+    private EnvLoader $envLoader;
+    private AppConfig $appConfig;
+    private DatabaseConfig $databaseConfig;
+    private DatabaseSchemaConfig $schemaConfig;
+    private LogPathsConfig $logPathsConfig;
 
     /**
-     * Secure, stateless environment loader.
-     */
-    private EnvLoader $env;
-
-    /**
-     * Application-level configuration (name, environment, debug mode).
-     */
-    private AppConfig $app;
-
-    /**
-     * Database connection credentials and port.
-     */
-    private DatabaseConfig $database;
-
-    /**
-     * Logical mapping of database structure (tables and fields).
-     */
-    private DatabaseSchemaConfig $schema;
-
-    /**
-     * Paths to log files used in various subsystems.
-     */
-    private LogsConfig $logs;
-
-    /**
+     * ConfigContainer constructor.
+     *
      * Initializes all configuration modules in correct dependency order.
      *
-     * @throws InvalidArgumentException If any component fails to initialize.
+     * @throws InvalidArgumentException
      */
     public function __construct()
     {
-        // Dependency order must be strictly observed.
-        $this->paths    = new PathsConfig();
-        $this->env      = new EnvLoader($this->paths->envFile());
-        $this->app      = new AppConfig($this->env);
-        $this->database = new DatabaseConfig($this->env);
-        $this->schema   = new DatabaseSchemaConfig();
-        $this->logs     = new LogsConfig();
+        $this->pathsConfig     = new PathsConfig();
+        $this->envLoader       = new EnvLoader($this->pathsConfig->getEnvFilePath());
+        $this->appConfig       = new AppConfig($this->envLoader);
+        $this->databaseConfig  = new DatabaseConfig($this->envLoader);
+        $this->schemaConfig    = new DatabaseSchemaConfig();
+        $this->logPathsConfig  = new LogPathsConfig($this->pathsConfig);
     }
 
-    /**
-     * Returns application-level configuration.
-     */
-    public function app(): AppConfig
+    /** @return PathsConfig */
+    public function getPathsConfig(): PathsConfig
     {
-        return $this->app;
+        return $this->pathsConfig;
     }
 
-    /**
-     * Returns runtime paths configuration.
-     */
-    public function paths(): PathsConfig
+    /** @return EnvLoader */
+    public function getEnvLoader(): EnvLoader
     {
-        return $this->paths;
+        return $this->envLoader;
     }
 
-    /**
-     * Returns the environment variable loader.
-     */
-    public function env(): EnvLoader
+    /** @return AppConfig */
+    public function getAppConfig(): AppConfig
     {
-        return $this->env;
+        return $this->appConfig;
     }
 
-    /**
-     * Returns the database connection configuration.
-     */
-    public function database(): DatabaseConfig
+    /** @return DatabaseConfig */
+    public function getDatabaseConfig(): DatabaseConfig
     {
-        return $this->database;
+        return $this->databaseConfig;
     }
 
-    /**
-     * Returns logical schema mapping of the database.
-     */
-    public function schema(): DatabaseSchemaConfig
+    /** @return DatabaseSchemaConfig */
+    public function getSchemaConfig(): DatabaseSchemaConfig
     {
-        return $this->schema;
+        return $this->schemaConfig;
     }
 
-    /**
-     * Returns all configured log file paths.
-     */
-    public function logs(): LogsConfig
+    /** @return LogPathsConfig */
+    public function getLogPathsConfig(): LogPathsConfig
     {
-        return $this->logs;
+        return $this->logPathsConfig;
     }
 }

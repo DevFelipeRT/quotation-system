@@ -2,39 +2,41 @@
 
 namespace App\Kernel;
 
+use App\Infrastructure\Database\Connection\DatabaseConnectionFactory;
 use App\Infrastructure\Database\Connection\DatabaseConnectionInterface;
-use App\Infrastructure\Database\DatabaseFactory;
-use App\Interfaces\Infrastructure\LoggerInterface;
-use Config\Container\ConfigContainer;
+use App\Logging\LoggerInterface;
+use Config\Database\DatabaseConfig;
 
 /**
  * DatabaseKernel
  *
- * Initializes the database connection strategy based on the environment.
- * This kernel encapsulates the instantiation logic of the connection
- * and exposes only the connection interface to upstream components.
+ * Coordinates and provides access to the system's active database connection.
+ *
+ * This kernel encapsulates the instantiation strategy for the database connection,
+ * using configuration and logger inputs to produce a driver-specific implementation
+ * while exposing only the standard interface for consumer components.
  */
 final class DatabaseKernel
 {
     private readonly DatabaseConnectionInterface $connection;
 
     /**
-     * Constructs the database kernel with necessary configuration and logging.
+     * Constructs the database kernel using provided configuration and logger.
      *
-     * @param ConfigContainer   $config Application configuration container
-     * @param LoggerInterface   $logger Application logger for diagnostics
+     * @param DatabaseConfig $config Database configuration object
+     * @param LoggerInterface $logger Logger instance used for connection diagnostics
      */
-    public function __construct(ConfigContainer $config, LoggerInterface $logger)
+    public function __construct(DatabaseConfig $config, LoggerInterface $logger)
     {
-        $this->connection = DatabaseFactory::make($config, $logger);
+        $this->connection = DatabaseConnectionFactory::make($config, $logger);
     }
 
     /**
-     * Returns the database connection interface.
+     * Returns the initialized database connection.
      *
-     * @return DatabaseConnectionInterface
+     * @return DatabaseConnectionInterface Active connection instance
      */
-    public function connection(): DatabaseConnectionInterface
+    public function getConnection(): DatabaseConnectionInterface
     {
         return $this->connection;
     }

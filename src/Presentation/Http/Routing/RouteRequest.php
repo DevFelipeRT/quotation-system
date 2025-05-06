@@ -3,7 +3,7 @@
 namespace App\Presentation\Http\Routing;
 
 use App\Application\Routing\RoutePath;
-use App\Interfaces\Presentation\Routing\RouteRequestInterface;
+use App\Presentation\Http\Routing\Contracts\RouteRequestInterface;
 
 /**
  * Class RouteRequest

@@ -2,12 +2,10 @@
 
 namespace App\Infrastructure\Session;
 
-use App\Interfaces\Infrastructure\SessionInterface;
-
 /**
  * Native PHP session implementation of SessionInterface.
  */
-final class SessionHandler implements SessionInterface
+final class SessionHandler implements SessionHandlerInterface
 {
     private bool $started = false;
     private const DATA_KEY = '__data__';

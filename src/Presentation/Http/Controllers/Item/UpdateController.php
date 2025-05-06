@@ -5,8 +5,7 @@ declare(strict_types=1);
 namespace App\Presentation\Http\Controllers\Item;
 
 use App\Application\UseCases\Item\UpdateUseCase;
-use App\Interfaces\Infrastructure\LoggerInterface;
-use App\Presentation\Http\Controllers\AbstractHttpController;
+use App\Logging\LoggerInterface;
 use Exception;
 use InvalidArgumentException;
 
@@ -16,7 +15,7 @@ use InvalidArgumentException;
  * Handles HTTP POST requests to update an existing item.
  * Validates input data, delegates to the use case, and logs results.
  */
-final class UpdateController extends AbstractHttpController
+final class UpdateController extends Controller
 {
     private UpdateUseCase $useCase;
 

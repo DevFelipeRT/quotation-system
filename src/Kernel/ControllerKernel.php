@@ -6,16 +6,16 @@ use App\Application\UseCases\Item\CreateUseCase;
 use App\Application\UseCases\Item\DeleteUseCase;
 use App\Application\UseCases\Item\ListUseCase;
 use App\Application\UseCases\Item\UpdateUseCase;
+use App\Infrastructure\Http\AppUrlResolver;
+use App\Infrastructure\Session\SessionHandler;
+use App\Logging\Application\LogEntryAssembler;
+use App\Logging\Infrastructure\FileLogger;
 use App\Presentation\Http\Controllers\HomeController;
 use App\Presentation\Http\Controllers\Item\Controller as ItemController;
 use App\Presentation\Http\Controllers\Item\CreateController;
 use App\Presentation\Http\Controllers\Item\DeleteController;
 use App\Presentation\Http\Controllers\Item\UpdateController;
 use App\Presentation\Http\Renderers\HtmlViewRenderer;
-use App\Infrastructure\Http\AppUrlResolver;
-use App\Infrastructure\Logging\FileLogger;
-use App\Infrastructure\Logging\LogAssembler;
-use App\Infrastructure\Session\SessionHandler;
 use Config\Container\ConfigContainer;
 
 /**
@@ -31,7 +31,7 @@ final class ControllerKernel
     private HtmlViewRenderer $renderer;
     private AppUrlResolver $urlResolver;
     private FileLogger $logger;
-    private LogAssembler $logAssembler;
+    private LogEntryAssembler $logEntryAssembler;
     private ListUseCase $listUseCase;
     private CreateUseCase $createUseCase;
     private UpdateUseCase $updateUseCase;
@@ -43,7 +43,7 @@ final class ControllerKernel
      * @param HtmlViewRenderer $renderer
      * @param AppUrlResolver $urlResolver
      * @param FileLogger $logger
-     * @param LogAssembler $logAssembler
+     * @param LogEntryAssembler $logEntryAssembler
      * @param ListUseCase $listUseCase
      * @param CreateUseCase $createUseCase
      * @param UpdateUseCase $updateUseCase
@@ -55,7 +55,7 @@ final class ControllerKernel
         HtmlViewRenderer $renderer,
         AppUrlResolver $urlResolver,
         FileLogger $logger,
-        LogAssembler $logAssembler,
+        LogEntryAssembler $logEntryAssembler,
         ListUseCase $listUseCase,
         CreateUseCase $createUseCase,
         UpdateUseCase $updateUseCase,
@@ -66,7 +66,7 @@ final class ControllerKernel
         $this->renderer      = $renderer;
         $this->urlResolver   = $urlResolver;
         $this->logger        = $logger;
-        $this->logAssembler  = $logAssembler;
+        $this->logEntryAssembler  = $logEntryAssembler;
         $this->listUseCase   = $listUseCase;
         $this->createUseCase = $createUseCase;
         $this->updateUseCase = $updateUseCase;
@@ -87,7 +87,7 @@ final class ControllerKernel
                 $this->renderer,
                 $this->urlResolver,
                 $this->logger,
-                $this->logAssembler
+                $this->logEntryAssembler
             ),
 
             ItemController::class => new ItemController(

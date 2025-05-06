@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Presentation\Http\Controllers\Item;
 
 use App\Application\UseCases\Item\CreateUseCase;
-use App\Presentation\Http\Controllers\AbstractHttpController;
+use App\Logging\LoggerInterface;
 use Exception;
 
 /**
@@ -15,7 +15,7 @@ use Exception;
  * Delegates to the application-layer use case and utilizes inherited utilities
  * for structured logging and response handling.
  */
-final class CreateController extends AbstractHttpController
+final class CreateController extends Controller
 {
     private CreateUseCase $useCase;
 
@@ -24,7 +24,7 @@ final class CreateController extends AbstractHttpController
      *
      * @param CreateUseCase $useCase Application-layer use case for item creation.
      */
-    public function __construct(CreateUseCase $useCase, \App\Interfaces\Infrastructure\LoggerInterface $logger)
+    public function __construct(CreateUseCase $useCase, LoggerInterface $logger)
     {
         parent::__construct($logger);
         $this->useCase = $useCase;

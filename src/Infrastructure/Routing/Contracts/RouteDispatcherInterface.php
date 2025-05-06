@@ -1,6 +1,8 @@
 <?php
 
-namespace App\Interfaces\Presentation\Routing;
+namespace App\Infrastructure\Routing\Contracts;
+
+use App\Presentation\Http\Routing\Contracts\RouteRequestInterface;
 
 /**
  * Interface RouteDispatcherInterface

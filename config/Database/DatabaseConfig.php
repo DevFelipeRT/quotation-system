@@ -3,23 +3,23 @@
 namespace Config\Database;
 
 use Config\Env\EnvLoader;
-use InvalidArgumentException;
 
 /**
- * DatabaseConfig
+ * Class DatabaseConfig
  *
- * Provides validated access to database connection parameters via
- * environment variables. Avoids storing sensitive data in memory,
- * exposing values only through controlled accessors.
+ * Provides immutable and validated access to database connection parameters
+ * retrieved from environment variables.
+ *
+ * @package Config\Database
  */
 final class DatabaseConfig
 {
     private EnvLoader $env;
 
     /**
-     * Constructor
+     * DatabaseConfig constructor.
      *
-     * @param EnvLoader $env The environment loader instance.
+     * @param EnvLoader $env Loader for environment variables.
      */
     public function __construct(EnvLoader $env)
     {
@@ -27,68 +27,51 @@ final class DatabaseConfig
     }
 
     /**
-     * Get the database driver (e.g., mysql, pgsql, sqlite).
+     * Retrieves and validates the database driver.
      *
      * @return string
-     * @throws InvalidArgumentException if the driver is unsupported.
      */
-    public function driver(): string
+    public function getDriver(): string
     {
-        $driver = strtolower(trim((string) getenv('DB_DRIVER')));
-
-        return match ($driver) {
-            'mysql', 'pgsql', 'sqlite' => $driver,
-            '', null                  => 'mysql', // default fallback
-            default                   => throw new InvalidArgumentException("Unsupported DB_DRIVER: {$driver}")
-        };
+        return SupportedDrivers::resolve(getenv('DB_DRIVER'));
     }
 
     /**
-     * Get the database host.
-     *
      * @return string
      */
-    public function host(): string
+    public function getHost(): string
     {
         return $this->env->getRequired('DB_HOST');
     }
 
     /**
-     * Get the database username.
-     *
      * @return string
      */
-    public function username(): string
+    public function getUsername(): string
     {
         return $this->env->getRequired('DB_USER');
     }
 
     /**
-     * Get the database password.
-     *
      * @return string
      */
-    public function password(): string
+    public function getPassword(): string
     {
         return $this->env->getRequired('DB_PASS');
     }
 
     /**
-     * Get the database name.
-     *
      * @return string
      */
-    public function database(): string
+    public function getDatabase(): string
     {
         return $this->env->getRequired('DB_NAME');
     }
 
     /**
-     * Get the database port.
-     *
      * @return int
      */
-    public function port(): int
+    public function getPort(): int
     {
         return (int) $this->env->getRequired('DB_PORT');
     }

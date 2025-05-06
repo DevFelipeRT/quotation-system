@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Interfaces\Application\Routing;
+namespace App\Infrastructure\Routing\Contracts;
 
-use App\Interfaces\Presentation\Routing\HttpRouteInterface;
-use App\Interfaces\Presentation\Routing\RouteRequestInterface;
+use App\Presentation\Http\Routing\Contracts\HttpRouteInterface;
+use App\Presentation\Http\Routing\Contracts\RouteRequestInterface;
 
 /**
  * Interface RouteResolverInterface

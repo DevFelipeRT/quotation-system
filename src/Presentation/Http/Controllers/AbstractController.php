@@ -2,105 +2,115 @@
 
 namespace App\Presentation\Http\Controllers;
 
-use App\Application\Messaging\LogMessage;
-use App\Infrastructure\Logging\LogAssembler;
-use App\Interfaces\Infrastructure\SessionInterface;
-use App\Interfaces\Infrastructure\LoggerInterface;
-use App\Interfaces\Infrastructure\UrlResolverInterface;
-use App\Interfaces\Presentation\ControllerInterface;
-use App\Interfaces\Presentation\ViewInterface;
-use App\Interfaces\Presentation\ViewRendererInterface;
-use App\Interfaces\Presentation\Routing\RouteRequestInterface;
+use App\Infrastructure\Http\UrlResolverInterface;
+use App\Infrastructure\Session\SessionHandlerInterface;
+use App\Logging\Application\LogEntryAssemblerInterface;
+use App\Logging\LoggerInterface;
+use App\Messaging\Application\Types\LoggableMessage;
+use App\Presentation\Http\Renderers\ViewRendererInterface;
+use App\Presentation\Http\Routing\Contracts\RouteRequestInterface;
+use App\Presentation\Http\Views\HtmlView;
+use App\Presentation\Http\Views\ViewInterface;
 use Config\Container\ConfigContainer;
 use Throwable;
 
 /**
  * AbstractController
  *
- * Base class for all HTTP controllers. Provides access to view rendering,
- * session, logging, and configuration. Also handles global error fallback
- * and output standardization.
+ * Defines the foundational behavior for all HTTP controllers in the application.
+ * It encapsulates shared concerns such as configuration access, session handling,
+ * view rendering, error reporting, and JSON/redirect output management.
+ *
+ * Responsibilities:
+ * - Define a unified entry point (`handle`) for controller execution
+ * - Delegate request-specific logic to concrete implementations via `execute`
+ * - Provide helper methods for rendering views, returning JSON, and issuing redirects
+ * - Log unexpected exceptions using the application's structured logging strategy
+ *
+ * All dependencies are injected through the constructor to promote immutability,
+ * testability, and adherence to clean architectural boundaries.
  */
 abstract class AbstractController implements ControllerInterface
 {
     private ConfigContainer $config;
-    private SessionInterface $session;
+    private SessionHandlerInterface $session;
     private ViewRendererInterface $viewRenderer;
     protected UrlResolverInterface $urlResolver;
     private LoggerInterface $logger;
-    private LogAssembler $logAssembler;
+    private LogEntryAssemblerInterface $logAssembler;
 
-    /**
-     * Base controller dependencies are injected via constructor.
-     *
-     * @param ConfigContainer         $config       Global configuration container.
-     * @param SessionInterface        $session      Session handler interface.
-     * @param ViewRendererInterface   $viewRenderer View renderer service.
-     * @param LoggerInterface         $logger       Application logger interface.
-     * @param LogAssembler            $logAssembler Assembler for log entries.
-     */
     public function __construct(
         ConfigContainer $config,
-        SessionInterface $session,
+        SessionHandlerInterface $session,
         ViewRendererInterface $viewRenderer,
         UrlResolverInterface $urlResolver,
         LoggerInterface $logger,
-        LogAssembler $logAssembler
+        LogEntryAssemblerInterface $logAssembler
     ) {
-        $this->config       = $config;
-        $this->session      = $session;
+        $this->config = $config;
+        $this->session = $session;
         $this->viewRenderer = $viewRenderer;
         $this->urlResolver = $urlResolver;
-        $this->logger       = $logger;
+        $this->logger = $logger;
         $this->logAssembler = $logAssembler;
     }
 
     /**
-     * Entry point for controller execution.
-     * Wraps the user-defined logic and fallback error handling.
-     *
-     * @param RouteRequestInterface $request
-     * @return string
+     * Entry point for handling incoming HTTP requests.
+     * Wraps execution with structured error logging and fallback rendering.
      */
     final public function handle(RouteRequestInterface $request): string
     {
         try {
             return $this->execute($request);
         } catch (Throwable $exception) {
-            $this->reportError($exception, [
-                'method' => $request->method()->value(),
-                'path'   => $request->path()->value(),
-                'host'   => $request->host(),
-                'scheme' => $request->scheme(),
-            ]);
-
-            return $this->renderGenericErrorPage();
+            $this->logException($exception, $request);
+            return $this->renderErrorView();
         }
     }
 
     /**
-     * Subclasses must implement this to handle request-specific logic.
+     * Concrete controllers must implement this to handle the request.
      */
     abstract protected function execute(RouteRequestInterface $request): string;
 
     /**
-     * Provides access to the full application configuration.
+     * Logs unexpected exceptions with contextual request data.
      */
-    protected function config(): ConfigContainer
+    private function logException(Throwable $exception, RouteRequestInterface $request): void
     {
-        return $this->config;
+        $message = LoggableMessage::error(
+            'Unhandled exception in HTTP controller.',
+            [
+                'exception' => $exception->getMessage(),
+                'trace'     => $exception->getTraceAsString(),
+                'request'   => [
+                    'method' => $request->method()->value(),
+                    'path'   => $request->path()->value(),
+                    'host'   => $request->host(),
+                    'scheme' => $request->scheme(),
+                ],
+            ]
+        )->withChannel('controller');
+
+        $entry = $this->logAssembler->assembleFromMessage($message);
+        $this->logger->log($entry);
     }
 
     /**
-     * Provides access to the session abstraction.
+     * Renders a generic error page when an unhandled exception occurs.
      */
-    protected function getSession(): SessionInterface
+    protected function renderErrorView(): string
     {
-        return $this->session;
+        return $this->viewRenderer->render(
+            new HtmlView('error.php', [
+                'message' => 'Ocorreu um erro inesperado. Tente novamente mais tarde.',
+            ])
+        );
     }
 
     /**
-     * Renders the specified view using the injected renderer.
+     * Returns a rendered view.
      */
     protected function render(ViewInterface $view): string
     {
@@ -108,7 +118,18 @@ abstract class AbstractController implements ControllerInterface
     }
 
     /**
-     * Issues a redirect and halts execution.
+     * Returns a JSON response and halts further execution.
+     */
+    protected function json(array $data, int $status = 200): void
+    {
+        http_response_code($status);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}';
+        exit();
+    }
+
+    /**
+     * Performs an HTTP redirect and halts execution.
      */
     protected function redirect(string $url): void
     {
@@ -117,43 +138,18 @@ abstract class AbstractController implements ControllerInterface
     }
 
     /**
-     * Outputs JSON and terminates execution.
+     * Returns the global configuration container.
      */
-    protected function json(array $data, int $status = 200): void
+    protected function getConfig(): ConfigContainer
     {
-        http_response_code($status);
-        header('Content-Type: application/json; charset=utf-8');
-        echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        exit();
+        return $this->config;
     }
 
     /**
-     * Reports a structured exception log to the logger interface.
+     * Returns the current session handler.
      */
-    private function reportError(Throwable $exception, array $request): void
+    protected function getSession(): SessionHandlerInterface
     {
-        $message = LogMessage::error(
-            'Erro inesperado ao processar requisição.',
-            [
-                'exception' => $exception->getMessage(),
-                'trace'     => $exception->getTraceAsString(),
-                'request'   => $request,
-            ]
-        );
-
-        $entry = $this->logAssembler->fromLogMessage($message);
-        $this->logger->log($entry);
-    }
-
-    /**
-     * Renders a fallback error view.
-     */
-    protected function renderGenericErrorPage(): string
-    {
-        return $this->render(
-            new \App\Presentation\Http\Views\HtmlView('error.php', [
-                'message' => 'Ocorreu um erro inesperado. Tente novamente mais tarde.',
-            ])
-        );
+        return $this->session;
     }
 }

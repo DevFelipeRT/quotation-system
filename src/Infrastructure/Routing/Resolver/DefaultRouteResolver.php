@@ -2,11 +2,11 @@
 
 namespace App\Infrastructure\Routing\Resolver;
 
-use App\Interfaces\Application\Routing\RouteResolverInterface;
-use App\Interfaces\Application\Routing\RouteMatcherInterface;
-use App\Interfaces\Application\Routing\RouteRepositoryInterface;
-use App\Interfaces\Presentation\Routing\HttpRouteInterface;
-use App\Interfaces\Presentation\Routing\RouteRequestInterface;
+use App\Infrastructure\Routing\Contracts\RouteMatcherInterface;
+use App\Infrastructure\Routing\Contracts\RouteRepositoryInterface;
+use App\Infrastructure\Routing\Contracts\RouteResolverInterface;
+use App\Presentation\Http\Routing\Contracts\HttpRouteInterface;
+use App\Presentation\Http\Routing\Contracts\RouteRequestInterface;
 
 /**
  * DefaultRouteResolver
