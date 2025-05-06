@@ -50,11 +50,12 @@ final class DatabaseConnectionFactory
     public static function make(
         DatabaseConfig $config,
         array $observers = []
-    ): DatabaseConnectionInterface {
+    ): DatabaseConnectionInterface 
+    {
         self::assertResolverIsSet();
         self::assertValidObservers($observers);
 
-        $driver = $config->driver();
+        $driver = $config->getDriver();
         $class  = self::$resolver->resolve($driver);
 
         return new $class($config, $observers);

@@ -6,10 +6,8 @@ use App\Infrastructure\Http\AppUrlResolver;
 use App\Infrastructure\Http\UrlResolverInterface;
 use App\Infrastructure\Session\SessionHandler;
 use App\Infrastructure\Session\SessionHandlerInterface;
-use App\Logging\Application\LogEntryAssembler;
-use App\Logging\Application\LogEntryAssemblerInterface;
-use App\Logging\Infrastructure\FileLogger;
 use App\Logging\LoggerInterface;
+use App\Logging\Application\LogEntryAssemblerInterface;
 use App\Messaging\Application\Types\LoggableMessage;
 use App\Presentation\Http\Renderers\HtmlViewRenderer;
 use App\Presentation\Http\Renderers\ViewRendererInterface;
@@ -19,54 +17,111 @@ use Throwable;
 /**
  * InfrastructureKernel
  *
- * Core orchestrator of infrastructure-level services required during
- * the runtime of the application. This includes:
+ * Aggregates and exposes infrastructure-level services required at runtime.
  *
- * - Structured logging and log entry assembly
- * - Session handling for stateful requests
- * - URL resolution for routing and asset access
- * - View rendering for HTML responses
+ * This kernel centralizes access to reusable components across the application,
+ * including session handling, routing, view rendering, and structured logging.
+ * Logging services are injected via LoggingKernel.
  *
- * All services are configured via the ConfigContainer and exposed through
- * interface-based accessors to maximize testability and encapsulation.
+ * Responsibilities:
+ * - Start and expose user session handler
+ * - Resolve application URLs and paths
+ * - Render HTML views for HTTP responses
+ * - Log infrastructure errors using structured entries
  */
 final class InfrastructureKernel
 {
-    private LoggerInterface $logger;
-    private LogEntryAssemblerInterface $logEntryAssembler;
-    private ?SessionHandlerInterface $sessionHandler = null;
-    private UrlResolverInterface $urlResolver;
-    private ViewRendererInterface $viewRenderer;
+    private readonly LoggerInterface $logger;
+    private readonly LogEntryAssemblerInterface $logEntryAssembler;
+    private readonly UrlResolverInterface $urlResolver;
+    private readonly ViewRendererInterface $viewRenderer;
+    private readonly ?SessionHandlerInterface $sessionHandler;
 
     /**
-     * Constructs and wires all core infrastructure services.
+     * Initializes infrastructure services based on configuration and logging kernel.
      *
-     * @param ConfigContainer $config Fully initialized configuration container.
+     * @param ConfigContainer $config   Configuration container with paths and environment.
+     * @param LoggingKernel   $logging  Logging kernel (provides logger and assembler).
      */
-    public function __construct(ConfigContainer $config)
+    public function __construct(ConfigContainer $config, LoggingKernel $logging)
     {
-        $this->logger = $this->createLogger($config);
-        $this->logEntryAssembler = $this->createLogEntryAssembler();
+        $this->logger = $logging->getLogger();
+        $this->logEntryAssembler = $logging->getLogEntryAssembler();
         $this->urlResolver = $this->createUrlResolver($config);
         $this->viewRenderer = $this->createViewRenderer($config, $this->urlResolver);
         $this->sessionHandler = $this->createSessionHandler();
     }
 
-    private function createLogger(ConfigContainer $config): LoggerInterface
+    /**
+     * Returns the active logger for structured persistence.
+     *
+     * @return LoggerInterface
+     */
+    public function getLogger(): LoggerInterface
     {
-        return new FileLogger($config->getPathsConfig()->getLogsDirPath());
+        return $this->logger;
     }
 
-    private function createLogEntryAssembler(): LogEntryAssemblerInterface
+    /**
+     * Returns the log entry assembler that converts messages to structured logs.
+     *
+     * @return LogEntryAssemblerInterface
+     */
+    public function getLogEntryAssembler(): LogEntryAssemblerInterface
     {
-        return new LogEntryAssembler();
+        return $this->logEntryAssembler;
     }
 
+    /**
+     * Provides a resolver for application routes and asset URLs.
+     *
+     * @return UrlResolverInterface
+     */
+    public function getUrlResolver(): UrlResolverInterface
+    {
+        return $this->urlResolver;
+    }
+
+    /**
+     * Returns the view renderer for server-side HTML generation.
+     *
+     * @return ViewRendererInterface
+     */
+    public function getViewRenderer(): ViewRendererInterface
+    {
+        return $this->viewRenderer;
+    }
+
+    /**
+     * Returns the active session handler or null if session failed to start.
+     *
+     * @return SessionHandlerInterface|null
+     */
+    public function getSessionHandler(): ?SessionHandlerInterface
+    {
+        return $this->sessionHandler;
+    }
+
+    /**
+     * Instantiates the application's URL resolver.
+     *
+     * @param ConfigContainer $config
+     * @return UrlResolverInterface
+     */
     private function createUrlResolver(ConfigContainer $config): UrlResolverInterface
     {
-        return new AppUrlResolver($config->getPathsConfig()->getAppDirectory());
+        return new AppUrlResolver(
+            $config->getPathsConfig()->getAppDirectory()
+        );
     }
 
+    /**
+     * Instantiates the HTML view renderer.
+     *
+     * @param ConfigContainer $config
+     * @param UrlResolverInterface $resolver
+     * @return ViewRendererInterface
+     */
     private function createViewRenderer(ConfigContainer $config, UrlResolverInterface $resolver): ViewRendererInterface
     {
         return new HtmlViewRenderer(
@@ -75,6 +130,11 @@ final class InfrastructureKernel
         );
     }
 
+    /**
+     * Attempts to start and return the session handler.
+     *
+     * @return SessionHandlerInterface|null
+     */
     private function createSessionHandler(): ?SessionHandlerInterface
     {
         $session = new SessionHandler();
@@ -87,6 +147,12 @@ final class InfrastructureKernel
         return $session;
     }
 
+    /**
+     * Attempts to start the session, safely handling failure.
+     *
+     * @param SessionHandler $session
+     * @return bool
+     */
     private function startSessionSafely(SessionHandler $session): bool
     {
         try {
@@ -97,6 +163,11 @@ final class InfrastructureKernel
         }
     }
 
+    /**
+     * Logs a failure when session startup is unsuccessful.
+     *
+     * @return void
+     */
     private function logSessionStartFailure(): void
     {
         $message = LoggableMessage::error('Failed to start session')
@@ -105,61 +176,4 @@ final class InfrastructureKernel
         $entry = $this->logEntryAssembler->assembleFromMessage($message);
         $this->logger->log($entry);
     }
-
-
-    /**
-     * Returns the logger service used for structured log persistence.
-     */
-    public function getLogger(): LoggerInterface
-    {
-        return $this->logger;
-    }
-
-    /**
-     * Returns the session handler instance, or null if initialization failed.
-     */
-    public function getSessionHandler(): ?SessionHandlerInterface
-    {
-        return $this->sessionHandler;
-    }
-
-    /**
-     * Provides access to the service that builds log entries from messages.
-     */
-    public function getLogEntryAssembler(): LogEntryAssemblerInterface
-    {
-        return $this->logEntryAssembler;
-    }
-
-    /**
-     * Returns the application's URL resolver for routes and assets.
-     */
-    public function getUrlResolver(): UrlResolverInterface
-    {
-        return $this->urlResolver;
-    }
-
-    /**
-     * Provides the HTML view renderer for server-side rendered responses.
-     */
-    public function getViewRenderer(): ViewRendererInterface
-    {
-        return $this->viewRenderer;
-    }
-
-    // /**
-    //  * Provides runtime diagnostics for infrastructure services.
-    //  *
-    //  * @return array{session_active: bool, view_root: string|null, logger_class: class-string}
-    //  */
-    // public function diagnostics(): array
-    // {
-    //     return [
-    //         'session_active' => $this->sessionHandler?->isActive() ?? false,
-    //         'view_root'      => method_exists($this->viewRenderer, 'getViewRootPath')
-    //             ? $this->viewRenderer->getViewRootPath()
-    //             : null,
-    //         'logger_class'   => get_class($this->logger),
-    //     ];
-    // }
 }

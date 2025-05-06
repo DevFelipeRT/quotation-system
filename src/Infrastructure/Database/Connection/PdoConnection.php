@@ -60,20 +60,20 @@ final class PdoConnection implements DatabaseConnectionInterface
         try {
             $pdo = new PDO(
                 $this->buildDsn(),
-                $this->config->username(),
-                $this->config->password(),
+                $this->config->getUsername(),
+                $this->config->getPassword(),
                 $this->pdoOptions()
             );
 
             $this->notify(new ConnectionSucceededEvent(
-                driver: $this->config->driver(),
+                driver: $this->config->getDriver(),
                 metadata: $this->safeMetadata()
             ));
 
             return $pdo;
         } catch (PDOException $e) {
             $this->notify(new ConnectionFailedEvent(
-                driver: $this->config->driver(),
+                driver: $this->config->getDriver(),
                 error: $e->getMessage(),
                 metadata: $this->failureMetadata()
             ));
@@ -96,21 +96,21 @@ final class PdoConnection implements DatabaseConnectionInterface
      */
     private function buildDsn(): string
     {
-        return match ($this->config->driver()) {
+        return match ($this->config->getDriver()) {
             'mysql' => sprintf(
                 'mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',
-                $this->config->host(),
-                $this->config->port(),
-                $this->config->database()
+                $this->config->getHost(),
+                $this->config->getPort(),
+                $this->config->getDatabase()
             ),
             'pgsql' => sprintf(
                 'pgsql:host=%s;port=%d;dbname=%s',
-                $this->config->host(),
-                $this->config->port(),
-                $this->config->database()
+                $this->config->getHost(),
+                $this->config->getPort(),
+                $this->config->getDatabase()
             ),
-            'sqlite' => sprintf('sqlite:%s', $this->config->database()),
-            default => throw new RuntimeException('Unsupported driver: ' . $this->config->driver())
+            'sqlite' => sprintf('sqlite:%s', $this->config->getDatabase()),
+            default => throw new RuntimeException('Unsupported driver: ' . $this->config->getDriver())
         };
     }
 
@@ -174,9 +174,9 @@ final class PdoConnection implements DatabaseConnectionInterface
     private function failureMetadata(): array
     {
         return [
-            'host'     => $this->config->host(),
-            'port'     => $this->config->port(),
-            'database' => $this->config->database(),
+            'host'     => $this->config->getHost(),
+            'port'     => $this->config->getPort(),
+            'database' => $this->config->getDatabase(),
         ];
     }
 }
