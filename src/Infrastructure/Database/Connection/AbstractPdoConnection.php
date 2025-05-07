@@ -10,7 +10,6 @@ use App\Infrastructure\Database\Connection\Events\ConnectionFailedEvent;
 use App\Infrastructure\Database\Exceptions\DatabaseConnectionException;
 use PDO;
 use PDOException;
-use RuntimeException;
 
 /**
  * Base abstract class for specialized PDO-based database connections.

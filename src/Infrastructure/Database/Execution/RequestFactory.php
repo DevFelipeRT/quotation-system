@@ -4,35 +4,47 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Database\Execution;
 
+use App\Infrastructure\Database\Connection\DatabaseConnectionInterface;
 use App\Infrastructure\Database\Execution\DatabaseRequestInterface;
-use App\Infrastructure\Database\Execution\PdoDatabaseRequest;
+use App\Infrastructure\Database\Execution\RequestBuilders\RequestBuilderInterface;
+use App\Infrastructure\Database\Execution\Resolvers\RequestBuilderResolverInterface;
 use App\Infrastructure\Database\Observers\RequestObserverInterface;
 use PDO;
 
 /**
  * Factory for creating database request executors.
  *
- * Encapsulates the instantiation of DatabaseRequestInterface implementations
- * while supporting observer injection for query instrumentation (e.g. logging, metrics).
+ * Delegates request creation to a resolved RequestBuilderInterface implementation,
+ * based on the provided DatabaseConnectionInterface instance.
  */
 final class RequestFactory
 {
-    /**
-     * @param PDO $pdo Active PDO database connection.
-     * @param RequestObserverInterface[] $observers Optional list of query observers.
-     */
     public function __construct(
-        private readonly PDO $pdo,
-        private readonly array $observers = []
+        private readonly RequestBuilderResolverInterface $resolver
     ) {}
 
     /**
-     * Creates a fully configured SQL request executor.
+     * Creates a fully configured SQL request executor from a PDO connection.
      *
+     * @param PDO $pdo
+     * @param RequestObserverInterface[] $observers
      * @return DatabaseRequestInterface
      */
-    public function create(): DatabaseRequestInterface
+    public function create(PDO $pdo, array $observers = []): DatabaseRequestInterface
     {
-        return new PdoDatabaseRequest($this->pdo, $this->observers);
+        throw new \LogicException('Use createFromConnection instead when using a resolver-based factory.');
+    }
+
+    /**
+     * Creates a request executor based on a resolved builder from the given connection.
+     *
+     * @param DatabaseConnectionInterface $connection
+     * @param RequestObserverInterface[] $observers
+     * @return DatabaseRequestInterface
+     */
+    public function createFromConnection(DatabaseConnectionInterface $connection, array $observers = []): DatabaseRequestInterface
+    {
+        $builder = $this->resolver->resolve($connection);
+        return $builder->build($connection->connect(), $observers);
     }
 }

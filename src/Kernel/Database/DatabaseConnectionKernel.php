@@ -1,6 +1,8 @@
 <?php
 
-namespace App\Kernel;
+declare(strict_types=1);
+
+namespace App\Kernel\Database;
 
 use App\Infrastructure\Database\Connection\DatabaseConnectionInterface;
 use App\Infrastructure\Database\Connection\DatabaseConnectionFactory;
@@ -13,52 +15,63 @@ use Config\Database\DatabaseConfig;
 use Throwable;
 
 /**
- * DatabaseKernel
+ * Class DatabaseConnectionKernel
  *
- * Initializes and exposes the active database connection for this module.
+ * Coordinates the safe initialization and access to a database connection using
+ * the system's configured driver, logger, and environment settings.
+ *
+ * This kernel is responsible for:
+ * - Registering the appropriate driver resolver.
+ * - Constructing and activating the database connection.
+ * - Handling connection exceptions with structured error reporting.
+ * - Supporting a debug mode for verbose connection tracing.
+ *
+ * @package App\Kernel\Database
  */
-final class DatabaseKernel
+final class DatabaseConnectionKernel
 {
     private readonly DatabaseConnectionInterface $connection;
     private readonly DriverResolverInterface $resolver;
     private readonly DatabaseConfig $config;
     private readonly LoggerInterface $logger;
-    private readonly array $observers;
+    /** @var array */
+    private array $observers;
 
     /**
-     * @param DatabaseConfig   $config
-     * @param LoggerInterface  $logger
+     * Initializes the kernel and attempts to safely establish a database connection.
      *
-     * @throws DatabaseConnectionException
+     * @param DatabaseConfig   $config   Configuration object with driver and credentials.
+     * @param LoggerInterface  $logger   Logging interface for observing connection events.
+     * @param bool             $debugMode Enables verbose output for diagnostics.
+     *
+     * @throws DatabaseConnectionException On failure to create or activate the connection.
      */
-    public function __construct(DatabaseConfig $config, LoggerInterface $logger, $debugMode = false)
+    public function __construct(DatabaseConfig $config, LoggerInterface $logger, bool $debugMode = false)
     {
         $this->config = $config;
         $this->logger = $logger;
         $this->observers = [new ConnectionLoggerObserver($this->logger)];
-        $this->resolver = new DefaultDriverResolver($config->getDriver());
+        $this->resolver = new DefaultDriverResolver();
 
         $this->registerResolver();
 
-        if ($debugMode) {
-            $this->connection = $this->initializeSafelyDebug();
-            return;
-        }
-        $this->connection = $this->initializeSafely();
+        $this->connection = $debugMode
+            ? $this->initializeSafelyDebug()
+            : $this->initializeSafely();
     }
 
     /**
-     * Returns the active connection interface.
+     * Provides access to the resolved and connected database interface.
      *
      * @return DatabaseConnectionInterface
      */
-    public function connection(): DatabaseConnectionInterface
+    public function getConnection(): DatabaseConnectionInterface
     {
         return $this->connection;
     }
 
     /**
-     * Registers the default driver resolver.
+     * Registers the selected driver resolver within the factory.
      *
      * @return void
      */
@@ -68,10 +81,9 @@ final class DatabaseKernel
     }
 
     /**
-     * Safely initializes the database connection, handling any exception.
+     * Attempts to establish the connection and capture any failures.
      *
      * @return DatabaseConnectionInterface
-     *
      * @throws DatabaseConnectionException
      */
     private function initializeSafely(): DatabaseConnectionInterface
@@ -89,24 +101,21 @@ final class DatabaseKernel
     }
 
     /**
-     * Builds and activates the connection using internal configuration.
+     * Constructs and connects the database interface.
      *
      * @return DatabaseConnectionInterface
      */
     private function bootConnection(): DatabaseConnectionInterface
-    {;
+    {
         $connection = DatabaseConnectionFactory::make($this->config, $this->observers);
         $connection->connect();
         return $connection;
     }
 
-    // Debugging
-
     /**
-     * Safely initializes the database connection, handling any exception.
+     * Debug-safe connection initializer with terminal output.
      *
      * @return DatabaseConnectionInterface
-     *
      * @throws DatabaseConnectionException
      */
     private function initializeSafelyDebug(): DatabaseConnectionInterface
@@ -124,9 +133,10 @@ final class DatabaseKernel
     }
 
     /**
-     * Builds and activates the connection using internal configuration.
+     * Verbosely builds and connects to the database, logging to the terminal.
      *
      * @return DatabaseConnectionInterface
+     * @throws DatabaseConnectionException
      */
     private function bootConnectionDebug(): DatabaseConnectionInterface
     {
@@ -158,7 +168,7 @@ final class DatabaseKernel
                 $e
             );
         }
-        
+
         return $connection;
     }
 }

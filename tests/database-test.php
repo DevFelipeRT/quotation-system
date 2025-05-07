@@ -1,28 +1,83 @@
 <?php
 
-use App\Kernel\DatabaseKernel;
+use App\Kernel\Database\DatabaseConnectionKernel;
+use App\Kernel\Database\DatabaseExecutionKernel;
 use App\Kernel\LoggingKernel;
 
-// Initialize the application configuration container
+function printStatus(string $message, string $status = 'INFO'): void
+{
+    echo sprintf("[%s] %s%s", strtoupper($status), $message, PHP_EOL);
+}
+
+// Step 1: Load configuration
 $configContainer = require_once __DIR__ . '/TestBootstrap.php';
+printStatus("Bootstrap executed successfully. Configuration container loaded.", 'STEP');
+
 $databaseConfig = $configContainer->getDatabaseConfig();
 
-// Instantiates the Logging module
+// Step 2: Initialize logging
 try {
     $loggingKernel = new LoggingKernel($configContainer);
-    echo "LoggingKernel initialized successfully." . PHP_EOL;
+    printStatus("LoggingKernel initialized successfully.", 'OK');
 } catch (Throwable $e) {
-    echo "Error initializing LoggingKernel: " . $e->getMessage() . PHP_EOL;
+    printStatus("Error initializing LoggingKernel: {$e->getMessage()}", 'FAIL');
     exit(1);
 }
 
 $logger = $loggingKernel->getLogger();
 
-// Instantiate the Database module
+// Step 3: Initialize connection kernel
 try {
-    $databaseKernel = new DatabaseKernel($databaseConfig, $logger, true);
-    echo "DatabaseKernel initialized successfully." . PHP_EOL;
-} catch (\Throwable $e) {
-    echo "Error initializing DatabaseKernel: " . $e->getMessage() . PHP_EOL;
+    $databaseConnectionKernel = new DatabaseConnectionKernel($databaseConfig, $logger, true);
+    printStatus("DatabaseConnectionKernel initialized successfully.", 'OK');
+} catch (Throwable $e) {
+    printStatus("Error initializing DatabaseKernel: {$e->getMessage()}", 'FAIL');
     exit(1);
+}
+
+// Step 4: Retrieve connection instance
+try {
+    $connection = $databaseConnectionKernel->getConnection();
+    printStatus("Database connection initialized successfully.", 'OK');
+} catch (Throwable $e) {
+    printStatus("Error initializing Database connection: {$e->getMessage()}", 'FAIL');
+    exit(1);
+}
+
+// Step 5: Initialize execution kernel
+try {
+    $databaseExecutionKernel = new DatabaseExecutionKernel($connection, $logger);
+    printStatus("DatabaseExecutionKernel initialized successfully.", 'OK');
+} catch (Throwable $e) {
+    printStatus("Error initializing DatabaseExecutionKernel: {$e->getMessage()}", 'FAIL');
+    exit(1);
+}
+
+// Step 6: Retrieve request interface
+try {
+    $request = $databaseExecutionKernel->request();
+    printStatus("Database request initialized successfully.", 'OK');
+} catch (Throwable $e) {
+    printStatus("Error initializing Database request: {$e->getMessage()}", 'FAIL');
+    exit(1);
+}
+
+// Step 7: Execute SELECT query
+try {
+    $sql = "SELECT 1";
+    $result = $request->select($sql);
+    printStatus("Select query executed successfully.", 'OK');
+} catch (Throwable $e) {
+    printStatus("Error executing select query: {$e->getMessage()}", 'FAIL');
+    exit(1);
+}
+
+// Step 8: Print results
+if (!empty($result)) {
+    printStatus("Query returned results:", 'RESULT');
+    echo '<pre>';
+    print_r($result);
+    echo '</pre>';
+} else {
+    printStatus("No results found.", 'INFO');
 }
