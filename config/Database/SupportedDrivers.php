@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Config\Database;
 
 use Config\Database\Exceptions\UnsupportedDriverException;
@@ -7,65 +9,44 @@ use Config\Database\Exceptions\UnsupportedDriverException;
 /**
  * SupportedDrivers
  *
- * Centralizes normalization, validation, and fallback resolution for
- * supported database driver strings.
+ * Central authority for valid database driver identifiers.
+ * Responsible for normalization, validation, and fallback logic.
+ *
+ * @package Config\Database
  */
 final class SupportedDrivers
 {
     /**
-     * List of supported database drivers.
+     * List of supported driver identifiers.
+     *
+     * @var string[]
      */
     private const SUPPORTED = ['mysql', 'pgsql', 'sqlite'];
 
     /**
-     * Resolves the driver string to be used by the system.
+     * Resolves and validates the driver to be used.
      *
-     * Applies normalization, fallback, and validation logic.
+     * Applies normalization and fallback logic, then ensures validity.
      *
-     * @param string|null $driver Input driver string or null.
-     * @return string Validated and resolved driver.
+     * @param string|null $driver Raw input from config or env.
+     * @return string Normalized and validated driver identifier.
      *
-     * @throws UnsupportedDriverException If the driver is not in the supported list.
+     * @throws UnsupportedDriverException
      */
     public static function resolve(?string $driver): string
-    {
-        $resolved = self::resolveOrDefault($driver);
-        self::assertIsSupported($resolved);
-        return $resolved;
-    }
-
-    /**
-     * Normalizes the given driver and returns it or falls back to the default if empty.
-     * This method does not validate.
-     *
-     * @param string|null $driver
-     * @return string
-     */
-    private static function resolveOrDefault(?string $driver): string
     {
         $normalized = self::normalize($driver);
         return $normalized !== '' ? $normalized : self::default();
     }
 
     /**
-     * Normalizes a driver string by trimming and lowercasing it.
-     *
-     * @param string|null $driver
-     * @return string
-     */
-    private static function normalize(?string $driver): string
-    {
-        return strtolower(trim((string) $driver));
-    }
-
-    /**
      * Ensures the provided driver is in the supported list.
      *
-     * @param string $driver
+     * @param string $driver Normalized driver string.
      * @return void
      * @throws UnsupportedDriverException
      */
-    private static function assertIsSupported(string $driver): void
+    public static function assertIsSupported(string $driver): void
     {
         if (!in_array($driver, self::SUPPORTED, true)) {
             $available = implode(', ', self::SUPPORTED);
@@ -74,22 +55,33 @@ final class SupportedDrivers
     }
 
     /**
-     * Returns the default driver.
-     *
-     * @return string
-     */
-    private static function default(): string
-    {
-        return self::SUPPORTED[0];
-    }
-
-    /**
-     * Returns the list of supported drivers.
+     * Returns the list of valid driver identifiers.
      *
      * @return string[]
      */
     public static function list(): array
     {
         return self::SUPPORTED;
+    }
+
+    /**
+     * Returns the default driver if none is provided.
+     *
+     * @return string
+     */
+    public static function default(): string
+    {
+        return self::SUPPORTED[0];
+    }
+
+    /**
+     * Normalizes input for consistent comparison.
+     *
+     * @param string|null $driver
+     * @return string
+     */
+    private static function normalize(?string $driver): string
+    {
+        return strtolower(trim((string) $driver));
     }
 }
