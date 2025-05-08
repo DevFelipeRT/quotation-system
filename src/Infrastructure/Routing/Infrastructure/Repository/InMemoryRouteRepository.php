@@ -1,9 +1,8 @@
 <?php
 
-namespace App\Infrastructure\Routing\Repository;
+declare(strict_types=1);
 
-use App\Infrastructure\Routing\Contracts\RouteRepositoryInterface;
-use App\Presentation\Http\Routing\Contracts\HttpRouteInterface;
+namespace App\Infrastructure\Routing\Infrastructure\Repository;
 
 /**
  * InMemoryRouteRepository

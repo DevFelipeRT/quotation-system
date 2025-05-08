@@ -2,16 +2,8 @@
 
 declare(strict_types=1);
 
-namespace App\Kernel\Database;
+namespace App\Kernel\Infrastructure\Database;
 
-use App\Infrastructure\Database\Connection\DatabaseConnectionInterface;
-use App\Infrastructure\Database\Connection\DatabaseConnectionFactory;
-use App\Infrastructure\Database\Connection\Observers\ConnectionLoggerObserver;
-use App\Infrastructure\Database\Connection\Resolvers\DefaultDriverResolver;
-use App\Infrastructure\Database\Connection\Resolvers\DriverResolverInterface;
-use App\Infrastructure\Database\Exceptions\DatabaseConnectionException;
-use App\Logging\LoggerInterface;
-use Config\Database\DatabaseConfig;
 use Throwable;
 
 /**

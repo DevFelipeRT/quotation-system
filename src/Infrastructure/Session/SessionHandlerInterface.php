@@ -2,7 +2,7 @@
 
 namespace App\Infrastructure\Session;
 
-use App\Infrastructure\Session\SessionData;
+use App\Infrastructure\Session\ValueObjects\SessionData;
 
 /**
  * Defines the contract for managing user session data.

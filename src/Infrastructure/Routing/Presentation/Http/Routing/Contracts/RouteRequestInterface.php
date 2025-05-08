@@ -1,9 +1,8 @@
 <?php
 
-namespace App\Presentation\Http\Routing\Contracts;
+declare(strict_types=1);
 
-use App\Application\Routing\RoutePath;
-use App\Presentation\Http\Routing\HttpMethod;
+namespace App\Infrastructure\Routing\Presentation\Http\Routing\Contracts;
 
 /**
  * Interface RouteRequestInterface

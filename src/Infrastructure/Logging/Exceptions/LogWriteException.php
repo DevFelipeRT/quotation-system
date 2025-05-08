@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Logging\Exceptions;
+namespace App\Infrastructure\Logging\Exceptions;
 
 /**
  * Raised when a log file cannot be written to.

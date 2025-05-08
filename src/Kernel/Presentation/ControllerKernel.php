@@ -1,22 +1,8 @@
 <?php
 
-namespace App\Kernel;
+declare(strict_types=1);
 
-use App\Application\UseCases\Item\CreateUseCase;
-use App\Application\UseCases\Item\DeleteUseCase;
-use App\Application\UseCases\Item\ListUseCase;
-use App\Application\UseCases\Item\UpdateUseCase;
-use App\Infrastructure\Http\AppUrlResolver;
-use App\Infrastructure\Session\SessionHandler;
-use App\Logging\Application\LogEntryAssembler;
-use App\Logging\Infrastructure\FileLogger;
-use App\Presentation\Http\Controllers\HomeController;
-use App\Presentation\Http\Controllers\Item\Controller as ItemController;
-use App\Presentation\Http\Controllers\Item\CreateController;
-use App\Presentation\Http\Controllers\Item\DeleteController;
-use App\Presentation\Http\Controllers\Item\UpdateController;
-use App\Presentation\Http\Renderers\HtmlViewRenderer;
-use Config\Container\ConfigContainer;
+namespace App\Kernel\Presentation;
 
 /**
  * ControllerKernel

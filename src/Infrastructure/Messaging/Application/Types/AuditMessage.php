@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Messaging\Application\Types;
+declare(strict_types=1);
 
-use App\Messaging\Application\AbstractMessage;
+namespace App\Infrastructure\Messaging\Application\Types;
+
 use DateTimeImmutable;
 
 /**

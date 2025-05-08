@@ -1,9 +1,8 @@
 <?php
 
-namespace App\Kernel;
+declare(strict_types=1);
 
-use App\Logging\LoggerInterface;
-use Config\Container\ConfigContainer;
+namespace App\Kernel;
 
 /**
  * KernelManager

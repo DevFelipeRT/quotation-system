@@ -2,10 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Database\Execution\Resolvers;
-
-use App\Infrastructure\Database\Connection\DatabaseConnectionInterface;
-use App\Infrastructure\Database\Execution\RequestBuilders\RequestBuilderInterface;
+namespace App\Infrastructure\Database\Domain\Execution\Resolvers;
 
 /**
  * Contract for resolving a RequestBuilderInterface based on a given database connection.

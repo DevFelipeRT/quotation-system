@@ -1,14 +1,8 @@
 <?php
 
-namespace App\Infrastructure\Routing\Providers;
+declare(strict_types=1);
 
-use App\Application\Routing\RoutePath;
-use App\Infrastructure\Routing\Contracts\RouteProviderInterface;
-use App\Presentation\Http\Controllers\HomeController;
-use App\Presentation\Http\Routing\ControllerAction;
-use App\Presentation\Http\Routing\Contracts\HttpRouteInterface;
-use App\Presentation\Http\Routing\HttpMethod;
-use App\Presentation\Http\Routing\HttpRoute;
+namespace App\Infrastructure\Routing\Infrastructure\Providers;
 
 /**
  * HomeRouteProvider

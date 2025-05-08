@@ -1,11 +1,5 @@
 <?php
 
-use App\Application\Messaging\AuditMessage;
-use App\Application\Messaging\ErrorMessage;
-use App\Application\Messaging\LogMessage;
-use App\Application\Messaging\NotificationMessage;
-use App\Infrastructure\Logging\LogAssembler;
-
 require_once __DIR__ . '/../autoload.php';
 
 // 1. Criar as mensagens

@@ -1,10 +1,8 @@
 <?php
 
-namespace App\Infrastructure\Routing\Matcher;
+declare(strict_types=1);
 
-use App\Infrastructure\Routing\Contracts\RouteMatcherInterface;
-use App\Presentation\Http\Routing\Contracts\HttpRouteInterface;
-use App\Presentation\Http\Routing\Contracts\RouteRequestInterface;
+namespace App\Infrastructure\Routing\Infrastructure\Matcher;
 
 /**
  * DefaultRouteMatcher

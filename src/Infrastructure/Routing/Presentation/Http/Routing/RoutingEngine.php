@@ -1,11 +1,9 @@
 <?php
 
-namespace App\Presentation\Http\Routing;
+declare(strict_types=1);
 
-use App\Infrastructure\Routing\Contracts\RouteDispatcherInterface;
-use App\Infrastructure\Routing\Contracts\RouteResolverInterface;
-use App\Presentation\Http\Routing\Contracts\RouteRequestInterface;
-use App\Presentation\Http\Routing\Contracts\RoutingEngineInterface;
+namespace App\Infrastructure\Routing\Presentation\Http\Routing;
+
 use RuntimeException;
 
 /**

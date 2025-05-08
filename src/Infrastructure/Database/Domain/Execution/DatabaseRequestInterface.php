@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Database\Execution;
+namespace App\Infrastructure\Database\Domain\Execution;
 
 /**
  * Defines a contract for performing database operations in a decoupled, infrastructure-oriented way.

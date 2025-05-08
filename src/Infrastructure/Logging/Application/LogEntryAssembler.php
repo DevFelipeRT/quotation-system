@@ -1,10 +1,9 @@
 <?php
 
-namespace App\Logging\Application;
+declare(strict_types=1);
 
-use App\Logging\Domain\LogEntry;
-use App\Logging\Domain\LogLevelEnum;
-use App\Messaging\Domain\LoggableMessageInterface;
+namespace App\Infrastructure\Logging\Application;
+
 use InvalidArgumentException;
 
 /**

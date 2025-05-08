@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Database\Connection\Observers;
+namespace App\Infrastructure\Database\Domain\Connection\Observers;
 
 /**
  * Represents an observer that listens to database connection lifecycle events.

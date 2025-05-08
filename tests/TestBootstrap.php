@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Config\Container\ConfigContainer;
+namespace App\Tests;
 
 try {
     require_once __DIR__ . '/../bootstrap.php';

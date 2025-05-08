@@ -1,9 +1,7 @@
 <?php
 
-namespace App\Messaging\Application\Types;
+namespace App\Infrastructure\Messaging\Application\Types;
 
-use App\Messaging\Application\AbstractMessage;
-use App\Messaging\Domain\LoggableMessageInterface;
 use DateTimeImmutable;
 
 /**

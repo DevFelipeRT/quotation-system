@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Application\Routing;
+namespace App\Infrastructure\Routing\Application\Services;
 
 use InvalidArgumentException;
 

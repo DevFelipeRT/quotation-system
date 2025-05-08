@@ -1,12 +1,7 @@
 <?php
 
-namespace App\Presentation\Controllers;
+namespace App\Domains\Quotation\Presentation\Http\Controllers;
 
-use App\Entities\Item;
-use App\Entities\Quotation;
-use App\Entities\QuotationItem;
-use App\Models\ItemModel;
-use App\Models\QuotationItemModel;
 use Exception;
 
 require_once __DIR__ . '/../../autoload.php';

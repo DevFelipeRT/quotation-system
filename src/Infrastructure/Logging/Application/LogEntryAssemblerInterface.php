@@ -1,9 +1,6 @@
 <?php
 
-namespace App\Logging\Application;
-
-use App\Logging\Domain\LogEntry;
-use App\Messaging\Domain\LoggableMessageInterface;
+namespace App\Infrastructure\Logging\Application;
 
 /**
  * Defines the contract for assembling LogEntry objects from loggable messages.

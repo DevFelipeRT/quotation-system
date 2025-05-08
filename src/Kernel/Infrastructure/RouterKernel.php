@@ -1,17 +1,8 @@
 <?php
 
-namespace App\Kernel;
+declare(strict_types=1);
 
-use App\Infrastructure\Routing\Contracts\HttpRouteInterface;
-use App\Infrastructure\Routing\Contracts\RouteProviderInterface;
-use App\Infrastructure\Routing\Dispatcher\DefaultRouteDispatcher;
-use App\Infrastructure\Routing\Matcher\DefaultRouteMatcher;
-use App\Infrastructure\Routing\Providers\HomeRouteProvider;
-use App\Infrastructure\Routing\Providers\ItemRouteProvider;
-use App\Infrastructure\Routing\Registration\RouteRegistrar;
-use App\Infrastructure\Routing\Repository\InMemoryRouteRepository;
-use App\Infrastructure\Routing\Resolver\DefaultRouteResolver;
-use App\Presentation\Http\Routing\RoutingEngine;
+namespace App\Kernel\Infrastructure;
 
 /**
  * Class RouterKernel

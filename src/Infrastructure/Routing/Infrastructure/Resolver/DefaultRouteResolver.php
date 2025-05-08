@@ -1,12 +1,8 @@
 <?php
 
-namespace App\Infrastructure\Routing\Resolver;
+declare(strict_types=1);
 
-use App\Infrastructure\Routing\Contracts\RouteMatcherInterface;
-use App\Infrastructure\Routing\Contracts\RouteRepositoryInterface;
-use App\Infrastructure\Routing\Contracts\RouteResolverInterface;
-use App\Presentation\Http\Routing\Contracts\HttpRouteInterface;
-use App\Presentation\Http\Routing\Contracts\RouteRequestInterface;
+namespace App\Infrastructure\Routing\Infrastructure\Resolver;
 
 /**
  * DefaultRouteResolver

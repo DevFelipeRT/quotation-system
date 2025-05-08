@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Database\Connection\Resolvers;
 
-use App\Infrastructure\Database\Connection\DatabaseConnectionInterface;
-use App\Infrastructure\Database\Exceptions\UnsupportedDriverException;
-use Config\Database\SupportedDrivers;
-
 /**
  * Resolves the appropriate connection class for a given driver identifier.
  *

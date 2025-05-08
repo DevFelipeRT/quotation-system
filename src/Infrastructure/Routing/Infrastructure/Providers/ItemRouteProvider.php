@@ -2,18 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Routing\Providers;
-
-use App\Application\Routing\RoutePath;
-use App\Infrastructure\Routing\Contracts\RouteProviderInterface;
-use App\Presentation\Http\Controllers\Item\Controller;
-use App\Presentation\Http\Controllers\Item\CreateController;
-use App\Presentation\Http\Controllers\Item\UpdateController;
-use App\Presentation\Http\Controllers\Item\DeleteController;
-use App\Presentation\Http\Routing\ControllerAction;
-use App\Presentation\Http\Routing\Contracts\HttpRouteInterface;
-use App\Presentation\Http\Routing\HttpMethod;
-use App\Presentation\Http\Routing\HttpRoute;
+namespace App\Infrastructure\Routing\Infrastructure\Providers;
 
 /**
  * ItemRouteProvider

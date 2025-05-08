@@ -1,14 +1,8 @@
 <?php
 
-namespace App\Kernel;
+declare(strict_types=1);
 
-use App\Application\UseCases\Item\CreateUseCase;
-use App\Application\UseCases\Item\DeleteUseCase;
-use App\Application\UseCases\Item\ListUseCase;
-use App\Application\UseCases\Item\UpdateUseCase;
-use App\Infrastructure\Persistence\Item\PdoItemRepository;
-use App\Infrastructure\Database\Connection\DatabaseConnectionInterface;
-use App\Logging\LoggerInterface;
+namespace App\Kernel\Application;
 
 /**
  * UseCaseKernel

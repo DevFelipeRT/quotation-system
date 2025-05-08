@@ -2,13 +2,8 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Database\Execution;
+namespace App\Infrastructure\Database\Application\Execution;
 
-use App\Infrastructure\Database\Connection\DatabaseConnectionInterface;
-use App\Infrastructure\Database\Execution\DatabaseRequestInterface;
-use App\Infrastructure\Database\Execution\RequestBuilders\RequestBuilderInterface;
-use App\Infrastructure\Database\Execution\Resolvers\RequestBuilderResolverInterface;
-use App\Infrastructure\Database\Observers\RequestObserverInterface;
 use PDO;
 
 /**

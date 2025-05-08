@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Messaging\Domain;
+namespace App\Infrastructure\Messaging\Domain;
 
 /**
  * Contract for loggable messages that can specify a log channel.

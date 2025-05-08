@@ -2,12 +2,8 @@
 
 declare(strict_types=1);
 
-namespace App\Presentation\Http\Controllers\Item;
+namespace App\Domains\Item\Presentation\Http\Controllers;	
 
-use App\Application\UseCases\Item\DeleteUseCase;
-use App\Logging\Domain\LogEntry;
-use App\Logging\Domain\LogLevelEnum;
-use App\Logging\LoggerInterface;
 use Exception;
 use InvalidArgumentException;
 

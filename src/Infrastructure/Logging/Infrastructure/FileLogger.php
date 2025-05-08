@@ -1,11 +1,7 @@
 <?php
 
-namespace App\Logging\Infrastructure;
+namespace App\Infrastructure\Logging\Infrastructure;
 
-use App\Logging\LoggerInterface;
-use App\Logging\Domain\LogEntry;
-use App\Logging\Security\LogSanitizer;
-use App\Logging\Exceptions\LogWriteException;
 use DateTimeInterface;
 
 /**

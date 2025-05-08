@@ -2,13 +2,8 @@
 
 declare(strict_types=1);
 
-namespace App\Presentation\Http\Controllers\Item;
+namespace App\Domains\Item\Presentation\Http\Controllers;	
 
-use App\Application\UseCases\Item\ListUseCase;
-use App\Logging\LoggerInterface;
-use App\Presentation\Http\Controllers\AbstractController;
-use App\Presentation\Http\Renderers\HtmlViewRenderer;
-use App\Presentation\Http\Views\HtmlView;
 use Exception;
 
 /**

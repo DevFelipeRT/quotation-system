@@ -2,13 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Database\Execution\Observers;
-
-use App\Infrastructure\Database\Execution\Events\QueryExecutedEvent;
-use App\Infrastructure\Database\Execution\Events\QueryFailedEvent;
-use App\Logging\LoggerInterface;
-use App\Logging\Domain\LogEntry;
-use App\Logging\Domain\LogLevelEnum;
+namespace App\Infrastructure\Database\Infrastructure\Execution\Observers;
 
 /**
  * Observes SQL query events and logs them using the system logger.

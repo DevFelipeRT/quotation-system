@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Logging\Domain;
+namespace App\Infrastructure\Logging\Domain;
 
 use DateTimeImmutable;
 

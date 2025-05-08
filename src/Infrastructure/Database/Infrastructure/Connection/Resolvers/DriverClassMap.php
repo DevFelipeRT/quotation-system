@@ -4,11 +4,6 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Database\Connection\Resolvers;
 
-use App\Infrastructure\Database\Connection\DatabaseConnectionInterface;
-use App\Infrastructure\Database\Connection\Drivers\MySqlConnection;
-use App\Infrastructure\Database\Connection\Drivers\PostgreSqlConnection;
-use App\Infrastructure\Database\Connection\Drivers\SqliteConnection;
-
 /**
  * Provides the mapping between supported driver identifiers and their connection implementations.
  *

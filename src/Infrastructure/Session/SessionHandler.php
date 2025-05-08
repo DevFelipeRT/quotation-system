@@ -2,6 +2,8 @@
 
 namespace App\Infrastructure\Session;
 
+use App\Infrastructure\Session\ValueObjects\SessionData;
+
 /**
  * Native PHP session implementation of SessionInterface.
  */

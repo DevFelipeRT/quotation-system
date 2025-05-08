@@ -2,18 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Persistence\Item;
-
-use App\Domain\Entities\Item;
-use App\Domain\Repositories\ItemRepositoryInterface;
-use App\Infrastructure\Database\Connection\DatabaseConnectionInterface;
-use App\Infrastructure\Database\Exceptions\QueryExecutionException;
-use App\Logging\Domain\LogEntry;
-use App\Logging\Domain\LogLevelEnum;
-use App\Logging\LoggerInterface;
-use Config\Database\DatabaseSchemaConfig;
-use PDO;
-use PDOException;
+namespace App\Domains\Item\Infrastructure\Persistence;
 
 /**
  * PdoItemRepository

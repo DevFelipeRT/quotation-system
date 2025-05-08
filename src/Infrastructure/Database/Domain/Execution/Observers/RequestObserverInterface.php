@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Database\Execution\Observers;
+namespace App\Infrastructure\Database\Domain\Execution\Observers;
 
 /**
  * Defines a contract for observing database query execution events.

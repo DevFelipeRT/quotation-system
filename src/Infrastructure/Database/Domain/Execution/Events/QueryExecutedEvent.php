@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Database\Execution\Events;
+namespace App\Infrastructure\Database\Domain\Execution\Events;
 
 /**
  * Event dispatched after a successful SQL execution.

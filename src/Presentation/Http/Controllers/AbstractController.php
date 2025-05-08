@@ -1,17 +1,9 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Presentation\Http\Controllers;
 
-use App\Infrastructure\Http\UrlResolverInterface;
-use App\Infrastructure\Session\SessionHandlerInterface;
-use App\Logging\Application\LogEntryAssemblerInterface;
-use App\Logging\LoggerInterface;
-use App\Messaging\Application\Types\LoggableMessage;
-use App\Presentation\Http\Renderers\ViewRendererInterface;
-use App\Presentation\Http\Routing\Contracts\RouteRequestInterface;
-use App\Presentation\Http\Views\HtmlView;
-use App\Presentation\Http\Views\ViewInterface;
-use Config\Container\ConfigContainer;
 use Throwable;
 
 /**

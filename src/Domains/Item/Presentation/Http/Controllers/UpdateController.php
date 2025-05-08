@@ -2,10 +2,8 @@
 
 declare(strict_types=1);
 
-namespace App\Presentation\Http\Controllers\Item;
+namespace App\Domains\Item\Presentation\Http\Controllers;	
 
-use App\Application\UseCases\Item\UpdateUseCase;
-use App\Logging\LoggerInterface;
 use Exception;
 use InvalidArgumentException;
 

@@ -1,8 +1,6 @@
 <?php
 
-namespace App\Presentation\Http\Renderers;
-
-use App\Presentation\Http\Views\ViewInterface;
+namespace App\Infrastructure\Rendering\Infrastructure;
 
 /**
  * ViewRendererInterface

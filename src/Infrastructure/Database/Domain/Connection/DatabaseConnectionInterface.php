@@ -1,6 +1,8 @@
 <?php
 
-namespace App\Infrastructure\Database\Connection;
+declare(strict_types=1);
+
+namespace App\Infrastructure\Database\Domain\Connection;
 
 use PDO;
 

@@ -1,10 +1,7 @@
 <?php 
 
-namespace App\Presentation\Controllers;
+namespace App\Domains\Quotation\Presentation\Http\Controllers;
 
-use App\Core\Session;
-use App\Entities\Quotation;
-use App\Models\QuotationModel;
 use Exception;
 
 require_once __DIR__ . '/../../autoload.php';

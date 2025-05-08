@@ -2,15 +2,8 @@
 
 declare(strict_types=1);
 
-namespace App\Kernel\Database;
+namespace App\Kernel\Infrastructure\Database;
 
-use App\Infrastructure\Database\Connection\DatabaseConnectionInterface;
-use App\Infrastructure\Database\Execution\DatabaseRequestInterface;
-use App\Infrastructure\Database\Execution\RequestFactory;
-use App\Infrastructure\Database\Execution\Observers\QueryLoggerObserver;
-use App\Infrastructure\Database\Execution\Resolvers\RequestBuilderResolver;
-use App\Infrastructure\Database\Observers\RequestObserverInterface;
-use App\Logging\LoggerInterface;
 use Throwable;
 
 /**

@@ -1,6 +1,6 @@
 <?php 
 
-namespace App\Domain\Entities;
+namespace App\Domains\Item\Domain\Entities;
 
 use Exception;
 

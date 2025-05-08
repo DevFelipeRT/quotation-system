@@ -2,10 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Application\UseCases\Item;
-
-use App\Domain\Repositories\ItemRepositoryInterface;
-use InvalidArgumentException;
+namespace App\Domains\Item\Application\UseCases;
 
 /**
  * Class DeleteUseCase

@@ -2,11 +2,8 @@
 
 declare(strict_types=1);
 
-namespace App\Presentation\Http\Renderers;
+namespace App\Infrastructure\Rendering\Infrastructure;
 
-use App\Infrastructure\Http\AppUrlResolver;
-use App\Presentation\Http\Views\HtmlView;
-use App\Presentation\Http\Views\ViewInterface;
 use InvalidArgumentException;
 use RuntimeException;
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Exceptions\Application;
+namespace App\Infrastructure\Routing\Application\Exceptions;
 
 /**
  * Exception thrown when the application fails to resolve or dispatch a route.

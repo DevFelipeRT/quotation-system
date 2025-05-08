@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Exceptions\Application;
+namespace App\Shared\Exceptions;
 
 use Exception;
 use Throwable;

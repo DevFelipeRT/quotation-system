@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Logging\Security;
+namespace App\Infrastructure\Logging\Security;
 
 /**
  * Responsible for masking sensitive information in log context arrays

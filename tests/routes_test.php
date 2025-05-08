@@ -2,17 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Application\Routing\RoutePath;
-use App\Application\Routing\RoutingEngine;
-use App\Infrastructure\Routing\Dispatcher\DefaultRouteDispatcher;
-use App\Infrastructure\Routing\Matcher\DefaultRouteMatcher;
-use App\Infrastructure\Routing\Providers\StaticRouteProvider;
-use App\Infrastructure\Routing\Repository\InMemoryRouteRepository;
-use App\Infrastructure\Routing\Resolver\DefaultRouteResolver;
-use App\Presentation\Http\Routing\ControllerAction;
-use App\Presentation\Http\Routing\HttpMethod;
-use App\Presentation\Http\Routing\HttpRoute;
-use App\Presentation\Http\Routing\RouteRequest;
+
 
 require_once __DIR__ . '/../autoload.php';
 

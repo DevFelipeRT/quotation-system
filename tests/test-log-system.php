@@ -2,10 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Application\Messaging\LogMessage;
-use App\Infrastructure\Logging\FileLogger;
-use App\Infrastructure\Logging\LogAssembler;
-
 require_once __DIR__ . '/../autoload.php';
 
 // 1. Configurar o diretório onde os logs serão armazenados

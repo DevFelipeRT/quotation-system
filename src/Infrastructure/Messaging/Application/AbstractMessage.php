@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Messaging\Application;
+declare(strict_types=1);
 
-use App\Messaging\Domain\MessageInterface;
+namespace App\Infrastructure\Messaging\Application;
+
 use DateTimeImmutable;
 
 /**

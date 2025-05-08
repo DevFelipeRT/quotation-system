@@ -2,12 +2,8 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Database\Execution\Resolvers;
+namespace App\Infrastructure\Database\Infrastructure\Execution\Resolvers;
 
-use App\Infrastructure\Database\Connection\AbstractPdoConnection;
-use App\Infrastructure\Database\Connection\DatabaseConnectionInterface;
-use App\Infrastructure\Database\Execution\RequestBuilders\PdoRequestBuilder;
-use App\Infrastructure\Database\Execution\RequestBuilders\RequestBuilderInterface;
 use RuntimeException;
 
 /**

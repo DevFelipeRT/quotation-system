@@ -1,6 +1,8 @@
 <?php
 
-namespace App\Presentation\Http\Routing\Contracts;
+declare(strict_types=1);
+
+namespace App\Infrastructure\Routing\Presentation\Http\Routing\Contracts;
 
 /**
  * Interface RoutingEngineInterface

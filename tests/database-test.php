@@ -1,8 +1,6 @@
 <?php
 
-use App\Kernel\Database\DatabaseConnectionKernel;
-use App\Kernel\Database\DatabaseExecutionKernel;
-use App\Kernel\LoggingKernel;
+
 
 function printStatus(string $message, string $status = 'INFO'): void
 {

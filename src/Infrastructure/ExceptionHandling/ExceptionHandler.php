@@ -2,15 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Exceptions\Handlers;
-
-use App\Exceptions\ExceptionHandlerInterface;
-use App\Exceptions\Infrastructure\InfrastructureException;
-use App\Logging\Domain\LogEntry;
-use App\Logging\Domain\LogLevelEnum;
-use App\Logging\LoggerInterface;
-use App\Logging\Exceptions\LogWriteException;
-use Throwable;
+namespace App\Infrastructure\ExceptionHandling;
 
 /**
  * Default exception handler that logs critical application errors and determines

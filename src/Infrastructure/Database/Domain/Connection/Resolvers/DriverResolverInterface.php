@@ -2,10 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Database\Connection\Resolvers;
-
-use App\Infrastructure\Database\Connection\DatabaseConnectionInterface;
-use App\Infrastructure\Database\Exceptions\UnsupportedDriverException;
+namespace App\Infrastructure\Database\Domain\Connection\Resolvers;
 
 /**
  * Defines a contract for resolving the database connection class

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Presentation\Http\Views;
+namespace App\Infrastructure\Rendering\Application;
 
 /**
  * HtmlView

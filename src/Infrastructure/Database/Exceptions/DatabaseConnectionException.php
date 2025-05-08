@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Infrastructure\Database\Exceptions;
 
 use Throwable;
-use App\Exceptions\Infrastructure\InfrastructureException;
 
 /**
  * Represents a failure to establish a connection to the database.

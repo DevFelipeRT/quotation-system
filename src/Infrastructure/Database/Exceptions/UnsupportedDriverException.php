@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Database\Exceptions;
 
-use App\Exceptions\Infrastructure\InfrastructureException;
-
 /**
  * Exception thrown when a specified database driver is not supported by the system.
  *

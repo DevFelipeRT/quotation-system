@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Infrastructure\Session;
+namespace App\Infrastructure\Session\ValueObjects;
 
 /**
  * Value Object representing all user session data.

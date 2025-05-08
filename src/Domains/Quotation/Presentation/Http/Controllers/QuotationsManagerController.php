@@ -1,9 +1,6 @@
 <?php 
 
-namespace App\Presentation\Controllers;
-
-use App\Core\Session;
-use App\Traits\PostRequestProcessor;
+namespace App\Domains\Quotation\Presentation\Http\Controllers;
 
 require_once __DIR__ . '/../../autoload.php';
 require_once __DIR__ . '/../Config/config.php';
