@@ -4,6 +4,13 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Database\Infrastructure\Execution\Observers;
 
+use App\Infrastructure\Database\Domain\Execution\Events\QueryExecutedEvent;
+use App\Infrastructure\Database\Domain\Execution\Events\QueryFailedEvent;
+use App\Infrastructure\Database\Domain\Execution\Observers\RequestObserverInterface;
+use App\Infrastructure\Logging\Domain\LogEntry;
+use App\Infrastructure\Logging\Domain\LogLevelEnum;
+use App\Infrastructure\Logging\LoggerInterface;
+
 /**
  * Observes SQL query events and logs them using the system logger.
  *

@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Routing\Infrastructure\Matcher;
 
+use App\Infrastructure\Routing\Domain\Contracts\RouteMatcherInterface;
+use App\Infrastructure\Routing\Presentation\Http\Routing\Contracts\HttpRouteInterface;
+use App\Infrastructure\Routing\Presentation\Http\Routing\Contracts\RouteRequestInterface;
+
 /**
  * DefaultRouteMatcher
  *

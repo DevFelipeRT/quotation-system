@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 namespace App\Kernel\Infrastructure;
 
+use App\Infrastructure\Logging\Application\LogEntryAssembler;
+use App\Infrastructure\Logging\Application\LogEntryAssemblerInterface;
+use App\Infrastructure\Logging\Infrastructure\FileLogger;
+use App\Infrastructure\Logging\LoggerInterface;
+use Config\Container\ConfigContainer;
+
 /**
  * LoggingKernel
  *

@@ -2,6 +2,8 @@
 
 namespace App\Domains\Quotation\Domain\Entities;
 
+use App\Domains\Item\Domain\Entities\Item;
+use App\Shared\Traits\PriceCalcTrait;
 use Exception;
 
 class QuotationItem

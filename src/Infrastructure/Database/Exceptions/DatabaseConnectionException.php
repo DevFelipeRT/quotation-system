@@ -4,21 +4,25 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Database\Exceptions;
 
+use App\Shared\Exceptions\InfrastructureException;
 use Throwable;
 
 /**
- * Represents a failure to establish a connection to the database.
+ * Thrown when the system fails to establish a database connection.
  *
- * This exception is typically thrown when the configured database driver,
- * credentials, or network settings are invalid, or when the underlying
- * PDO driver encounters a connection error.
+ * Common causes include invalid credentials, unavailable network,
+ * unsupported drivers, or internal driver errors (e.g., PDO failures).
+ *
+ * This exception includes optional contextual metadata and supports exception chaining.
  */
 final class DatabaseConnectionException extends InfrastructureException
 {
     /**
+     * Initializes the exception for a database connection failure.
+     *
      * @param string         $message   A human-readable explanation of the error.
      * @param int            $code      Optional machine-readable error code.
-     * @param array          $context   Key-value data for diagnostic or logging purposes.
+     * @param array<string, mixed> $context   Key-value data for diagnostic or logging purposes.
      * @param Throwable|null $previous  The underlying cause of the failure, if available.
      */
     public function __construct(

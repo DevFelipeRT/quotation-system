@@ -4,6 +4,16 @@ declare(strict_types=1);
 
 namespace App\Kernel\Infrastructure;
 
+use App\Infrastructure\Http\AppUrlResolver;
+use App\Infrastructure\Http\UrlResolverInterface;
+use App\Infrastructure\Logging\Application\LogEntryAssemblerInterface;
+use App\Infrastructure\Logging\LoggerInterface;
+use App\Infrastructure\Messaging\Application\Types\LoggableMessage;
+use App\Infrastructure\Rendering\Infrastructure\HtmlViewRenderer;
+use App\Infrastructure\Rendering\Infrastructure\ViewRendererInterface;
+use App\Infrastructure\Session\SessionHandler;
+use App\Infrastructure\Session\SessionHandlerInterface;
+use Config\Container\ConfigContainer;
 use Throwable;
 
 /**
@@ -132,7 +142,6 @@ final class InfrastructureKernel
         $session = new SessionHandler();
 
         if (!$this->startSessionSafely($session)) {
-            $this->logSessionStartFailure();
             return null;
         }
 
@@ -151,6 +160,7 @@ final class InfrastructureKernel
             $session->start();
             return true;
         } catch (Throwable) {
+            $this->logSessionStartFailure();
             return false;
         }
     }

@@ -2,6 +2,7 @@
 
 namespace App\Infrastructure\Messaging\Application\Types;
 
+use App\Infrastructure\Messaging\Application\AbstractMessage;
 use DateTimeImmutable;
 
 /**

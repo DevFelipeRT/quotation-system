@@ -4,43 +4,29 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Database\Exceptions;
 
-use RuntimeException;
+use App\Shared\Exceptions\InfrastructureException;
 use Throwable;
 
 /**
  * Represents an error that occurred during SQL query execution.
  *
- * This exception includes contextual metadata to aid debugging
- * and supports exception chaining via previous exception.
+ * Includes contextual metadata (e.g., query string, bindings) to aid debugging
+ * and supports exception chaining.
  */
-final class QueryExecutionException extends RuntimeException
+final class QueryExecutionException extends InfrastructureException
 {
     /**
-     * @var array<string, mixed>
-     */
-    private array $context;
-
-    /**
-     * @param string $message A descriptive error message.
-     * @param array $context Contextual metadata (e.g., SQL and parameters).
-     * @param Throwable|null $previous Optional previous exception for chaining.
+     * @param string         $message   A descriptive error message.
+     * @param int            $code      Optional machine-readable error code.
+     * @param array          $context   Contextual metadata (e.g., SQL, parameters).
+     * @param Throwable|null $previous  Optional previous exception for chaining.
      */
     public function __construct(
-        string $message,
+        string $message = 'Failed to execute database query.',
+        int $code = 0,
         array $context = [],
         ?Throwable $previous = null
     ) {
-        parent::__construct($message, 0, $previous);
-        $this->context = $context;
-    }
-
-    /**
-     * Returns contextual information about the query failure.
-     *
-     * @return array<string, mixed>
-     */
-    public function context(): array
-    {
-        return $this->context;
+        parent::__construct($message, $code, $context, $previous);
     }
 }

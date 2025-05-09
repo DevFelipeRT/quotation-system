@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Routing\Infrastructure\Registration;
 
+use App\Infrastructure\Routing\Domain\Contracts\RouteRepositoryInterface;
+use App\Infrastructure\Routing\Presentation\Http\Routing\Contracts\HttpRouteInterface;
+
 /**
  * RouteRegistrar
  *

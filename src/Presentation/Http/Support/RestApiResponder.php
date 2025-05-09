@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Presentation\Http\Support;
 
+use App\Infrastructure\Logging\Application\LogEntryAssemblerInterface;
+use App\Infrastructure\Logging\LoggerInterface;
+use App\Infrastructure\Messaging\Application\Types\LoggableMessage;
 use Throwable;
 
 /**

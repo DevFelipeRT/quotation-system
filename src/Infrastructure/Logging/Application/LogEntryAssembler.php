@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Logging\Application;
 
+use App\Infrastructure\Logging\Domain\LogEntry;
+use App\Infrastructure\Logging\Domain\LogLevelEnum;
+use App\Infrastructure\Messaging\Domain\LoggableMessageInterface;
 use InvalidArgumentException;
 
 /**

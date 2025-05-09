@@ -2,6 +2,10 @@
 
 namespace App\Infrastructure\Logging\Infrastructure;
 
+use App\Infrastructure\Logging\Domain\LogEntry;
+use App\Infrastructure\Logging\Exceptions\LogWriteException;
+use App\Infrastructure\Logging\LoggerInterface;
+use App\Infrastructure\Logging\Security\LogSanitizer;
 use DateTimeInterface;
 
 /**

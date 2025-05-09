@@ -2,6 +2,8 @@
 
 namespace App\Infrastructure\Rendering\Infrastructure;
 
+use App\Infrastructure\Rendering\Domain\Contracts\ViewInterface;
+
 /**
  * ViewRendererInterface
  *

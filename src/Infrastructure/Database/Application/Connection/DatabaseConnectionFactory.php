@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Database\Application\Connection;
 
+use App\Infrastructure\Database\Domain\Connection\DatabaseConnectionInterface;
+use App\Infrastructure\Database\Domain\Connection\Observers\ConnectionObserverInterface;
+use App\Infrastructure\Database\Domain\Connection\Resolvers\DriverResolverInterface;
+use Config\Database\DatabaseConfig;
 use InvalidArgumentException;
 
 /**
@@ -15,22 +19,14 @@ use InvalidArgumentException;
  */
 final class DatabaseConnectionFactory
 {
-    /**
-     * @var DriverResolverInterface
-     */
-    private static ?DriverResolverInterface $resolver = null;
+    private DriverResolverInterface $resolver;
 
     /**
-     * Sets the resolver instance used to determine the connection class per driver.
-     *
-     * This must be called before invoking `make()`.
-     *
      * @param DriverResolverInterface $resolver
-     * @return void
      */
-    public static function useResolver(DriverResolverInterface $resolver): void
+    public function __construct(DriverResolverInterface $resolver)
     {
-        self::$resolver = $resolver;
+        $this->resolver = $resolver;
     }
 
     /**
@@ -40,21 +36,26 @@ final class DatabaseConnectionFactory
      * @param ConnectionObserverInterface[] $observers Optional list of lifecycle observers.
      * @return DatabaseConnectionInterface
      *
-     * @throws UnsupportedDriverException If the configured driver is not recognized.
-     * @throws InvalidArgumentException If any observer is invalid or resolver was not set.
+     * @throws InvalidArgumentException If any observer is invalid or resolved class is invalid.
      */
-    public static function make(
+    public function make(
         DatabaseConfig $config,
         array $observers = []
-    ): DatabaseConnectionInterface 
-    {
-        self::assertResolverIsSet();
-        self::assertValidObservers($observers);
+    ): DatabaseConnectionInterface {
+        $this->assertValidObservers($observers);
 
         $driver = $config->getDriver();
-        $class  = self::$resolver->resolve($driver);
+        $class  = $this->resolver->resolve($driver);
 
-        return new $class($config, $observers);
+        if (!is_subclass_of($class, DatabaseConnectionInterface::class)) {
+            throw new InvalidArgumentException(sprintf(
+                'Resolved class "%s" must implement DatabaseConnectionInterface.',
+                $class
+            ));
+        }
+
+        $instance = new $class($config, $observers);
+        return $instance;
     }
 
     /**
@@ -65,7 +66,7 @@ final class DatabaseConnectionFactory
      *
      * @throws InvalidArgumentException
      */
-    private static function assertValidObservers(array $observers): void
+    private function assertValidObservers(array $observers): void
     {
         foreach ($observers as $observer) {
             if (!$observer instanceof ConnectionObserverInterface) {
@@ -74,20 +75,6 @@ final class DatabaseConnectionFactory
                     is_object($observer) ? get_class($observer) : gettype($observer)
                 ));
             }
-        }
-    }
-
-    /**
-     * Ensures that a driver resolver has been set before use.
-     *
-     * @return void
-     *
-     * @throws InvalidArgumentException
-     */
-    private static function assertResolverIsSet(): void
-    {
-        if (self::$resolver === null) {
-            throw new InvalidArgumentException('No driver resolver has been configured for DatabaseConnectionFactory.');
         }
     }
 }

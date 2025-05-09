@@ -2,16 +2,20 @@
 
 namespace App\Domains\Quotation\Presentation\Http\Controllers;
 
+use App\Domains\Quotation\Domain\Entities\Quotation;
+use App\Infrastructure\Session\SessionHandler;
+use App\Models\QuotationModel;
+use App\Presentation\Http\Controllers\AbstractController;
 use Exception;
 
 require_once __DIR__ . '/../../autoload.php';
 require_once __DIR__ . '/../Config/config.php';
 
-class QuotationController extends Controller
+class QuotationController extends AbstractController
 {
     private QuotationModel $quotationModel;
 
-    public function __construct(?Session $session = null)
+    public function __construct(?SessionHandler $session = null)
     {
         $this->quotationModel = new QuotationModel;
         parent::__construct($this->quotationModel, $session);

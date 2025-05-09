@@ -2,6 +2,8 @@
 
 namespace App\Infrastructure\Messaging\Application\Types;
 
+use App\Infrastructure\Messaging\Application\AbstractMessage;
+use App\Infrastructure\Messaging\Domain\LoggableMessageInterface;
 use DateTimeImmutable;
 
 /**

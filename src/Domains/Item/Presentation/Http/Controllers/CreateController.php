@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Domains\Item\Presentation\Http\Controllers;	
+namespace App\Domains\Item\Presentation\Http\Controllers;
 
+use App\Domains\Item\Application\UseCases\CreateUseCase;
+use App\Infrastructure\Logging\LoggerInterface;
 use Exception;
 
 /**

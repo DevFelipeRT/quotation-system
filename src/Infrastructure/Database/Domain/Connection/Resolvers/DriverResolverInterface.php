@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Database\Domain\Connection\Resolvers;
 
+use App\Infrastructure\Database\Domain\Connection\DatabaseConnectionInterface;
+
 /**
  * Defines a contract for resolving the database connection class
  * based on a driver identifier (e.g. "mysql", "pgsql", "sqlite").

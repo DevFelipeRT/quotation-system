@@ -4,24 +4,30 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Database\Exceptions;
 
+use App\Shared\Exceptions\InfrastructureException;
+use Throwable;
+
 /**
- * Exception thrown when a specified database driver is not supported by the system.
+ * Exception thrown when a given database driver is not supported by the system.
  *
- * Typically used by connection factories to block attempts to instantiate
- * unsupported or misconfigured database strategies.
+ * This exception is typically used by connection factories to reject attempts
+ * to instantiate unsupported or unknown database implementations.
  */
 final class UnsupportedDriverException extends InfrastructureException
 {
     /**
-     * Constructs an exception for an invalid or unknown database driver.
+     * Initializes an exception for an invalid or unknown database driver.
      *
-     * @param string $driver The unsupported driver identifier.
+     * @param string         $driver   The unsupported driver identifier.
+     * @param Throwable|null $previous Optional root cause of the error.
      */
-    public function __construct(string $driver)
+    public function __construct(string $driver, ?Throwable $previous = null)
     {
         parent::__construct(
             message: "Unsupported database driver: {$driver}",
-            context: ['driver' => $driver]
+            code: 0,
+            context: ['driver' => $driver],
+            previous: $previous
         );
     }
 }

@@ -2,18 +2,20 @@
 
 namespace App\Domains\Quotation\Presentation\Http\Controllers;
 
+use App\Domains\Item\Presentation\Http\Controllers\Controller as ItemController;
+use App\Presentation\Http\Controllers\AbstractController;
+use SessionHandler;
+
 require_once __DIR__ . '/../../autoload.php';
 require_once __DIR__ . '/../Config/config.php';
 
-class QuotationsManagerController extends Controller 
+class QuotationsManagerController extends AbstractController
 {
-    use PostRequestProcessor;
-
     public QuotationController $quotationController;
     public ItemController $itemController;
     public QuotationItemController $quotationItemController;
 
-    public function __construct(Session $session)
+    public function __construct(SessionHandler $session)
     {
         $this->quotationController = new QuotationController($session);
         $this->itemController = new ItemController();

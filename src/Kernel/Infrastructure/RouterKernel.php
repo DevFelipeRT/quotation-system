@@ -4,6 +4,15 @@ declare(strict_types=1);
 
 namespace App\Kernel\Infrastructure;
 
+use App\Infrastructure\Routing\Infrastructure\Dispatcher\DefaultRouteDispatcher;
+use App\Infrastructure\Routing\Infrastructure\Matcher\DefaultRouteMatcher;
+use App\Infrastructure\Routing\Infrastructure\Providers\HomeRouteProvider;
+use App\Infrastructure\Routing\Infrastructure\Providers\ItemRouteProvider;
+use App\Infrastructure\Routing\Infrastructure\Registration\RouteRegistrar;
+use App\Infrastructure\Routing\Infrastructure\Repository\InMemoryRouteRepository;
+use App\Infrastructure\Routing\Infrastructure\Resolver\DefaultRouteResolver;
+use App\Infrastructure\Routing\Presentation\Http\Routing\RoutingEngine;
+
 /**
  * Class RouterKernel
  *

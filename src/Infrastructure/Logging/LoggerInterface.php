@@ -2,6 +2,8 @@
 
 namespace App\Infrastructure\Logging;
 
+use App\Infrastructure\Logging\Domain\LogEntry;
+
 /**
  * Defines a contract for structured logging mechanisms.
  * Implementations may persist or transmit log entries

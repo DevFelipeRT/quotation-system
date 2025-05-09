@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Database\Infrastructure\Execution;
 
+use App\Infrastructure\Database\Domain\Execution\DatabaseRequestInterface;
+use App\Infrastructure\Database\Domain\Execution\Events\QueryExecutedEvent;
+use App\Infrastructure\Database\Domain\Execution\Events\QueryFailedEvent;
+use App\Infrastructure\Database\Domain\Execution\Observers\RequestObserverInterface;
+use App\Infrastructure\Database\Exceptions\QueryExecutionException;
 use PDO;
 use PDOException;
 

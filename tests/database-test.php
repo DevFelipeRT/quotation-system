@@ -1,6 +1,8 @@
 <?php
 
-
+use App\Kernel\Infrastructure\Database\DatabaseConnectionKernel;
+use App\Kernel\Infrastructure\Database\DatabaseExecutionKernel;
+use App\Kernel\Infrastructure\LoggingKernel;
 
 function printStatus(string $message, string $status = 'INFO'): void
 {
@@ -29,7 +31,7 @@ try {
     $databaseConnectionKernel = new DatabaseConnectionKernel($databaseConfig, $logger, true);
     printStatus("DatabaseConnectionKernel initialized successfully.", 'OK');
 } catch (Throwable $e) {
-    printStatus("Error initializing DatabaseKernel: {$e->getMessage()}", 'FAIL');
+    printStatus("Error initializing DatabaseConnectionKernel: {$e->getMessage()}", 'FAIL');
     exit(1);
 }
 

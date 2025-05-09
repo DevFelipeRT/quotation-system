@@ -2,6 +2,9 @@
 
 namespace App\Infrastructure\Logging\Application;
 
+use App\Infrastructure\Logging\Domain\LogEntry;
+use App\Infrastructure\Messaging\Domain\LoggableMessageInterface;
+
 /**
  * Defines the contract for assembling LogEntry objects from loggable messages.
  */

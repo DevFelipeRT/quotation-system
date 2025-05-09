@@ -2,6 +2,7 @@
 
 namespace App\Domains\Quotation\Domain\Entities;
 
+use App\Shared\Traits\PriceCalcTrait;
 use DateTime;
 use Exception;
 

@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Database\Application\Execution;
 
+use App\Infrastructure\Database\Domain\Connection\DatabaseConnectionInterface;
+use App\Infrastructure\Database\Domain\Execution\DatabaseRequestInterface;
+use App\Infrastructure\Database\Domain\Execution\Resolvers\RequestBuilderResolverInterface;
 use PDO;
 
 /**

@@ -2,6 +2,8 @@
 
 namespace App\Infrastructure\Rendering\Application;
 
+use App\Infrastructure\Rendering\Domain\Contracts\ViewInterface;
+
 /**
  * HtmlView
  *

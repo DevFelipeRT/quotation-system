@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests;
 
+use Config\Container\ConfigContainer;
+use Throwable;
+
 try {
     require_once __DIR__ . '/../bootstrap.php';
 

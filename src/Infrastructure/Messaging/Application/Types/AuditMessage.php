@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Messaging\Application\Types;
 
+use App\Infrastructure\Messaging\Application\AbstractMessage;
 use DateTimeImmutable;
 
 /**

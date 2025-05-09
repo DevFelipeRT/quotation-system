@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domains\Item\Infrastructure\Persistence;
 
+use App\Domains\Item\Domain\Entities\Item;
+
 /**
  * Interface ItemRepositoryInterface
  *

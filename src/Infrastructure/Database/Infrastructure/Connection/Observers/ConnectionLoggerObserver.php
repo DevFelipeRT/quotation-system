@@ -4,6 +4,13 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Database\Infrastructure\Connection\Observers;
 
+use App\Infrastructure\Database\Domain\Connection\Events\ConnectionFailedEvent;
+use App\Infrastructure\Database\Domain\Connection\Events\ConnectionSucceededEvent;
+use App\Infrastructure\Database\Domain\Connection\Observers\ConnectionObserverInterface;
+use App\Infrastructure\Logging\Domain\LogEntry;
+use App\Infrastructure\Logging\Domain\LogLevelEnum;
+use App\Infrastructure\Logging\LoggerInterface;
+
 /**
  * Observes database connection events and logs them to the system logger.
  *

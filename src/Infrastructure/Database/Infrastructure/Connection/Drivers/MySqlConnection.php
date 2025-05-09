@@ -2,7 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Database\Connection\Drivers;
+namespace App\Infrastructure\Database\Infrastructure\Connection\Drivers;
+
+use App\Infrastructure\Database\Infrastructure\Connection\AbstractPdoConnection;
+use Config\Database\DatabaseConfig;
 
 /**
  * Provides a MySQL-specific implementation of the PDO database connection.

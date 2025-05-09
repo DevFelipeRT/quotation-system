@@ -2,13 +2,18 @@
 
 namespace App\Domains\Quotation\Presentation\Http\Controllers;
 
+use App\Domains\Quotation\Domain\Entities\Quotation;
+use App\Domains\Quotation\Domain\Entities\QuotationItem;
+use App\Models\ItemModel;
+use App\Models\QuotationItemModel;
+use App\Presentation\Http\Controllers\AbstractController;
 use Exception;
 
 require_once __DIR__ . '/../../autoload.php';
 require_once __DIR__ . '/../Config/config.php';
 
 
-class QuotationItemController extends Controller
+class QuotationItemController extends AbstractController
 {
     private QuotationItemModel $quotationItemModel;
     private ItemModel $itemModel;

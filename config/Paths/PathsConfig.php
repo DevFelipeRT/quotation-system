@@ -14,9 +14,9 @@ final class PathsConfig
 {
     private string $envFile;
     private string $logsDir;
+    private string $templatesDir;
     private string $viewsDir;
     private string $indexFile;
-    private string $manageItemsFile;
     private string $appDirectory;
 
     /**
@@ -31,9 +31,9 @@ final class PathsConfig
 
         $this->envFile         = $base . '/.env';
         $this->logsDir         = $base . '/storage/logs';
-        $this->viewsDir        = $base . '/src/Presentation/Http/Templates';
+        $this->templatesDir    = $base . '/src/Infrastructure/Rendering/Presentation/Templates';
+        $this->viewsDir        = $base . '/src/Presentation/Http/Views';
         $this->indexFile       = $base . '/public/index.php';
-        $this->manageItemsFile = $base . '/public/manage_items.php';
 
         $this->appDirectory = str_replace('/public', '', dirname($_SERVER['SCRIPT_NAME'] ?? ''));
     }
@@ -51,6 +51,12 @@ final class PathsConfig
     }
 
     /** @return string */
+    public function getTemplatesPath(): string
+    {
+        return $this->templatesDir;
+    }
+
+    /** @return string */
     public function getViewsDirPath(): string
     {
         return $this->viewsDir;
@@ -60,12 +66,6 @@ final class PathsConfig
     public function getIndexFilePath(): string
     {
         return $this->indexFile;
-    }
-
-    /** @return string */
-    public function getManageItemsFilePath(): string
-    {
-        return $this->manageItemsFile;
     }
 
     /** @return string */

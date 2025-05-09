@@ -4,6 +4,19 @@ declare(strict_types=1);
 
 namespace App\Kernel;
 
+use App\Infrastructure\Database\Domain\Connection\DatabaseConnectionInterface;
+use App\Infrastructure\Logging\Application\LogEntryAssemblerInterface;
+use App\Infrastructure\Logging\LoggerInterface;
+use App\Kernel\Application\UseCaseKernel;
+use App\Kernel\Infrastructure\Database\DatabaseConnectionKernel;
+use App\Kernel\Infrastructure\Database\DatabaseExecutionKernel;
+use App\Kernel\Infrastructure\InfrastructureKernel;
+use App\Kernel\Infrastructure\LoggingKernel;
+use App\Kernel\Infrastructure\RouterKernel;
+use App\Kernel\Presentation\ControllerKernel;
+use Config\Container\ConfigContainer;
+use Config\Database\DatabaseSchemaConfig;
+
 /**
  * KernelManager
  *
@@ -12,37 +25,75 @@ namespace App\Kernel;
  */
 final class KernelManager
 {
+    private ConfigContainer $configContainer;
+    private LoggingKernel $loggingKernel;
     private InfrastructureKernel $infrastructureKernel;
-    private DatabaseKernel $databaseKernel;
+    private DatabaseConnectionKernel $databaseConnectionKernel;
+    private DatabaseExecutionKernel $databaseExecutionKernel;
     private UseCaseKernel $useCaseKernel;
     private ControllerKernel $controllerKernel;
     private RouterKernel $routerKernel;
+    private LoggerInterface $logger;
+    private LogEntryAssemblerInterface $logEntryAssembler;
+    private DatabaseConnectionInterface $connection;
 
     /**
-     * Initializes and wires all kernels based on the application configuration.
+     * 
      *
      * @param ConfigContainer $config Fully initialized configuration container.
      */
-    public function __construct(ConfigContainer $config)
+    public function __construct(ConfigContainer $configContainer)
     {
-        // Step 1: Core infrastructure
-        $this->infrastructureKernel = new InfrastructureKernel($config);
+        $this->configContainer = $configContainer;
+    }
 
-        // Step 2: Database connection
-        $this->databaseKernel = new DatabaseKernel(
-            $config->getDatabaseConfig(),
-            $this->infrastructureKernel->getLogger()
-        );
+    /**
+     * Initializes and wires all kernels based on the application configuration.
+     */
+    public function boot(): void
+    {
+        $this->initializeLogging();
+        $this->initializeInfrastructure();
+        $this->initializeDatabaseConnection();
+        $this->initializeDatabaseExecution();
+        $this->initializeUseCase();
+        $this->initializeControllers();
+        $this->initializeRouter();
+    }
 
-        // Step 3: Use cases wired with repository
-        $this->useCaseKernel = new UseCaseKernel(
-            $this->databaseKernel->getConnection(),
-            $this->infrastructureKernel->getLogger()
-        );
+    private function initializeLogging(): void
+    {
+        $this->loggingKernel = new LoggingKernel($this->configContainer);
+        $this->logger = $this->loggingKernel->getLogger();
+        $this->logEntryAssembler = $this->loggingKernel->getLogEntryAssembler();
+    }
 
-        // Step 4: Controllers wired with services and use cases
+    private function initializeInfrastructure(): void
+    {
+        $this->infrastructureKernel = new InfrastructureKernel($this->configContainer, $this->loggingKernel);
+    }
+
+    private function initializeDatabaseConnection(): void
+    {
+        $databaseConfig = $this->configContainer->getDatabaseConfig();
+        $this->databaseConnectionKernel = new DatabaseConnectionKernel($databaseConfig, $this->logger);
+        $this->connection = $this->databaseConnectionKernel()->getConnection();
+    }
+
+    private function initializeDatabaseExecution(): void
+    {
+        $this->databaseExecutionKernel = new DatabaseExecutionKernel($this->connection, $this->logger);
+    }
+
+    private function initializeUseCase(): void
+    {
+        $this->useCaseKernel = new UseCaseKernel($this->connection, $this->logger);
+    }
+
+    private function initializeControllers(): void
+    {
         $this->controllerKernel = new ControllerKernel(
-            $config,
+            $this->configContainer,
             $this->infrastructureKernel->getSessionHandler(),
             $this->infrastructureKernel->getViewRenderer(),
             $this->infrastructureKernel->getUrlResolver(),
@@ -53,32 +104,34 @@ final class KernelManager
             $this->useCaseKernel->update(),
             $this->useCaseKernel->delete()
         );
+    }
 
-        // Step 5: RouterKernel uses controller map
+    private function initializeRouter(): void
+    {
         $this->routerKernel = new RouterKernel($this->controllerKernel->map());
     }
 
-    public function infrastructure(): InfrastructureKernel
+    public function infrastructureKernel(): InfrastructureKernel
     {
         return $this->infrastructureKernel;
     }
 
-    public function database(): DatabaseKernel
+    public function databaseConnectionKernel(): DatabaseConnectionKernel
     {
-        return $this->databaseKernel;
+        return $this->databaseConnectionKernel;
     }
 
-    public function useCase(): UseCaseKernel
+    public function useCaseKernel(): UseCaseKernel
     {
         return $this->useCaseKernel;
     }
 
-    public function controller(): ControllerKernel
+    public function controllerKernel(): ControllerKernel
     {
         return $this->controllerKernel;
     }
 
-    public function router(): RouterKernel
+    public function routerKernel(): RouterKernel
     {
         return $this->routerKernel;
     }

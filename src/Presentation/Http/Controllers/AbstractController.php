@@ -4,6 +4,16 @@ declare(strict_types=1);
 
 namespace App\Presentation\Http\Controllers;
 
+use App\Infrastructure\Http\UrlResolverInterface;
+use App\Infrastructure\Logging\Application\LogEntryAssemblerInterface;
+use App\Infrastructure\Logging\LoggerInterface;
+use App\Infrastructure\Messaging\Application\Types\LoggableMessage;
+use App\Infrastructure\Rendering\Application\HtmlView;
+use App\Infrastructure\Rendering\Domain\Contracts\ViewInterface;
+use App\Infrastructure\Rendering\Infrastructure\ViewRendererInterface;
+use App\Infrastructure\Routing\Presentation\Http\Routing\Contracts\RouteRequestInterface;
+use App\Infrastructure\Session\SessionHandlerInterface;
+use Config\Container\ConfigContainer;
 use Throwable;
 
 /**

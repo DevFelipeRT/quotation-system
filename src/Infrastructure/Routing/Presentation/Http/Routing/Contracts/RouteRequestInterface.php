@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Routing\Presentation\Http\Routing\Contracts;
 
+use App\Infrastructure\Routing\Application\Services\RoutePath;
+use App\Infrastructure\Routing\Presentation\Http\Routing\HttpMethod;
+
 /**
  * Interface RouteRequestInterface
  *

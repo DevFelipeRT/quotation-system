@@ -4,6 +4,16 @@ declare(strict_types=1);
 
 namespace App\Domains\Item\Infrastructure\Persistence;
 
+use App\Domains\Item\Domain\Entities\Item;
+use App\Infrastructure\Database\Domain\Connection\DatabaseConnectionInterface;
+use App\Infrastructure\Database\Exceptions\QueryExecutionException;
+use App\Infrastructure\Logging\Domain\LogEntry;
+use App\Infrastructure\Logging\Domain\LogLevelEnum;
+use App\Infrastructure\Logging\LoggerInterface;
+use Config\Database\DatabaseSchemaConfig;
+use PDO;
+use PDOException;
+
 /**
  * PdoItemRepository
  *

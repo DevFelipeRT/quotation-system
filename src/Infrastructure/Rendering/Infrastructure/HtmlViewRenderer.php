@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Rendering\Infrastructure;
 
+use App\Infrastructure\Http\AppUrlResolver;
+use App\Infrastructure\Rendering\Application\HtmlView;
+use App\Infrastructure\Rendering\Domain\Contracts\ViewInterface;
 use InvalidArgumentException;
 use RuntimeException;
 

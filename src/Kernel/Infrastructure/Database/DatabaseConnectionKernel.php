@@ -4,6 +4,18 @@ declare(strict_types=1);
 
 namespace App\Kernel\Infrastructure\Database;
 
+use App\Infrastructure\Database\Application\Connection\DatabaseConnectionFactory;
+
+use App\Infrastructure\Database\Infrastructure\Connection\Resolvers\DefaultDriverResolver;
+
+use App\Infrastructure\Database\Domain\Connection\DatabaseConnectionInterface;
+use App\Infrastructure\Database\Domain\Connection\Resolvers\DriverResolverInterface;
+use App\Infrastructure\Database\Exceptions\DatabaseConnectionException;
+use App\Infrastructure\Database\Infrastructure\Connection\Observers\ConnectionLoggerObserver;
+use App\Infrastructure\Logging\Domain\LogEntry;
+use App\Infrastructure\Logging\Domain\LogLevelEnum;
+use App\Infrastructure\Logging\LoggerInterface;
+use Config\Database\DatabaseConfig;
 use Throwable;
 
 /**
@@ -22,6 +34,7 @@ use Throwable;
  */
 final class DatabaseConnectionKernel
 {
+    private readonly DatabaseConnectionFactory $factory;
     private readonly DatabaseConnectionInterface $connection;
     private readonly DriverResolverInterface $resolver;
     private readonly DatabaseConfig $config;
@@ -44,8 +57,7 @@ final class DatabaseConnectionKernel
         $this->logger = $logger;
         $this->observers = [new ConnectionLoggerObserver($this->logger)];
         $this->resolver = new DefaultDriverResolver();
-
-        $this->registerResolver();
+        $this->factory = new DatabaseConnectionFactory($this->resolver);
 
         $this->connection = $debugMode
             ? $this->initializeSafelyDebug()
@@ -63,16 +75,6 @@ final class DatabaseConnectionKernel
     }
 
     /**
-     * Registers the selected driver resolver within the factory.
-     *
-     * @return void
-     */
-    private function registerResolver(): void
-    {
-        DatabaseConnectionFactory::useResolver($this->resolver);
-    }
-
-    /**
      * Attempts to establish the connection and capture any failures.
      *
      * @return DatabaseConnectionInterface
@@ -83,6 +85,13 @@ final class DatabaseConnectionKernel
         try {
             return $this->bootConnection();
         } catch (Throwable $e) {
+            $this->logger->log(new LogEntry(
+                level: LogLevelEnum::ERROR,
+                message: 'Erro ao inicializar conexão com o banco de dados.',
+                context: ['erro' => $e->getMessage()],
+                channel: 'infrastructure.database'
+            ));
+
             throw new DatabaseConnectionException(
                 'Kernel failed to initialize database connection.',
                 0,
@@ -93,36 +102,53 @@ final class DatabaseConnectionKernel
     }
 
     /**
-     * Constructs and connects the database interface.
+     * Initializes the database connection.
      *
      * @return DatabaseConnectionInterface
      */
     private function bootConnection(): DatabaseConnectionInterface
     {
-        $connection = DatabaseConnectionFactory::make($this->config, $this->observers);
+        $connection = $this->createConnection();
         $connection->connect();
         return $connection;
     }
 
     /**
-     * Debug-safe connection initializer with terminal output.
+     * Creates the database connection instance from the factory.
      *
      * @return DatabaseConnectionInterface
-     * @throws DatabaseConnectionException
      */
-    private function initializeSafelyDebug(): DatabaseConnectionInterface
+    private function createConnection(): DatabaseConnectionInterface
     {
-        try {
-            return $this->bootConnectionDebug();
-        } catch (Throwable $e) {
-            throw new DatabaseConnectionException(
-                'Kernel failed to initialize database connection.',
-                0,
-                [],
-                $e
-            );
-        }
+        return $this->factory->make($this->config, $this->observers);
     }
+
+    /**
+ * Debug-safe connection initializer with terminal output and structured logging.
+ *
+ * @return DatabaseConnectionInterface
+ * @throws DatabaseConnectionException
+ */
+private function initializeSafelyDebug(): DatabaseConnectionInterface
+{
+    try {
+        return $this->bootConnectionDebug();
+    } catch (Throwable $e) {
+        $this->logger->log(new LogEntry(
+            level: LogLevelEnum::ERROR,
+            message: 'Erro ao inicializar conexão com o banco de dados (modo debug).',
+            context: ['erro' => $e->getMessage()],
+            channel: 'infrastructure.database'
+        ));
+
+        throw new DatabaseConnectionException(
+            'Kernel failed to initialize database connection (debug mode).',
+            0,
+            [],
+            $e
+        );
+    }
+}
 
     /**
      * Verbosely builds and connects to the database, logging to the terminal.
@@ -133,14 +159,23 @@ final class DatabaseConnectionKernel
     private function bootConnectionDebug(): DatabaseConnectionInterface
     {
         echo "Initializing database connection..." . PHP_EOL;
+
         try {
             echo "Creating database connection instance..." . PHP_EOL;
-            $connection = DatabaseConnectionFactory::make($this->config, $this->observers);
+            $connection = $this->createConnection();
             echo "Database connection instance created." . PHP_EOL;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             echo "Error creating database connection instance: " . $e->getMessage() . PHP_EOL;
+
+            $this->logger->log(new LogEntry(
+                level: LogLevelEnum::ERROR,
+                message: 'Erro ao instanciar conexão com o banco de dados.',
+                context: ['erro' => $e->getMessage()],
+                channel: 'infrastructure.database'
+            ));
+
             throw new DatabaseConnectionException(
-                'Kernel failed to initialize database connection.',
+                'Kernel failed to initialize database connection (debug mode).',
                 0,
                 [],
                 $e
@@ -151,10 +186,18 @@ final class DatabaseConnectionKernel
             echo "Connecting to database..." . PHP_EOL;
             $connection->connect();
             echo "Database connection established." . PHP_EOL;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             echo "Error connecting to database: " . $e->getMessage() . PHP_EOL;
+
+            $this->logger->log(new LogEntry(
+                level: LogLevelEnum::ERROR,
+                message: 'Erro ao conectar ao banco de dados.',
+                context: ['erro' => $e->getMessage()],
+                channel: 'infrastructure.database'
+            ));
+
             throw new DatabaseConnectionException(
-                'Kernel failed to initialize database connection.',
+                'Kernel failed to initialize database connection (debug mode).',
                 0,
                 [],
                 $e
@@ -163,4 +206,5 @@ final class DatabaseConnectionKernel
 
         return $connection;
     }
+
 }

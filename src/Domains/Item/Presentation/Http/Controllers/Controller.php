@@ -2,8 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Domains\Item\Presentation\Http\Controllers;	
+namespace App\Domains\Item\Presentation\Http\Controllers;
 
+use App\Domains\Item\Application\UseCases\ListUseCase;
+use App\Infrastructure\Logging\Domain\LogEntry;
+use App\Infrastructure\Logging\Domain\LogLevelEnum;
+use App\Infrastructure\Logging\LoggerInterface;
+use App\Infrastructure\Rendering\Application\HtmlView;
+use App\Infrastructure\Rendering\Infrastructure\HtmlViewRenderer;
+use App\Presentation\Http\Controllers\AbstractController;
 use Exception;
 
 /**
@@ -16,6 +23,7 @@ final class Controller extends AbstractController
 {
     private ListUseCase $listItemsUseCase;
     private HtmlViewRenderer $viewRenderer;
+    private LoggerInterface $logger;
 
     /**
      * Controller constructor.
@@ -32,6 +40,7 @@ final class Controller extends AbstractController
         parent::__construct($logger);
         $this->listItemsUseCase = $listItemsUseCase;
         $this->viewRenderer = $viewRenderer;
+        $this->logger = $logger;
     }
 
     /**
@@ -48,23 +57,26 @@ final class Controller extends AbstractController
                 template: 'items_manager.php',
                 data: [
                     'headerTitle' => 'Gerenciar Itens',
-                    'fileName'   => 'items_manager',
+                    'fileName'    => 'items_manager',
                     'items'       => $items,
                 ]
             );
 
             echo $this->viewRenderer->render($view);
 
-            $this->logInfo(
+            $this->logger->log(new LogEntry(
+                level: LogLevelEnum::INFO,
                 message: 'Interface de gerenciamento de itens exibida com sucesso.',
+                context: [],
                 channel: 'presentation.item'
-            );
+            ));
         } catch (Exception $e) {
-            $this->logError(
+            $this->logger->log(new LogEntry(
+                level: LogLevelEnum::ERROR,
                 message: 'Falha ao exibir a interface de gerenciamento de itens.',
                 context: ['erro' => $e->getMessage()],
                 channel: 'presentation.item'
-            );
+            ));
 
             $this->respondWithError('Erro interno ao carregar a interface de itens.', 500);
         }

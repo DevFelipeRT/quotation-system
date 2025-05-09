@@ -2,7 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Database\Connection;
+namespace App\Infrastructure\Database\Infrastructure\Connection;
+
+use App\Infrastructure\Database\Domain\Connection\DatabaseConnectionInterface;
+use App\Infrastructure\Database\Domain\Connection\Events\ConnectionFailedEvent;
+use App\Infrastructure\Database\Domain\Connection\Events\ConnectionSucceededEvent;
+use App\Infrastructure\Database\Domain\Connection\Observers\ConnectionObserverInterface;
+use App\Infrastructure\Database\Exceptions\DatabaseConnectionException;
+use PDO;
+use PDOException;
 
 /**
  * Base abstract class for specialized PDO-based database connections.

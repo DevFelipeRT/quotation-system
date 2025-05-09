@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domains\Item\Application\UseCases;
 
+use App\Domains\Item\Infrastructure\Persistence\ItemRepositoryInterface;
+
 /**
  * Class ListUseCase
  *

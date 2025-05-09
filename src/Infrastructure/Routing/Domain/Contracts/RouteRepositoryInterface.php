@@ -2,6 +2,8 @@
 
 namespace App\Infrastructure\Routing\Domain\Contracts;
 
+use App\Infrastructure\Routing\Presentation\Http\Routing\Contracts\HttpRouteInterface;
+
 /**
  * Interface RouteRepositoryInterface
  *

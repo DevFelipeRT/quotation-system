@@ -4,6 +4,13 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\ExceptionHandling;
 
+use App\Infrastructure\Logging\Domain\LogEntry;
+use App\Infrastructure\Logging\Domain\LogLevelEnum;
+use App\Infrastructure\Logging\Exceptions\LogWriteException;
+use App\Infrastructure\Logging\LoggerInterface;
+use App\Shared\Exceptions\InfrastructureException;
+use Throwable;
+
 /**
  * Default exception handler that logs critical application errors and determines
  * the user-facing response based on the environment.
