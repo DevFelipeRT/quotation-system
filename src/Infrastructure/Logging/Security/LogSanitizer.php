@@ -1,42 +1,52 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Infrastructure\Logging\Security;
 
 /**
- * Responsible for masking sensitive information in log context arrays
- * to prevent credential leaks and ensure secure observability.
+ * Responsible for masking sensitive information in log contexts
+ * to prevent leaks of credentials or private data.
  */
 final class LogSanitizer
 {
     /**
-     * Keys that are considered sensitive and must be masked in logs.
+     * @var string[] List of keys considered sensitive.
      */
-    private const SENSITIVE_KEYS = [
-        'password',
-        'senha',
-        'token',
-        'api_key',
-        'secret',
-        'authorization',
-        'cpf',
-        'credit_card',
-    ];
+    private array $sensitiveKeys;
 
     /**
-     * Recursively sanitizes sensitive keys in a given array.
-     *
-     * @param array $context Arbitrary associative array for logging.
-     * @return array Sanitized array with redacted sensitive values.
+     * @param string[]|null $customSensitiveKeys Override default key list if provided
      */
-    public static function sanitize(array $context): array
+    public function __construct(?array $customSensitiveKeys = null)
+    {
+        $this->sensitiveKeys = $customSensitiveKeys ?? [
+            'password',
+            'senha',
+            'token',
+            'api_key',
+            'secret',
+            'authorization',
+            'cpf',
+            'credit_card',
+        ];
+    }
+
+    /**
+     * Sanitizes sensitive keys from the provided context.
+     *
+     * @param array<string, mixed> $context
+     * @return array<string, mixed>
+     */
+    public function sanitize(array $context): array
     {
         $sanitized = [];
 
         foreach ($context as $key => $value) {
-            if (self::isSensitiveKey($key)) {
+            if ($this->isSensitiveKey($key)) {
                 $sanitized[$key] = '[REDACTED]';
             } elseif (is_array($value)) {
-                $sanitized[$key] = self::sanitize($value);
+                $sanitized[$key] = $this->sanitize($value);
             } else {
                 $sanitized[$key] = $value;
             }
@@ -46,24 +56,24 @@ final class LogSanitizer
     }
 
     /**
-     * Alias for sanitize(), used for clarity in database logging contexts.
+     * Sanitizes SQL parameter bindings.
      *
-     * @param array $params SQL parameter bindings.
-     * @return array
+     * @param array<string, mixed> $params
+     * @return array<string, mixed>
      */
-    public static function sanitizeSqlParams(array $params): array
+    public function sanitizeSqlParams(array $params): array
     {
-        return self::sanitize($params);
+        return $this->sanitize($params);
     }
 
     /**
-     * Determines whether the given key should be treated as sensitive.
+     * Determines whether a key should be redacted.
      *
      * @param string $key
      * @return bool
      */
-    private static function isSensitiveKey(string $key): bool
+    private function isSensitiveKey(string $key): bool
     {
-        return in_array(strtolower($key), self::SENSITIVE_KEYS, true);
+        return in_array(strtolower($key), $this->sensitiveKeys, true);
     }
 }

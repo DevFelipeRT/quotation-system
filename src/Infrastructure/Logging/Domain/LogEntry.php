@@ -3,6 +3,7 @@
 namespace App\Infrastructure\Logging\Domain;
 
 use DateTimeImmutable;
+use InvalidArgumentException;
 
 /**
  * Represents a structured, immutable log entry.
@@ -33,6 +34,9 @@ final class LogEntry
         ?string $channel = null,
         ?DateTimeImmutable $timestamp = null
     ) {
+        if (trim($message) === '') {
+            throw new InvalidArgumentException('Log message cannot be empty.');
+        }
         $this->level     = $level;
         $this->message   = $message;
         $this->context   = $context;

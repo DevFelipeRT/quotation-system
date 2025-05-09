@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Infrastructure\Logging;
+namespace App\Infrastructure\Logging\Infrastructure\Contracts;
 
 use App\Infrastructure\Logging\Domain\LogEntry;
 

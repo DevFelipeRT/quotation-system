@@ -6,49 +6,51 @@ namespace App\Infrastructure\Logging\Application;
 
 use App\Infrastructure\Logging\Domain\LogEntry;
 use App\Infrastructure\Logging\Domain\LogLevelEnum;
-use App\Infrastructure\Messaging\Domain\LoggableMessageInterface;
-use InvalidArgumentException;
+use App\Infrastructure\Logging\Exceptions\InvalidLogLevelException;
+use App\Infrastructure\Logging\Security\LogSanitizer;
 
 /**
- * Concrete implementation of LogEntryAssemblerInterface.
+ * Converts loggable inputs into structured LogEntry objects.
  *
- * Converts loggable messages into structured LogEntry objects
- * for persistence or monitoring purposes.
+ * Applies security sanitization to context data and ensures level mapping.
  */
 final class LogEntryAssembler implements LogEntryAssemblerInterface
 {
-    /**
-     * @inheritdoc
-     */
-    public function assembleFromMessage(LoggableMessageInterface $message): LogEntry
+    public function __construct(
+        private readonly LogSanitizer $sanitizer
+    ) {}
+
+    public function assembleFromMessage(LoggableInputInterface $message): LogEntry
     {
         $level = $this->resolveLevelFromCode($message->getCode());
+        $sanitizedContext = $this->sanitizer->sanitize($message->getContext());
 
         return new LogEntry(
             level: $level,
             message: $message->getMessage(),
-            context: $message->getContext(),
+            context: $sanitizedContext,
             channel: $message->getChannel(),
             timestamp: $message->getTimestamp()
         );
     }
 
     /**
-     * Resolves the appropriate log level from a code string.
+     * Resolves a log level from an optional string code.
      *
      * @param string|null $code
      * @return LogLevelEnum
+     *
+     * @throws InvalidLogLevelException If the code is not recognized
      */
     private function resolveLevelFromCode(?string $code): LogLevelEnum
     {
         return match (strtolower($code ?? 'info')) {
             'debug'     => LogLevelEnum::DEBUG,
             'info'      => LogLevelEnum::INFO,
-            'warn',
-            'warning'   => LogLevelEnum::WARNING,
+            'warn', 'warning' => LogLevelEnum::WARNING,
             'error'     => LogLevelEnum::ERROR,
             'critical'  => LogLevelEnum::CRITICAL,
-            default     => throw new InvalidArgumentException("Invalid log level code: {$code}"),
+            default     => throw new InvalidLogLevelException("Invalid log level code: {$code}"),
         };
     }
 }

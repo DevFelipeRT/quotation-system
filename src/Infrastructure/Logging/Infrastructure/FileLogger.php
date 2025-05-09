@@ -4,22 +4,30 @@ namespace App\Infrastructure\Logging\Infrastructure;
 
 use App\Infrastructure\Logging\Domain\LogEntry;
 use App\Infrastructure\Logging\Exceptions\LogWriteException;
-use App\Infrastructure\Logging\LoggerInterface;
-use App\Infrastructure\Logging\Security\LogSanitizer;
+use App\Infrastructure\Logging\Infrastructure\Contracts\LoggerInterface;
 use DateTimeInterface;
 
 /**
- * Logs structured entries to local files.
+ * FileLogger writes structured log entries to flat files in the local filesystem.
  *
- * Ensures secure logging with sanitized context, proper formatting,
- * and resilient fallback behavior on file write failure.
+ * This implementation assumes the LogEntry has already been validated and sanitized.
+ * Each log entry is persisted to a file based on its logical channel or log level.
+ *
+ * Typical usage includes simple production environments, container logs,
+ * or fallback when no external logging service is available.
+ *
+ * Errors during write operations are logged to PHP's error_log and
+ * trigger a LogWriteException to support higher-layer resilience.
  */
 final class FileLogger implements LoggerInterface
 {
+    /**
+     * @var string Base directory path for log files.
+     */
     private string $basePath;
 
     /**
-     * @param string $basePath Directory where log files will be stored.
+     * @param string $basePath Absolute or relative path where log files will be written.
      */
     public function __construct(string $basePath)
     {
@@ -27,10 +35,11 @@ final class FileLogger implements LoggerInterface
     }
 
     /**
-     * Logs a structured log entry to a file, with secure context handling and fallback.
+     * Logs a structured entry to the appropriate file.
      *
-     * @param LogEntry $entry The entry to log.
-     * @throws LogWriteException If file write fails.
+     * @param LogEntry $entry Fully constructed and sanitized log entry.
+     *
+     * @throws LogWriteException If writing to disk fails.
      */
     public function log(LogEntry $entry): void
     {
@@ -40,7 +49,10 @@ final class FileLogger implements LoggerInterface
     }
 
     /**
-     * Determines the log file path based on channel or log level.
+     * Determines the target file based on channel or log level.
+     *
+     * @param LogEntry $entry
+     * @return string Full path to the log file.
      */
     private function resolveFilePath(LogEntry $entry): string
     {
@@ -51,12 +63,15 @@ final class FileLogger implements LoggerInterface
     }
 
     /**
-     * Formats the log message line with timestamp and sanitized context.
+     * Converts the log entry into a human-readable log line.
+     *
+     * @param LogEntry $entry
+     * @return string
      */
     private function formatLogLine(LogEntry $entry): string
     {
         $timestamp = $entry->getTimestamp()->format(DateTimeInterface::ATOM);
-        $context = LogSanitizer::sanitize($entry->getContext());
+        $context = $entry->getContext();
 
         $contextStr = !empty($context)
             ? ' | context: ' . json_encode($context, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
@@ -66,9 +81,12 @@ final class FileLogger implements LoggerInterface
     }
 
     /**
-     * Attempts to persist the log line to the file system.
+     * Attempts to write the log line to disk.
      *
-     * If it fails, it triggers error_log as a fallback and throws an exception.
+     * @param string $filepath
+     * @param string $line
+     *
+     * @throws LogWriteException
      */
     private function persistLog(string $filepath, string $line): void
     {
