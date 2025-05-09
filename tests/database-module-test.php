@@ -10,7 +10,7 @@ function printStatus(string $message, string $status = 'INFO'): void
 }
 
 // Step 1: Load configuration
-$configContainer = require_once __DIR__ . '/TestBootstrap.php';
+$configContainer = require_once __DIR__ . '/test-bootstrap.php';
 printStatus("Bootstrap executed successfully. Configuration container loaded.", 'STEP');
 
 $databaseConfig = $configContainer->getDatabaseConfig();
