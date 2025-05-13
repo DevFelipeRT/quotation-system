@@ -7,94 +7,59 @@ namespace App\Infrastructure\Database\Infrastructure\Execution;
 use App\Infrastructure\Database\Domain\Execution\DatabaseRequestInterface;
 use App\Infrastructure\Database\Domain\Execution\Events\QueryExecutedEvent;
 use App\Infrastructure\Database\Domain\Execution\Events\QueryFailedEvent;
-use App\Infrastructure\Database\Domain\Execution\Observers\RequestObserverInterface;
 use App\Infrastructure\Database\Exceptions\QueryExecutionException;
+use App\Shared\Event\Contracts\EventDispatcherInterface;
 use PDO;
 use PDOException;
+use PDOStatement;
 
 /**
- * Executes parameterized SQL statements via PDO and emits query lifecycle events.
+ * PDO-backed implementation of the DatabaseRequestInterface.
  *
- * This class is responsible for secure and observable interaction with relational databases,
- * emitting domain events for external instrumentation (e.g., logging, metrics).
+ * Encapsulates all SQL execution logic and emits domain events through
+ * a dispatcher to decouple side-effect processing (e.g., logging, metrics).
+ *
+ * Events:
+ * - QueryExecutedEvent: dispatched on successful execution.
+ * - QueryFailedEvent: dispatched on failure with context.
+ *
+ * @package App\Infrastructure\Database\Infrastructure\Execution
  */
 final class PdoDatabaseRequest implements DatabaseRequestInterface
 {
-    /**
-     * @param PDO $pdo An active and trusted PDO connection.
-     * @param RequestObserverInterface[] $observers External listeners for query lifecycle events.
-     *
-     * @throws \InvalidArgumentException If any provided observer is invalid.
-     */
     public function __construct(
         private readonly PDO $pdo,
-        private readonly array $observers = []
-    ) {
-        foreach ($this->observers as $observer) {
-            if (!$observer instanceof RequestObserverInterface) {
-                throw new \InvalidArgumentException(sprintf(
-                    'Expected instance of RequestObserverInterface, got: %s',
-                    is_object($observer) ? get_class($observer) : gettype($observer)
-                ));
-            }
-        }
-    }
+        private readonly EventDispatcherInterface $dispatcher
+    ) {}
 
     /**
      * Executes a SELECT query and returns the result set.
      *
-     * @param string $sql A parameterized SQL SELECT statement.
-     * @param array $params Key-value pairs to bind to placeholders.
-     * @return array List of result rows.
-     *
-     * @throws QueryExecutionException On execution failure.
+     * @param string $sql
+     * @param array $params
+     * @return array
+     * @throws QueryExecutionException
      */
     public function select(string $sql, array $params = []): array
     {
-        try {
-            $stmt = $this->prepareAndExecute($sql, $params);
-            $this->notify(new QueryExecutedEvent($sql, $params, $stmt->rowCount()));
-
-            return $stmt->fetchAll();
-        } catch (PDOException $e) {
-            $this->notify(new QueryFailedEvent($sql, $params, $e->getMessage()));
-            throw new QueryExecutionException(
-                'Failed to execute SELECT query.',
-                ['sql' => $sql, 'params' => $params],
-                $e
-            );
-        }
+        return $this->executeQuery($sql, $params, fn(PDOStatement $stmt) => $stmt->fetchAll());
     }
 
     /**
-     * Executes a DML query (INSERT, UPDATE, DELETE).
+     * Executes a DML query and returns the number of affected rows.
      *
-     * @param string $sql A parameterized SQL statement.
-     * @param array $params Bindings for placeholders.
-     * @return int Number of rows affected.
-     *
-     * @throws QueryExecutionException On execution failure.
+     * @param string $sql
+     * @param array $params
+     * @return int
+     * @throws QueryExecutionException
      */
     public function execute(string $sql, array $params = []): int
     {
-        try {
-            $stmt = $this->prepareAndExecute($sql, $params);
-            $affected = $stmt->rowCount();
-
-            $this->notify(new QueryExecutedEvent($sql, $params, $affected));
-            return $affected;
-        } catch (PDOException $e) {
-            $this->notify(new QueryFailedEvent($sql, $params, $e->getMessage()));
-            throw new QueryExecutionException(
-                'Failed to execute DML query.',
-                ['sql' => $sql, 'params' => $params],
-                $e
-            );
-        }
+        return $this->executeQuery($sql, $params, fn(PDOStatement $stmt) => $stmt->rowCount());
     }
 
     /**
-     * Returns true if the query returns at least one result row.
+     * Verifies if any rows exist for the provided query.
      *
      * @param string $sql
      * @param array $params
@@ -105,72 +70,53 @@ final class PdoDatabaseRequest implements DatabaseRequestInterface
         return !empty($this->select($sql, $params));
     }
 
-    /**
-     * Begins a transaction.
-     *
-     * @return void
-     */
     public function beginTransaction(): void
     {
         $this->pdo->beginTransaction();
     }
 
-    /**
-     * Commits the current transaction.
-     *
-     * @return void
-     */
     public function commit(): void
     {
         $this->pdo->commit();
     }
 
-    /**
-     * Rolls back the current transaction.
-     *
-     * @return void
-     */
     public function rollback(): void
     {
         $this->pdo->rollBack();
     }
 
-    /**
-     * Returns the last inserted ID from the current connection.
-     *
-     * @return int
-     */
     public function lastInsertId(): int
     {
         return (int) $this->pdo->lastInsertId();
     }
 
     /**
-     * Notifies all registered observers of a query lifecycle event.
+     * Prepares and executes the given query, handles success/failure via events.
      *
-     * @param QueryExecutedEvent|QueryFailedEvent $event
-     * @return void
-     */
-    private function notify(QueryExecutedEvent|QueryFailedEvent $event): void
-    {
-        foreach ($this->observers as $observer) {
-            $observer->handle($event);
-        }
-    }
-
-    /**
-     * Prepares and executes a PDO statement with given parameters.
-     *
+     * @template T
      * @param string $sql
      * @param array $params
-     * @return \PDOStatement
-     *
-     * @throws PDOException If preparation or execution fails.
+     * @param callable(PDOStatement): T $onSuccess
+     * @return T
+     * @throws QueryExecutionException
      */
-    private function prepareAndExecute(string $sql, array $params): \PDOStatement
+    private function executeQuery(string $sql, array $params, callable $onSuccess)
     {
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute($params);
-        return $stmt;
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($params);
+
+            $result = $onSuccess($stmt);
+            $this->dispatcher->dispatch(new QueryExecutedEvent($sql, $params, $stmt->rowCount()));
+            return $result;
+        } catch (PDOException $e) {
+            $this->dispatcher->dispatch(new QueryFailedEvent($sql, $params, $e->getMessage()));
+            throw new QueryExecutionException(
+                'Failed to execute database query.',
+                0,
+                ['sql' => $sql, 'params' => $params],
+                $e
+            );
+        }
     }
 }

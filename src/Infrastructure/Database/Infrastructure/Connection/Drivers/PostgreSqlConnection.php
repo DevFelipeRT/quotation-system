@@ -5,36 +5,29 @@ declare(strict_types=1);
 namespace App\Infrastructure\Database\Infrastructure\Connection\Drivers;
 
 use App\Infrastructure\Database\Infrastructure\Connection\AbstractPdoConnection;
+use App\Shared\Event\Contracts\EventDispatcherInterface;
 use Config\Database\DatabaseConfig;
 
 /**
- * Provides a PostgreSQL-specific implementation of the PDO database connection.
+ * PostgreSQL-specific implementation of a PDO-based database connection.
  *
- * This class builds the DSN string for the pgsql driver and retrieves connection
- * credentials and metadata from configuration. It integrates with the standardized
- * observer lifecycle defined in AbstractPdoConnection.
+ * This class encapsulates the construction of a PostgreSQL DSN,
+ * credential retrieval, and PDO configuration. It integrates with
+ * the application's event dispatching infrastructure to emit domain
+ * events on connection success or failure.
  *
- * @package App\Infrastructure\Database\Connection\Drivers
+ * @internal Should be instantiated via a resolver or connection factory.
  */
 final class PostgreSqlConnection extends AbstractPdoConnection
 {
-    /**
-     * @param DatabaseConfig $config   Structured configuration for PostgreSQL connection parameters.
-     * @param array $observers         List of ConnectionObserverInterface instances.
-     */
     public function __construct(
         private readonly DatabaseConfig $config,
-        array $observers = []
+        EventDispatcherInterface $dispatcher
     ) {
-        parent::__construct($observers);
+        parent::__construct($dispatcher);
     }
 
-    /**
-     * Constructs a DSN string compatible with the PostgreSQL PDO driver.
-     *
-     * @return string
-     */
-    protected function getDsn(): string
+    protected function createDsn(): string
     {
         return sprintf(
             'pgsql:host=%s;port=%d;dbname=%s',
@@ -44,48 +37,23 @@ final class PostgreSqlConnection extends AbstractPdoConnection
         );
     }
 
-    /**
-     * Retrieves the username from the configuration.
-     *
-     * @return string
-     */
     protected function getUsername(): string
     {
         return $this->config->getUsername();
     }
 
-    /**
-     * Retrieves the password from the configuration.
-     *
-     * @return string
-     */
     protected function getPassword(): string
     {
         return $this->config->getPassword();
     }
 
-    /**
-     * Returns the identifier for this connection's driver.
-     *
-     * @return string
-     */
-    protected function getDriverName(): string
+    protected function getOptions(): array
     {
-        return 'pgsql';
+        return $this->config->getOptions();
     }
 
-    /**
-     * Returns metadata used for logging and observability.
-     *
-     * @param bool $redacted Whether to obscure sensitive details.
-     * @return array<string, string|int>
-     */
-    protected function getConnectionMetadata(bool $redacted): array
+    protected function getDriver(): string
     {
-        return [
-            'host' => $redacted ? '[REDACTED]' : $this->config->getHost(),
-            'port' => $redacted ? '[REDACTED]' : $this->config->getPort(),
-            'database' => $redacted ? '[REDACTED]' : $this->config->getDatabase(),
-        ];
+        return 'pgsql';
     }
 }

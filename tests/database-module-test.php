@@ -1,5 +1,8 @@
 <?php
 
+use App\Adapters\EventListening\Infrastructure\Dispatcher\DefaultEventDispatcher;
+use App\Kernel\Adapters\EventListeningKernel;
+use App\Kernel\Adapters\Providers\DatabaseEventBindingProvider;
 use App\Kernel\Infrastructure\Database\DatabaseConnectionKernel;
 use App\Kernel\Infrastructure\Database\DatabaseExecutionKernel;
 use App\Kernel\Infrastructure\LoggingKernel;
@@ -9,70 +12,77 @@ function printStatus(string $message, string $status = 'INFO'): void
     echo sprintf("[%s] %s%s", strtoupper($status), $message, PHP_EOL);
 }
 
-// Step 1: Load configuration
+// STEP 1: Bootstrap configuration
 $configContainer = require_once __DIR__ . '/test-bootstrap.php';
 printStatus("Bootstrap executed successfully. Configuration container loaded.", 'STEP');
 
 $databaseConfig = $configContainer->getDatabaseConfig();
 
-// Step 2: Initialize logging
+// STEP 2: Initialize Logging
 try {
     $loggingKernel = new LoggingKernel($configContainer);
-    printStatus("LoggingKernel initialized successfully.", 'OK');
+    $logger = $loggingKernel->getLoggerAdapter('psr'); // Adaptador PSR-compatível
+    printStatus("LoggingKernel initialized with PSR logger.", 'OK');
 } catch (Throwable $e) {
-    printStatus("Error initializing LoggingKernel: {$e->getMessage()}", 'FAIL');
+    printStatus("Failed to initialize LoggingKernel: {$e->getMessage()}", 'FAIL');
     exit(1);
 }
 
-$logger = $loggingKernel->getLogger();
-
-// Step 3: Initialize connection kernel
+// STEP 3: Initialize EventListeningKernel + Dispatcher
 try {
-    $databaseConnectionKernel = new DatabaseConnectionKernel($databaseConfig, $logger, true);
+    $eventListeningKernel = new EventListeningKernel([
+        new DatabaseEventBindingProvider($logger),
+    ]);
+
+    $dispatcher = new DefaultEventDispatcher($eventListeningKernel->resolver());
+    printStatus("Event dispatcher initialized via EventListeningKernel.", 'OK');
+} catch (Throwable $e) {
+    printStatus("Failed to initialize event dispatching: {$e->getMessage()}", 'FAIL');
+    exit(1);
+}
+
+// STEP 4: Initialize DatabaseConnectionKernel
+try {
+    $databaseConnectionKernel = new DatabaseConnectionKernel(
+        config: $databaseConfig,
+        dispatcher: $dispatcher,
+        debugMode: true
+    );
     printStatus("DatabaseConnectionKernel initialized successfully.", 'OK');
 } catch (Throwable $e) {
-    printStatus("Error initializing DatabaseConnectionKernel: {$e->getMessage()}", 'FAIL');
+    printStatus("Failed to initialize DatabaseConnectionKernel: {$e->getMessage()}", 'FAIL');
     exit(1);
 }
 
-// Step 4: Retrieve connection instance
+// STEP 5: Get Connection
 try {
     $connection = $databaseConnectionKernel->getConnection();
-    printStatus("Database connection initialized successfully.", 'OK');
+    printStatus("Database connection established.", 'OK');
 } catch (Throwable $e) {
-    printStatus("Error initializing Database connection: {$e->getMessage()}", 'FAIL');
+    printStatus("Connection failed: {$e->getMessage()}", 'FAIL');
     exit(1);
 }
 
-// Step 5: Initialize execution kernel
+// STEP 6: Initialize Execution Kernel
 try {
-    $databaseExecutionKernel = new DatabaseExecutionKernel($connection, $logger);
-    printStatus("DatabaseExecutionKernel initialized successfully.", 'OK');
+    $executionKernel = new DatabaseExecutionKernel($connection, $dispatcher);
+    printStatus("DatabaseExecutionKernel initialized.", 'OK');
 } catch (Throwable $e) {
-    printStatus("Error initializing DatabaseExecutionKernel: {$e->getMessage()}", 'FAIL');
+    printStatus("Failed to initialize execution kernel: {$e->getMessage()}", 'FAIL');
     exit(1);
 }
 
-// Step 6: Retrieve request interface
+// STEP 7: Execute a test query
 try {
-    $request = $databaseExecutionKernel->request();
-    printStatus("Database request initialized successfully.", 'OK');
+    $request = $executionKernel->request();
+    $result = $request->select("SELECT 1");
+    printStatus("Query executed successfully.", 'OK');
 } catch (Throwable $e) {
-    printStatus("Error initializing Database request: {$e->getMessage()}", 'FAIL');
+    printStatus("Query execution failed: {$e->getMessage()}", 'FAIL');
     exit(1);
 }
 
-// Step 7: Execute SELECT query
-try {
-    $sql = "SELECT 1";
-    $result = $request->select($sql);
-    printStatus("Select query executed successfully.", 'OK');
-} catch (Throwable $e) {
-    printStatus("Error executing select query: {$e->getMessage()}", 'FAIL');
-    exit(1);
-}
-
-// Step 8: Print results
+// STEP 8: Print query result
 if (!empty($result)) {
     printStatus("Query returned results:", 'RESULT');
     echo '<pre>';

@@ -9,28 +9,25 @@ use App\Infrastructure\Database\Domain\Execution\RequestBuilders\RequestBuilderI
 use App\Infrastructure\Database\Domain\Execution\Resolvers\RequestBuilderResolverInterface;
 use App\Infrastructure\Database\Infrastructure\Connection\AbstractPdoConnection;
 use App\Infrastructure\Database\Infrastructure\Execution\RequestBuilders\PdoRequestBuilder;
+use App\Shared\Event\Contracts\EventDispatcherInterface;
 use RuntimeException;
 
 /**
  * Resolves the appropriate request builder implementation
  * for a given database connection.
  *
- * Synchronizes the execution strategy with the underlying connection type.
+ * All returned builders are preconfigured with required collaborators.
  */
 final class RequestBuilderResolver implements RequestBuilderResolverInterface
 {
-    /**
-     * Resolves the request builder for the given connection instance.
-     *
-     * @param DatabaseConnectionInterface $connection
-     * @return RequestBuilderInterface
-     *
-     * @throws RuntimeException If the connection type is unsupported.
-     */
+    public function __construct(
+        private readonly EventDispatcherInterface $dispatcher
+    ) {}
+
     public function resolve(DatabaseConnectionInterface $connection): RequestBuilderInterface
     {
         if ($connection instanceof AbstractPdoConnection) {
-            return new PdoRequestBuilder();
+            return new PdoRequestBuilder($this->dispatcher);
         }
 
         throw new RuntimeException(

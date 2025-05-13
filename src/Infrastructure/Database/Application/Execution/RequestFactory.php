@@ -7,42 +7,32 @@ namespace App\Infrastructure\Database\Application\Execution;
 use App\Infrastructure\Database\Domain\Connection\DatabaseConnectionInterface;
 use App\Infrastructure\Database\Domain\Execution\DatabaseRequestInterface;
 use App\Infrastructure\Database\Domain\Execution\Resolvers\RequestBuilderResolverInterface;
-use PDO;
+use App\Shared\Event\Contracts\EventDispatcherInterface;
 
 /**
  * Factory for creating database request executors.
  *
- * Delegates request creation to a resolved RequestBuilderInterface implementation,
- * based on the provided DatabaseConnectionInterface instance.
+ * Delegates construction to a resolved RequestBuilderInterface instance,
+ * based on the provided DatabaseConnectionInterface.
  */
 final class RequestFactory
 {
     public function __construct(
-        private readonly RequestBuilderResolverInterface $resolver
+        private readonly RequestBuilderResolverInterface $resolver,
+        private readonly EventDispatcherInterface $dispatcher
     ) {}
 
     /**
-     * Creates a fully configured SQL request executor from a PDO connection.
-     *
-     * @param PDO $pdo
-     * @param RequestObserverInterface[] $observers
-     * @return DatabaseRequestInterface
-     */
-    public function create(PDO $pdo, array $observers = []): DatabaseRequestInterface
-    {
-        throw new \LogicException('Use createFromConnection instead when using a resolver-based factory.');
-    }
-
-    /**
-     * Creates a request executor based on a resolved builder from the given connection.
+     * Creates a request executor based on the resolved builder and dispatcher.
      *
      * @param DatabaseConnectionInterface $connection
-     * @param RequestObserverInterface[] $observers
      * @return DatabaseRequestInterface
      */
-    public function createFromConnection(DatabaseConnectionInterface $connection, array $observers = []): DatabaseRequestInterface
+    public function createFromConnection(DatabaseConnectionInterface $connection): DatabaseRequestInterface
     {
+        $pdo = $connection->connect();
         $builder = $this->resolver->resolve($connection);
-        return $builder->build($connection->connect(), $observers);
+
+        return $builder->build($pdo, $this->dispatcher);
     }
 }

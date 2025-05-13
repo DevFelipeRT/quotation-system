@@ -75,4 +75,18 @@ final class DatabaseConfig
     {
         return (int) $this->env->getRequired('DB_PORT');
     }
+
+        /**
+     * Returns additional PDO driver options.
+     *
+     * @return array
+     */
+    public function getOptions(): array
+    {
+        return [
+            \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+            \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
+            \PDO::ATTR_EMULATE_PREPARES => false,
+        ];
+    }
 }

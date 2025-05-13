@@ -8,15 +8,22 @@ use App\Infrastructure\Database\Domain\Connection\DatabaseConnectionInterface;
 use App\Infrastructure\Database\Domain\Execution\RequestBuilders\RequestBuilderInterface;
 
 /**
- * Contract for resolving a RequestBuilderInterface based on a given database connection.
+ * Contract for resolving a request builder based on the connection type.
+ *
+ * Implementations are responsible for instantiating and configuring a compatible
+ * RequestBuilderInterface instance that supports the runtime connection.
+ *
+ * Builders may require additional collaborators (e.g., dispatcher).
  */
 interface RequestBuilderResolverInterface
 {
     /**
-     * Resolves the appropriate request builder for the provided connection.
+     * Resolves the appropriate builder for the given connection.
      *
-     * @param DatabaseConnectionInterface $connection
-     * @return RequestBuilderInterface
+     * @param DatabaseConnectionInterface $connection The active database connection instance.
+     * @return RequestBuilderInterface A compatible builder instance.
+     *
+     * @throws \RuntimeException If no builder is available for the connection type.
      */
     public function resolve(DatabaseConnectionInterface $connection): RequestBuilderInterface;
 }

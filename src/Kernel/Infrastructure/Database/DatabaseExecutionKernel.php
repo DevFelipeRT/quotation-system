@@ -7,40 +7,33 @@ namespace App\Kernel\Infrastructure\Database;
 use App\Infrastructure\Database\Application\Execution\RequestFactory;
 use App\Infrastructure\Database\Domain\Connection\DatabaseConnectionInterface;
 use App\Infrastructure\Database\Domain\Execution\DatabaseRequestInterface;
-use App\Infrastructure\Database\Infrastructure\Execution\Observers\QueryLoggerObserver;
 use App\Infrastructure\Database\Infrastructure\Execution\Resolvers\RequestBuilderResolver;
-use App\Infrastructure\Logging\LoggerInterface;
+use App\Shared\Event\Contracts\EventDispatcherInterface;
+use RuntimeException;
 use Throwable;
 
 /**
- * Class DatabaseExecutionKernel
+ * Initializes the database query execution layer.
  *
- * Coordinates the initialization of the database query execution layer.
- *
- * This kernel is responsible for:
- * - Constructing the DatabaseRequestInterface from an active connection.
- * - Registering execution observers such as loggers.
- * - Handling errors in a controlled way.
- *
- * @package App\Kernel\Database
+ * This kernel constructs a fully configured DatabaseRequestInterface using a factory.
+ * The query lifecycle is instrumented via emitted domain events.
  */
 final class DatabaseExecutionKernel
 {
     private readonly DatabaseRequestInterface $request;
-    private readonly array $observers;
-    private readonly RequestBuilderResolver $resolver;
-    private readonly RequestFactory $factory;
 
-    public function __construct(DatabaseConnectionInterface $connection, LoggerInterface $logger)
-    {
-        $this->observers = $this->defaultObservers($logger);
-        $this->resolver = $this->resolveBuilder();
-        $this->factory = $this->createFactory();
-        $this->request = $this->safelyCreateRequest($connection);
+    public function __construct(
+        DatabaseConnectionInterface $connection,
+        EventDispatcherInterface $dispatcher
+    ) {
+        $resolver = new RequestBuilderResolver($dispatcher);
+        $factory = new RequestFactory($resolver, $dispatcher);
+
+        $this->request = $this->createRequest($factory, $connection);
     }
 
     /**
-     * Returns the ready-to-use query request interface.
+     * Returns the request interface for executing queries.
      *
      * @return DatabaseRequestInterface
      */
@@ -50,48 +43,20 @@ final class DatabaseExecutionKernel
     }
 
     /**
-     * Resolves the request builder resolver.
+     * Handles request creation and captures any factory failures.
      *
-     * @return RequestBuilderResolver
-     */
-    private function resolveBuilder(): RequestBuilderResolver
-    {
-        return new RequestBuilderResolver();
-    }
-
-    /**
-     * Creates the factory using the internal resolver.
-     *
-     * @return RequestFactory
-     */
-    private function createFactory(): RequestFactory
-    {
-        return new RequestFactory($this->resolver);
-    }
-
-    /**
-     * Attempts to create the request and handles any failure.
-     *
+     * @param RequestFactory $factory
      * @param DatabaseConnectionInterface $connection
      * @return DatabaseRequestInterface
      */
-    private function safelyCreateRequest(DatabaseConnectionInterface $connection): DatabaseRequestInterface
-    {
+    private function createRequest(
+        RequestFactory $factory,
+        DatabaseConnectionInterface $connection
+    ): DatabaseRequestInterface {
         try {
-            return $this->factory->createFromConnection($connection, $this->observers);
+            return $factory->createFromConnection($connection);
         } catch (Throwable $e) {
-            throw new \RuntimeException('Failed to initialize database request layer.', 0, $e);
+            throw new RuntimeException('Failed to initialize the database request layer.', 0, $e);
         }
-    }
-
-    /**
-     * Defines the default observers for query instrumentation.
-     *
-     * @param LoggerInterface $logger
-     * @return RequestObserverInterface[]
-     */
-    private function defaultObservers(LoggerInterface $logger): array
-    {
-        return [new QueryLoggerObserver($logger)];
     }
 }

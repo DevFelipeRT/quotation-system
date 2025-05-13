@@ -5,36 +5,30 @@ declare(strict_types=1);
 namespace App\Infrastructure\Database\Infrastructure\Connection\Drivers;
 
 use App\Infrastructure\Database\Infrastructure\Connection\AbstractPdoConnection;
+use App\Shared\Event\Contracts\EventDispatcherInterface;
 use Config\Database\DatabaseConfig;
 
 /**
- * Provides a MySQL-specific implementation of the PDO database connection.
+ * MySQL-specific implementation of a PDO-based database connection.
  *
- * This class is responsible for constructing the appropriate DSN, retrieving
- * credentials from configuration, and supplying connection metadata for MySQL databases.
- * It extends the standardized lifecycle and observer pattern defined in AbstractPdoConnection.
+ * This class encapsulates all MySQL connection logic, including DSN formatting,
+ * authentication, and PDO configuration, using values from a DatabaseConfig object.
  *
- * @package App\Infrastructure\Database\Connection\Drivers
+ * It delegates lifecycle events to the injected EventDispatcherInterface,
+ * allowing infrastructure-level listeners to observe connection success or failure.
+ *
+ * @internal This class should be instantiated via a factory or resolver.
  */
 final class MySqlConnection extends AbstractPdoConnection
 {
-    /**
-     * @param DatabaseConfig $config   Structured configuration for MySQL connection parameters.
-     * @param array $observers         List of ConnectionObserverInterface instances.
-     */
     public function __construct(
         private readonly DatabaseConfig $config,
-        array $observers = []
+        EventDispatcherInterface $dispatcher
     ) {
-        parent::__construct($observers);
+        parent::__construct($dispatcher);
     }
 
-    /**
-     * Constructs a DSN string compatible with the MySQL PDO driver.
-     *
-     * @return string
-     */
-    protected function getDsn(): string
+    protected function createDsn(): string
     {
         return sprintf(
             'mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',
@@ -44,48 +38,23 @@ final class MySqlConnection extends AbstractPdoConnection
         );
     }
 
-    /**
-     * Retrieves the username from the configuration.
-     *
-     * @return string
-     */
     protected function getUsername(): string
     {
         return $this->config->getUsername();
     }
 
-    /**
-     * Retrieves the password from the configuration.
-     *
-     * @return string
-     */
     protected function getPassword(): string
     {
         return $this->config->getPassword();
     }
 
-    /**
-     * Returns the identifier for this connection's driver.
-     *
-     * @return string
-     */
-    protected function getDriverName(): string
+    protected function getOptions(): array
     {
-        return 'mysql';
+        return $this->config->getOptions();
     }
 
-    /**
-     * Returns metadata used for logging and observability.
-     *
-     * @param bool $redacted Whether to obscure sensitive details.
-     * @return array<string, string|int>
-     */
-    protected function getConnectionMetadata(bool $redacted): array
+    protected function getDriver(): string
     {
-        return [
-            'host' => $redacted ? '[REDACTED]' : $this->config->getHost(),
-            'port' => $redacted ? '[REDACTED]' : $this->config->getPort(),
-            'database' => $redacted ? '[REDACTED]' : $this->config->getDatabase(),
-        ];
+        return 'mysql';
     }
 }

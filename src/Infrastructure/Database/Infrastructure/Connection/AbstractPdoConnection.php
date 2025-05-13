@@ -7,146 +7,120 @@ namespace App\Infrastructure\Database\Infrastructure\Connection;
 use App\Infrastructure\Database\Domain\Connection\DatabaseConnectionInterface;
 use App\Infrastructure\Database\Domain\Connection\Events\ConnectionFailedEvent;
 use App\Infrastructure\Database\Domain\Connection\Events\ConnectionSucceededEvent;
-use App\Infrastructure\Database\Domain\Connection\Observers\ConnectionObserverInterface;
 use App\Infrastructure\Database\Exceptions\DatabaseConnectionException;
+use App\Shared\Event\Contracts\EventDispatcherInterface;
 use PDO;
-use PDOException;
+use Throwable;
 
 /**
- * Base abstract class for specialized PDO-based database connections.
+ * Abstract base for database connections using PDO.
  *
- * This class standardizes the creation and instrumentation of PDO connections,
- * delegating driver-specific behavior to subclasses. It provides lifecycle
- * event notification, exception handling, and default option management.
+ * This base class provides lifecycle management for PDO database connections,
+ * including standardized connection logic, exception handling, and event emission
+ * on success or failure. It is designed for extension by concrete driver implementations.
  *
- * Subclasses must implement driver-specific DSN, credentials and metadata.
+ * Domain events emitted:
+ * - ConnectionSucceededEvent
+ * - ConnectionFailedEvent
+ *
+ * Implementing classes must provide driver-specific DSN, credentials, and options.
  */
 abstract class AbstractPdoConnection implements DatabaseConnectionInterface
 {
     /**
-     * @var ConnectionObserverInterface[] List of registered lifecycle observers.
+     * Internal PDO instance (lazy-loaded).
+     *
+     * @var PDO|null
      */
-    private readonly array $observers;
+    protected ?PDO $pdo = null;
 
     /**
-     * @param ConnectionObserverInterface[] $observers Observers to be notified on success or failure.
-     * @throws \InvalidArgumentException If any observer does not implement the expected interface.
+     * Dispatcher responsible for emitting domain events on connection lifecycle.
      */
-    public function __construct(array $observers = [])
-    {
-        foreach ($observers as $observer) {
-            if (!$observer instanceof ConnectionObserverInterface) {
-                throw new \InvalidArgumentException(sprintf(
-                    'Observer must implement ConnectionObserverInterface, %s given.',
-                    is_object($observer) ? get_class($observer) : gettype($observer)
-                ));
-            }
-        }
-
-        $this->observers = $observers;
-    }
+    public function __construct(
+        protected readonly EventDispatcherInterface $eventDispatcher
+    ) {}
 
     /**
-     * Creates and returns a configured PDO instance, notifying observers.
+     * Establishes and returns an active PDO connection.
+     *
+     * If the connection is already open, it is reused. On failure, a domain event is
+     * dispatched and a DatabaseConnectionException is thrown.
      *
      * @return PDO
-     * @throws DatabaseConnectionException On failure to connect.
+     *
+     * @throws DatabaseConnectionException
      */
-    final public function connect(): PDO
+    public function connect(): PDO
     {
+        if ($this->pdo !== null) {
+            return $this->pdo;
+        }
+
         try {
-            $pdo = new PDO(
-                $this->getDsn(),
-                $this->getUsername(),
-                $this->getPassword(),
-                $this->getOptions()
+            $dsn = $this->createDsn();
+            $this->pdo = new PDO(
+                dsn: $dsn,
+                username: $this->getUsername(),
+                password: $this->getPassword(),
+                options: $this->getOptions()
             );
 
-            $this->notify(new ConnectionSucceededEvent(
-                driver: $this->getDriverName(),
-                metadata: $this->getConnectionMetadata(true)
+            $this->eventDispatcher->dispatch(new ConnectionSucceededEvent(
+                driver: $this->getDriver(),
+                message: 'Database connection established successfully.',
+                metadata: ['dsn' => $dsn]
             ));
 
-            return $pdo;
-        } catch (PDOException $e) {
-            $this->notify(new ConnectionFailedEvent(
-                driver: $this->getDriverName(),
+            return $this->pdo;
+        } catch (Throwable $e) {
+            $this->eventDispatcher->dispatch(new ConnectionFailedEvent(
+                driver: $this->getDriver(),
                 error: $e->getMessage(),
-                metadata: $this->getConnectionMetadata(false)
+                metadata: ['exception' => $e]
             ));
 
             throw new DatabaseConnectionException(
-                'Unable to establish database connection.',
-                0,
-                $this->getConnectionMetadata(false),
-                $e
+                message: 'Failed to connect to database.',
+                code: 0,
+                context: [],
+                previous: $e
             );
         }
     }
 
     /**
-     * Returns standard PDO options used by all connections.
+     * Constructs the DSN (Data Source Name) string specific to the driver.
      *
-     * @return array<string, mixed>
+     * @return string
      */
-    protected function getOptions(): array
-    {
-        return [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_TIMEOUT => $this->resolveTimeout(),
-        ];
-    }
+    abstract protected function createDsn(): string;
 
     /**
-     * Resolves the connection timeout.
+     * Returns the username for the database connection.
      *
-     * @return int
-     */
-    protected function resolveTimeout(): int
-    {
-        $timeout = getenv('DB_TIMEOUT');
-        return is_numeric($timeout) ? (int) $timeout : 5;
-    }
-
-    /**
-     * Dispatches a lifecycle event to all registered observers.
-     *
-     * @param object $event Either ConnectionSucceededEvent or ConnectionFailedEvent.
-     * @return void
-     */
-    protected function notify(object $event): void
-    {
-        foreach ($this->observers as $observer) {
-            $observer->handle($event);
-        }
-    }
-
-    /**
-     * Subclasses must return a valid PDO DSN string.
-     */
-    abstract protected function getDsn(): string;
-
-    /**
-     * Subclasses must return the database username.
+     * @return string
      */
     abstract protected function getUsername(): string;
 
     /**
-     * Subclasses must return the database password.
+     * Returns the password for the database connection.
+     *
+     * @return string
      */
     abstract protected function getPassword(): string;
 
     /**
-     * Subclasses must return the driver name (e.g. mysql, pgsql).
+     * Returns driver-specific PDO connection options.
+     *
+     * @return array
      */
-    abstract protected function getDriverName(): string;
+    abstract protected function getOptions(): array;
 
     /**
-     * Subclasses must return connection metadata for observability.
+     * Returns the identifier string for the current driver (e.g., 'mysql', 'pgsql').
      *
-     * @param bool $redacted Whether to redact sensitive values.
-     * @return array<string, string|int>
+     * @return string
      */
-    abstract protected function getConnectionMetadata(bool $redacted): array;
+    abstract protected function getDriver(): string;
 }
