@@ -1,52 +1,55 @@
 # Quotation System
 
-A professional modular quotation management system developed in PHP, designed with Clean Architecture, SOLID principles, Object Calisthenics, and rigorous separation of concerns.
+A professional, event-driven, modular quotation management system developed in PHP, structured with Clean Architecture, Domain-Driven Design (DDD), SOLID principles, and Object Calisthenics.
 
 ## Features
 
-- Domain-Driven Design with modular boundaries (`Domains/`)
-- Dedicated technical subsystems (`Infrastructure/`) for Logging, Rendering, Messaging, etc.
-- HTTP controllers organized under `Presentation/Http/`
-- PDO-based persistence with encapsulated schema and repository abstraction
-- Fully extensible event-based logging and exception handling
-- Testable structure by default: domain logic isolated from technical dependencies
+- Modular boundaries aligned with Domain-Driven Design (`Domains/`, `Modules/`)
+- Clean separation between core logic and technical details (`Application/`, `Infrastructure/`, `Presentation/`)
+- **Event-Driven Architecture** for logging, monitoring, and lifecycle orchestration
+- Logger compatible with internal and PSR-based consumers (via adapter pattern)
+- PDO-based persistence, abstracted behind driver-independent contracts
+- Native autoloading, fully decoupled from Composer
+- Kernel-based bootstrapping with dynamic module orchestration
+- Designed for testability: business logic isolated from technical implementations
 
 ## Development Status
 
-The project is currently in the **modularization and architectural stabilization phase**.
+The project is now in the **event architecture stabilization and module integration phase**.
 
-> ✅ The **Database Connection module is functional and validated**, and all namespaces have been unified across the codebase.
+> ✅ The **Database, Logging, and EventListening modules are fully integrated and validated**  
+> ✅ The **application dispatches domain events**, and listeners respond across isolated modules
 
 ### Known limitations
 
-- The project **does not use Composer** and relies on a **custom native autoloader**
-- Controllers are not yet wired to application use cases
-- Some functional modules are being incrementally connected and integrated
+- The project does **not use Composer** and relies on a **custom autoloader**
+- Controllers are present but not yet connected to application services
+- Some modules are still in partial integration
 
 ### What's already in place
 
-- Modular architecture based on Domain-Driven Design and Clean Architecture
-- Strict internal layering within each module (`Domain`, `Application`, `Infrastructure`, `Presentation`)
-- Technical subsystems (Database, Logging, Rendering, Session) are isolated and extensible
-- A consistent naming strategy and separation of concerns are being enforced
-- Namespace structure aligned with directory organization throughout the codebase
+- Structured DDD-based modular design with clear technical boundaries
+- Fully asynchronous event propagation (e.g., query, connection, and error events)
+- Logger contract (`LoggerInterface`) and adapter (`PsrLoggerAdapter`) for decoupled usage
+- Dynamic kernel dispatch of modules and listener mapping
+- Consistent PSR-style coding standards, without external dependency on `psr/*`
 
 ### Next steps
 
-- Connect HTTP controllers to their corresponding use cases
-- Establish routing and request flow for at least one business context
-- Progressively integrate and test additional modules (e.g., Messaging, Rendering)
+- Wire HTTP controllers to application use cases via router abstraction
+- Build a complete request→use case→response flow for one business domain
+- Expand event bindings to include application-level and cross-cutting concerns
+- Refactor or eliminate legacy modules stored under `deprecated/`
 
 ## Deprecated Code
 
-This project includes a `deprecated/` directory used for **temporary storage of legacy or transitional code** during the ongoing refactoring and modularization process.
+This project includes a `deprecated/` directory for **temporarily retained legacy or transitional code**:
 
-- Code in this folder is **not included in the application runtime** and is **excluded from the native autoloader**
-- It exists solely to **preserve references** while equivalent functionality is being restructured elsewhere
-- All content within `deprecated/` is intended to be **progressively removed or migrated**
-- No new modules or logic should depend on any of the code located in this directory
+- Excluded from runtime and from the autoload system
+- Used as a reference during refactoring and modularization
+- Marked for complete removal upon stabilization
 
-Once the architecture stabilization is complete, this directory will be fully eliminated.
+No new code should depend on content under `deprecated/`.
 
 ## Requirements
 
