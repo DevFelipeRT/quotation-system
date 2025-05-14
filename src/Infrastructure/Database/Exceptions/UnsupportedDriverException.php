@@ -8,18 +8,18 @@ use App\Shared\Exceptions\InfrastructureException;
 use Throwable;
 
 /**
- * Exception thrown when a given database driver is not supported by the system.
+ * Thrown when a given database driver is not supported by the system.
  *
- * This exception is typically used by connection factories to reject attempts
- * to instantiate unsupported or unknown database implementations.
+ * This typically occurs when a connection factory receives an unknown or
+ * unregistered driver identifier during initialization.
  */
 final class UnsupportedDriverException extends InfrastructureException
 {
     /**
-     * Initializes an exception for an invalid or unknown database driver.
+     * Initializes the exception for an unsupported or unknown database driver.
      *
-     * @param string         $driver   The unsupported driver identifier.
-     * @param Throwable|null $previous Optional root cause of the error.
+     * @param string              $driver    The unsupported driver identifier.
+     * @param Throwable|null      $previous  The underlying cause of the failure, if any.
      */
     public function __construct(string $driver, ?Throwable $previous = null)
     {

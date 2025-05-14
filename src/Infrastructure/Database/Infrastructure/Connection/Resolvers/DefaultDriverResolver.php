@@ -7,15 +7,15 @@ namespace App\Infrastructure\Database\Infrastructure\Connection\Resolvers;
 use App\Infrastructure\Database\Domain\Connection\DatabaseConnectionInterface;
 use App\Infrastructure\Database\Domain\Connection\Resolvers\DriverResolverInterface;
 use App\Infrastructure\Database\Exceptions\UnsupportedDriverException;
-use Config\Database\SupportedDrivers;
+use App\Infrastructure\Database\Infrastructure\Connection\DriverClassMap;
+use App\Infrastructure\Database\Validation\DriverValidator;
+
 
 /**
  * Resolves the appropriate connection class for a given driver identifier.
  *
- * Combines validated driver resolution from SupportedDrivers with
+ * Combines validated driver resolution from DriverValidator with
  * the static implementation map defined in DriverClassMap.
- *
- * @package App\Infrastructure\Database\Connection\Resolvers
  */
 final class DefaultDriverResolver implements DriverResolverInterface
 {
@@ -29,8 +29,8 @@ final class DefaultDriverResolver implements DriverResolverInterface
      */
     public function resolve(string $driver): string
     {
-        $normalized = SupportedDrivers::resolve($driver);
-        SupportedDrivers::assertIsSupported($normalized);
+        $normalized = DriverValidator::resolve($driver);
+        DriverValidator::assertIsSupported($normalized);
 
         $map = DriverClassMap::get();
 

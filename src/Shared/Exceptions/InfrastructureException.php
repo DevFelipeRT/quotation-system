@@ -22,9 +22,9 @@ class InfrastructureException extends RuntimeException
 
     /**
      * @param string            $message   Human-readable explanation of the failure.
-     * @param int               $code         Optional machine-readable error code.
-     * @param array             $context    Structured context for logs or monitoring.
-     * @param Throwable|null    $previous Underlying cause, if any.
+     * @param int               $code      Optional machine-readable error code.
+     * @param array             $context   Structured context for logs or monitoring.
+     * @param Throwable|null    $previous  Underlying cause, if any.
      */
     public function __construct(
         string $message = '',
@@ -44,5 +44,23 @@ class InfrastructureException extends RuntimeException
     public function getContext(): array
     {
         return $this->context;
+    }
+
+    /**
+     * Returns a detailed string representation of the exception.
+     *
+     * @return string
+     */
+    public function __toString(): string
+    {
+        $context = json_encode($this->context, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        return sprintf(
+            "[%s] %s (code: %d)\nContext: %s\n%s",
+            static::class,
+            $this->getMessage(),
+            $this->getCode(),
+            $context,
+            $this->getTraceAsString()
+        );
     }
 }

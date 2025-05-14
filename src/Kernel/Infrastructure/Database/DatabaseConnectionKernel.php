@@ -56,8 +56,8 @@ final class DatabaseConnectionKernel
             $this->debugOutput("Connection established.");
             return $connection;
         } catch (Throwable $e) {
-            $this->debugOutput("Connection failed: {$e->getMessage()}");
-
+            $this->debugOutput("Connection failed:");
+            $this->debugOutput((string) $e);
             throw new DatabaseConnectionException(
                 'DatabaseConnectionKernel failed to initialize connection.',
                 0,
