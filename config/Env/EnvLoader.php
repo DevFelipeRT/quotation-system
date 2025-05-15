@@ -61,6 +61,21 @@ class EnvLoader
     }
 
     /**
+     * Reads an environment variable from the .env file,
+     * or returns the provided default if missing or empty.
+     *
+     * @param string $key Variable name (e.g. DB_PORT)
+     * @param string|null $default Fallback value if the key is not found or empty
+     * @return string|null
+     */
+    public function get(string $key, ?string $default = null): ?string
+    {
+        $value = $this->readKey($key);
+
+        return ($value === null || trim($value) === '') ? $default : $value;
+    }
+
+    /**
      * Reads a specific key from the .env file (without parsing all keys).
      *
      * @param string $key
@@ -97,4 +112,3 @@ class EnvLoader
         return ['EnvLoader' => '[secured]'];
     }
 }
-
