@@ -1,34 +1,34 @@
 <?php
 
-namespace App\Adapters\EventListening\Infrastructure\EventListeners;
+namespace App\Adapters\EventListening\Infrastructure\EventListeners\Database;
 
 use App\Adapters\EventListening\Domain\Contracts\EventListenerInterface;
-use App\Infrastructure\Database\Domain\Execution\Events\QueryExecutedEvent;
+use App\Infrastructure\Database\Domain\Execution\Events\QueryFailedEvent;
 use App\Infrastructure\Logging\Infrastructure\Contracts\PsrLoggerInterface;
 
 /**
- * Logs metadata after a query is successfully executed.
+ * Logs details when a query fails during database execution.
  */
-final class LogQueryExecutedListener implements EventListenerInterface
+final class LogQueryFailureListener implements EventListenerInterface
 {
     public function __construct(private readonly PsrLoggerInterface $logger) {}
 
     /**
-     * Invoked when a QueryExecutedEvent is dispatched.
+     * Invoked when a QueryFailedEvent is dispatched.
      *
      * @param object $event
      * @return void
      */
     public function __invoke(object $event): void
     {
-        if (!$event instanceof QueryExecutedEvent) {
+        if (!$event instanceof QueryFailedEvent) {
             return;
         }
 
-        $this->logger->info('Database query executed', [
+        $this->logger->error('Database query failed', [
             'query' => $event->query,
             'parameters' => $event->parameters,
-            'affected_rows' => $event->affectedRows,
+            'error_message' => $event->errorMessage,
         ]);
     }
 }

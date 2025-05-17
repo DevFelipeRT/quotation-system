@@ -5,17 +5,19 @@ declare(strict_types=1);
 namespace App\Infrastructure\Session\Domain\ValueObjects;
 
 /**
- * Represents an anonymous (unauthenticated) session.
+ * Represents a guest (unauthenticated) session.
  *
- * Encapsulates session context such as locale, without user identity.
- * Immutable and validated by construction.
+ * Provides access to contextual metadata (locale, authentication state)
+ * and ensures serialization format is consistent for all session data objects.
+ *
+ * Immutable by construction.
  */
-final class GuestSessionData extends SessionData
+final class GuestSessionData extends AbstractSessionData
 {
     /**
-     * Constructs a guest session representation.
+     * Initializes the guest session data with the given context.
      *
-     * @param SessionContext $context Valid session context.
+     * @param SessionContext $context The session context (locale, authentication state).
      */
     public function __construct(SessionContext $context)
     {
@@ -23,7 +25,9 @@ final class GuestSessionData extends SessionData
     }
 
     /**
-     * Converts the session data into an associative array.
+     * Converts the guest session data to an associative array.
+     *
+     * The format is consistent with AuthenticatedSessionData, but user fields are null.
      *
      * @return array<string, mixed>
      */
@@ -33,7 +37,7 @@ final class GuestSessionData extends SessionData
             'user_id'       => null,
             'user_name'     => null,
             'user_role'     => null,
-            'locale'        => $this->context->getLocale(),
+            'locale'        => $this->getLocale(),
             'authenticated' => false,
         ];
     }

@@ -4,23 +4,21 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Session\Domain\ValueObjects;
 
-use App\Infrastructure\Session\Exceptions\InvalidSessionDataException;
-
 /**
  * Represents a session with an authenticated user.
  *
- * Provides access to user identity and session context.
- * Immutable and validated by construction.
+ * Encapsulates user identity and contextual session metadata (locale, authentication state).
+ * Immutable by construction.
  */
-final class AuthenticatedSessionData extends SessionData
+final class AuthenticatedSessionData extends AbstractSessionData
 {
     private UserIdentity $identity;
 
     /**
-     * Constructs an authenticated session representation.
+     * Initializes an authenticated session data object.
      *
-     * @param UserIdentity   $identity Valid user identity.
-     * @param SessionContext $context  Contextual session metadata.
+     * @param UserIdentity   $identity The authenticated user's identity.
+     * @param SessionContext $context  The session context (locale, authentication state).
      */
     public function __construct(UserIdentity $identity, SessionContext $context)
     {
@@ -30,6 +28,8 @@ final class AuthenticatedSessionData extends SessionData
 
     /**
      * Returns the authenticated user's identity.
+     *
+     * @return UserIdentity
      */
     public function getIdentity(): UserIdentity
     {
@@ -37,7 +37,9 @@ final class AuthenticatedSessionData extends SessionData
     }
 
     /**
-     * Converts the session data into an associative array.
+     * Converts the authenticated session data into an associative array.
+     *
+     * The format is compatible with deserialization by SessionDataFactory.
      *
      * @return array<string, mixed>
      */
@@ -47,7 +49,7 @@ final class AuthenticatedSessionData extends SessionData
             'user_id'       => $this->identity->getId(),
             'user_name'     => $this->identity->getName(),
             'user_role'     => $this->identity->getRole(),
-            'locale'        => $this->context->getLocale(),
+            'locale'        => $this->getLocale(),
             'authenticated' => true,
         ];
     }

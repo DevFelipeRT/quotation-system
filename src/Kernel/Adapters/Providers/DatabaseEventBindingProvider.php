@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Kernel\Adapters\Providers;
 
-use App\Adapters\EventListening\Infrastructure\EventListeners\LogConnectionFailureListener;
-use App\Adapters\EventListening\Infrastructure\EventListeners\LogQueryExecutedListener;
-use App\Adapters\EventListening\Infrastructure\EventListeners\LogQueryFailureListener;
-use App\Adapters\EventListening\Infrastructure\EventListeners\LogSuccessfulConnectionListener;
+use App\Adapters\EventListening\Infrastructure\EventListeners\Database\LogConnectionFailureListener;
+use App\Adapters\EventListening\Infrastructure\EventListeners\Database\LogQueryExecutedListener;
+use App\Adapters\EventListening\Infrastructure\EventListeners\Database\LogQueryFailureListener;
+use App\Adapters\EventListening\Infrastructure\EventListeners\Database\LogSuccessfulConnectionListener;
 use App\Infrastructure\Database\Domain\Connection\Events\ConnectionFailedEvent;
 use App\Infrastructure\Database\Domain\Connection\Events\ConnectionSucceededEvent;
 use App\Infrastructure\Database\Domain\Execution\Events\QueryExecutedEvent;

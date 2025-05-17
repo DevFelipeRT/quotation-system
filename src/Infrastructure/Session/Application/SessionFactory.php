@@ -1,31 +1,36 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Infrastructure\Session\Application;
 
 use App\Infrastructure\Session\Domain\Contracts\SessionHandlerInterface;
 use App\Infrastructure\Session\Domain\Contracts\SessionHandlerResolverInterface;
 
 /**
- * Responsible for building and returning the active SessionHandlerInterface instance.
+ * Factory responsible for instantiating the session handler implementation
+ * resolved via the SessionHandlerResolverInterface.
  *
- * Uses a resolver to determine the appropriate implementation.
+ * This factory centralizes handler construction, decoupled from event infrastructure.
  */
 final class SessionFactory
 {
-    /**
-     * @param SessionHandlerResolverInterface $resolver
-     */
     public function __construct(
         private readonly SessionHandlerResolverInterface $resolver
     ) {}
 
     /**
-     * Returns a fully configured session handler.
+     * Instantiates and returns the resolved session handler.
      *
      * @return SessionHandlerInterface
      */
     public function create(): SessionHandlerInterface
     {
-        return $this->resolver->resolve();
+        $handlerClass = $this->resolver->resolve();
+
+        /** @var SessionHandlerInterface $handler */
+        $handler = new $handlerClass();
+
+        return $handler;
     }
 }

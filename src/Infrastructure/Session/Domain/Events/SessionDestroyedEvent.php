@@ -1,39 +1,45 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Infrastructure\Session\Domain\Events;
 
-use App\Infrastructure\Session\Domain\ValueObjects\SessionData;
+use App\Infrastructure\Session\Domain\Contracts\SessionDataInterface;
 use DateTimeImmutable;
 use DateTimeZone;
 
 /**
- * Dispatched when a session is destroyed.
+ * Domain event dispatched when a session is destroyed.
  *
- * Carries the final state of the session and the exact UTC timestamp.
+ * Carries the final state of the session and the UTC timestamp of destruction.
  */
 final class SessionDestroyedEvent
 {
     private readonly DateTimeImmutable $occurredAt;
 
     /**
-     * @param SessionData $previousData The last known state before destruction.
+     * @param SessionDataInterface $previousData The last known state before destruction.
      */
     public function __construct(
-        private readonly SessionData $previousData
+        private readonly SessionDataInterface $previousData
     ) {
         $this->occurredAt = new DateTimeImmutable('now', new DateTimeZone('UTC'));
     }
 
     /**
      * Returns the session data that was active before destruction.
+     *
+     * @return SessionDataInterface
      */
-    public function getPreviousData(): SessionData
+    public function getPreviousData(): SessionDataInterface
     {
         return $this->previousData;
     }
 
     /**
      * Returns the UTC timestamp when the session was destroyed.
+     *
+     * @return DateTimeImmutable
      */
     public function occurredAt(): DateTimeImmutable
     {

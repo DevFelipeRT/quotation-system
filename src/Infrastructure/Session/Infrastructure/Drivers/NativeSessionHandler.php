@@ -1,105 +1,157 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Infrastructure\Session\Infrastructure\Drivers;
 
 use App\Infrastructure\Session\Domain\Contracts\SessionHandlerInterface;
-use App\Infrastructure\Session\Infrastructure\ValueObjects\SessionData;
-use App\Infrastructure\Session\Infrastructure\Exceptions\SessionStartException;
-use App\Infrastructure\Session\Infrastructure\Exceptions\SessionDestroyException;
+use App\Infrastructure\Session\Domain\Contracts\SessionDataInterface;
+use App\Infrastructure\Session\Domain\Factories\SessionDataFactory;
+use App\Infrastructure\Session\Exceptions\SessionStartException;
+use App\Infrastructure\Session\Exceptions\SessionDestroyException;
+use App\Infrastructure\Session\Exceptions\InvalidSessionDataException;
 
 /**
  * Native PHP session implementation of SessionHandlerInterface.
  *
- * This class encapsulates native session lifecycle operations
- * and provides a structured interface for working with SessionData.
+ * Manages the raw session lifecycle and strictly enforces valid session data.
  */
 final class NativeSessionHandler implements SessionHandlerInterface
 {
     private bool $started = false;
+
     private const DATA_KEY = '__data__';
 
-    public function __construct()
+    public function __construct() {}
+
+    /**
+     * Ensures the session is started and ready for I/O.
+     *
+     * @throws SessionStartException
+     */
+    private function ensureSessionIsReady(): void
     {
-        $this->start();
+        if ($this->isSessionAlreadyStarted()) {
+            return;
+        }
+        $this->ensureHeadersAreIntact();
+        $this->attemptStartSession();
+        $this->markAsStarted();
     }
 
     /**
-     * Starts the session if it is not already active.
-     *
-     * @throws SessionStartException If session cannot be started.
+     * {@inheritDoc}
      */
     public function start(): void
     {
-        if ($this->started || session_status() === PHP_SESSION_ACTIVE) {
-            return;
-        }
-
-        if (headers_sent()) {
-            throw new SessionStartException('Cannot start session: headers already sent.');
-        }
-
-        if (!session_start()) {
-            throw new SessionStartException('Failed to start session.');
-        }
-
-        $this->started = true;
+        $this->ensureSessionIsReady();
     }
 
     /**
-     * Retrieves the current session data object.
-     *
-     * @return SessionData
+     * {@inheritDoc}
      */
-    public function getData(): SessionData
+    public function getData(): SessionDataInterface
     {
-        $data = $_SESSION[self::DATA_KEY] ?? [];
-        return SessionData::fromArray($data);
+        $this->ensureSessionIsReady();
+        $sessionArray = $this->readRawSessionData();
+
+        // SessionDataFactory rigorously validates locale
+        return SessionDataFactory::fromArray($sessionArray);
     }
 
     /**
-     * Replaces the session data with the given object.
-     *
-     * @param SessionData $data
-     * @return void
+     * {@inheritDoc}
      */
-    public function setData(SessionData $data): void
+    public function setData(SessionDataInterface $data): void
     {
-        if (session_status() !== PHP_SESSION_ACTIVE) {
-            throw new SessionStartException('Cannot write to session: session is not active.');
+        $this->ensureSessionIsReady();
+
+        // Rigorously require locale before persisting session data
+        $locale = $data->getLocale();
+        if (!is_string($locale) || trim($locale) === '') {
+            throw new InvalidSessionDataException("Session data must contain a valid, non-empty locale.");
         }
 
-        $_SESSION[self::DATA_KEY] = $data->toArray();
+        $this->writeSessionData($data);
     }
 
     /**
-     * Removes all stored values from the session but keeps it open.
-     *
-     * @return void
+     * {@inheritDoc}
      */
     public function clearData(): void
     {
+        $this->ensureSessionIsReady();
         $_SESSION[self::DATA_KEY] = [];
     }
 
     /**
-     * Destroys the session and clears all associated resources.
-     *
-     * @throws SessionDestroyException If destruction fails.
-     *
-     * @return void
+     * {@inheritDoc}
      */
     public function destroy(): void
     {
         $this->clearData();
-
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            session_unset();
-
-            if (!session_destroy()) {
-                throw new SessionDestroyException('Session destruction failed.');
-            }
+        if ($this->isSessionActive()) {
+            $this->unsetSessionStorage();
+            $this->attemptDestroySession();
         }
+        $this->markAsNotStarted();
+    }
 
+    // ========== Private Methods ==========
+
+    private function isSessionAlreadyStarted(): bool
+    {
+        return $this->started || session_status() === PHP_SESSION_ACTIVE;
+    }
+
+    private function ensureHeadersAreIntact(): void
+    {
+        if (headers_sent()) {
+            throw new SessionStartException('Cannot start session: headers already sent.');
+        }
+    }
+
+    private function attemptStartSession(): void
+    {
+        if (!session_start()) {
+            throw new SessionStartException('Failed to start session.');
+        }
+    }
+
+    private function markAsStarted(): void
+    {
+        $this->started = true;
+    }
+
+    private function readRawSessionData(): array
+    {
+        return $_SESSION[self::DATA_KEY] ?? [];
+    }
+
+    private function writeSessionData(SessionDataInterface $data): void
+    {
+        $_SESSION[self::DATA_KEY] = $data->toArray();
+    }
+
+    private function isSessionActive(): bool
+    {
+        return session_status() === PHP_SESSION_ACTIVE;
+    }
+
+    private function unsetSessionStorage(): void
+    {
+        session_unset();
+    }
+
+    private function attemptDestroySession(): void
+    {
+        if (!session_destroy()) {
+            throw new SessionDestroyException('Session destruction failed.');
+        }
+    }
+
+    private function markAsNotStarted(): void
+    {
         $this->started = false;
     }
 }

@@ -1,37 +1,43 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Infrastructure\Session\Domain\Events;
 
-use App\Infrastructure\Session\Domain\ValueObjects\SessionData;
+use App\Infrastructure\Session\Domain\Contracts\SessionDataInterface;
 
 /**
- * Dispatched when the session data is replaced or updated.
+ * Domain event dispatched when the session data is updated or replaced.
  *
- * Carries both the previous and updated session states.
+ * Carries both the previous and the new session data objects.
  */
 final class SessionDataChangedEvent
 {
     /**
-     * @param SessionData $previousData The session data before the change.
-     * @param SessionData $newData      The session data after the change.
+     * @param SessionDataInterface $previousData The session data before the change.
+     * @param SessionDataInterface $newData      The session data after the change.
      */
     public function __construct(
-        private readonly SessionData $previousData,
-        private readonly SessionData $newData
+        private readonly SessionDataInterface $previousData,
+        private readonly SessionDataInterface $newData
     ) {}
 
     /**
-     * Returns the previous session state.
+     * Returns the session data before the update.
+     *
+     * @return SessionDataInterface
      */
-    public function getPreviousData(): SessionData
+    public function getPreviousData(): SessionDataInterface
     {
         return $this->previousData;
     }
 
     /**
-     * Returns the updated session state.
+     * Returns the updated session data.
+     *
+     * @return SessionDataInterface
      */
-    public function getNewData(): SessionData
+    public function getNewData(): SessionDataInterface
     {
         return $this->newData;
     }

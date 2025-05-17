@@ -2,12 +2,14 @@
 
 namespace Config\Container;
 
+
 use Config\App\AppConfig;
 use Config\Database\DatabaseConfig;
 use Config\Database\DatabaseSchemaConfig;
 use Config\Env\EnvLoader;
 use Config\Paths\PathsConfig;
 use Config\Paths\LogPathsConfig;
+use Config\Session\SessionConfig;
 use InvalidArgumentException;
 
 /**
@@ -20,12 +22,13 @@ use InvalidArgumentException;
  */
 final class ConfigContainer
 {
-    private PathsConfig $pathsConfig;
-    private EnvLoader $envLoader;
-    private AppConfig $appConfig;
-    private DatabaseConfig $databaseConfig;
-    private DatabaseSchemaConfig $schemaConfig;
-    private LogPathsConfig $logPathsConfig;
+    private PathsConfig           $pathsConfig;
+    private EnvLoader             $envLoader;
+    private AppConfig             $appConfig;
+    private DatabaseConfig        $databaseConfig;
+    private DatabaseSchemaConfig  $schemaConfig;
+    private LogPathsConfig        $logPathsConfig;
+    private SessionConfig         $sessionConfig;
 
     /**
      * ConfigContainer constructor.
@@ -42,6 +45,7 @@ final class ConfigContainer
         $this->databaseConfig  = new DatabaseConfig($this->envLoader);
         $this->schemaConfig    = new DatabaseSchemaConfig();
         $this->logPathsConfig  = new LogPathsConfig($this->pathsConfig);
+        $this->sessionConfig   = new SessionConfig();
     }
 
     /** @return PathsConfig */
@@ -78,5 +82,11 @@ final class ConfigContainer
     public function getLogPathsConfig(): LogPathsConfig
     {
         return $this->logPathsConfig;
+    }
+
+    /** @return SessionConfig */
+    public function getSessionConfig(): SessionConfig
+    {
+        return $this->sessionConfig;
     }
 }

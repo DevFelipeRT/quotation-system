@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Adapters\EventListening\Infrastructure\EventListeners;
+namespace App\Adapters\EventListening\Infrastructure\EventListeners\Database;
 
 use App\Adapters\EventListening\Domain\Contracts\EventListenerInterface;
 use App\Infrastructure\Database\Domain\Connection\Events\ConnectionSucceededEvent;

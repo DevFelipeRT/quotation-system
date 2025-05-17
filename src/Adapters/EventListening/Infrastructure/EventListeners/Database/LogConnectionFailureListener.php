@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Adapters\EventListening\Infrastructure\EventListeners;
+namespace App\Adapters\EventListening\Infrastructure\EventListeners\Database;
 
 use App\Adapters\EventListening\Domain\Support\AbstractEventListener;
 use App\Infrastructure\Database\Domain\Connection\Events\ConnectionFailedEvent;

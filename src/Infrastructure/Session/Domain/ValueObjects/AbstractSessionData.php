@@ -7,21 +7,21 @@ namespace App\Infrastructure\Session\Domain\ValueObjects;
 use App\Infrastructure\Session\Domain\Contracts\SessionDataInterface;
 
 /**
- * Abstract base class for all session data representations.
+ * Abstract base for session data value objects.
  *
- * Encapsulates shared behavior for both authenticated and guest sessions,
- * including access to session context and locale.
+ * Provides common accessors for contextual session metadata such as locale
+ * and authentication state, and enforces immutability.
  *
- * Immutable by design.
+ * All concrete session data types must extend this class and implement serialization.
  */
-abstract class SessionData implements SessionDataInterface
+abstract class AbstractSessionData implements SessionDataInterface
 {
     protected SessionContext $context;
 
     /**
-     * Initializes session context.
+     * Initializes a new session data instance with contextual metadata.
      *
-     * @param SessionContext $context Contextual metadata (locale, auth status).
+     * @param SessionContext $context Contextual session metadata (locale, authentication status).
      */
     public function __construct(SessionContext $context)
     {
@@ -29,7 +29,9 @@ abstract class SessionData implements SessionDataInterface
     }
 
     /**
-     * Returns the session context object.
+     * Returns the session context.
+     *
+     * @return SessionContext
      */
     public function getContext(): SessionContext
     {
@@ -37,7 +39,9 @@ abstract class SessionData implements SessionDataInterface
     }
 
     /**
-     * Returns the locale defined for this session.
+     * Returns the locale for the session.
+     *
+     * @return string
      */
     public function getLocale(): string
     {
@@ -46,6 +50,8 @@ abstract class SessionData implements SessionDataInterface
 
     /**
      * Returns whether the session is authenticated.
+     *
+     * @return bool
      */
     public function isAuthenticated(): bool
     {
@@ -53,7 +59,7 @@ abstract class SessionData implements SessionDataInterface
     }
 
     /**
-     * Converts the session data to an associative array.
+     * Converts the session data object to an associative array.
      *
      * Must be implemented by concrete subclasses.
      *

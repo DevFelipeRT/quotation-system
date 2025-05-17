@@ -1,100 +1,53 @@
 <?php
 
-namespace App\Infrastructure\Session\Infrastructure\Support;
+declare(strict_types=1);
 
-use InvalidArgumentException;
+namespace Config\Session;
 
 /**
  * SessionConfig
  *
- * Provides centralized access to session-specific configuration values,
- * as defined in `config/Session/SessionConfig.php`.
- *
- * This class is a static utility and should be treated as read-only.
- *
- * The configuration file must return an associative array with the following structure:
- *
- * ```php
- * return [
- *     'default_driver' => 'native',
- *     'drivers' => [
- *         'native' => [
- *             // Driver-specific options (if any)
- *         ],
- *     ],
- * ];
- * ```
+ * Exposes strongly-typed configuration for session handling.
+ * Supports explicit configuration of the session driver and default locale.
+ * For future drivers or options, add strongly-typed properties and accessors.
  */
 final class SessionConfig
 {
-    private const CONFIG_PATH = __DIR__ . '/../../../../../config/Session/SessionConfig.php';
+    /**
+     * The session driver key to be used for session handling.
+     * Only 'native' is currently implemented.
+     *
+     * @var string
+     */
+    private string $defaultDriver = 'native';
 
     /**
-     * Returns the name of the default session driver (e.g., 'native', 'redis', etc.).
+     * The default locale to be used for new sessions.
+     * Must follow the pattern xx_XX (e.g. 'pt_BR').
      *
-     * @return string The default driver key defined in the configuration file.
-     *
-     * @throws InvalidArgumentException If the key 'default_driver' is missing.
+     * @var string
      */
-    public static function defaultDriver(): string
+    private string $defaultLocale = 'pt_BR';
+
+    /**
+     * Returns the default session driver key.
+     *
+     * @return string
+     */
+    public function defaultDriver(): string
     {
-        return self::get('default_driver');
+        return $this->defaultDriver;
     }
 
     /**
-     * Returns the configuration array for the specified driver.
+     * Returns the default locale to be used for new sessions.
      *
-     * @param string $driver The driver key (e.g., 'native', 'redis').
-     * @return array<string, mixed> Configuration options for the given driver.
-     *
-     * @throws InvalidArgumentException If the 'drivers' key or specific driver is not defined.
+     * @return string
      */
-    public static function driverOptions(string $driver): array
+    public function defaultLocale(): string
     {
-        $drivers = self::get('drivers');
-
-        if (!array_key_exists($driver, $drivers)) {
-            throw new InvalidArgumentException("Driver '{$driver}' is not configured.");
-        }
-
-        return $drivers[$driver];
+        return $this->defaultLocale;
     }
 
-    /**
-     * Loads and returns the full session configuration array.
-     *
-     * @return array<string, mixed>
-     *
-     * @throws InvalidArgumentException If the configuration file is missing or invalid.
-     */
-    private static function load(): array
-    {
-        /** @var array $config */
-        $config = require self::CONFIG_PATH;
-
-        if (!is_array($config)) {
-            throw new InvalidArgumentException("Invalid session configuration: expected array.");
-        }
-
-        return $config;
-    }
-
-    /**
-     * Retrieves a top-level configuration value by key.
-     *
-     * @param string $key The key to retrieve from the session configuration.
-     * @return mixed The configuration value associated with the key.
-     *
-     * @throws InvalidArgumentException If the key is not present.
-     */
-    private static function get(string $key): mixed
-    {
-        $config = self::load();
-
-        if (!array_key_exists($key, $config)) {
-            throw new InvalidArgumentException("Missing session config key: '{$key}'.");
-        }
-
-        return $config[$key];
-    }
+    // Add further driver-specific properties and accessors as needed.
 }
