@@ -2,10 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Routing\Presentation\Http\Routing;
+namespace App\Infrastructure\Routing\Presentation\Http;
 
-use App\Infrastructure\Routing\Application\Services\RoutePath;
-use App\Infrastructure\Routing\Presentation\Http\Routing\Contracts\RouteRequestInterface;
+use App\Infrastructure\Routing\Domain\ValueObjects\HttpMethod;
+use App\Infrastructure\Routing\Domain\ValueObjects\RoutePath;
+use App\Infrastructure\Routing\Presentation\Http\Contracts\RouteRequestInterface;
 
 /**
  * Class RouteRequest

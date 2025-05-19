@@ -8,12 +8,12 @@ use App\Domains\Item\Presentation\Http\Controllers\Controller;
 use App\Domains\Item\Presentation\Http\Controllers\CreateController;
 use App\Domains\Item\Presentation\Http\Controllers\DeleteController;
 use App\Domains\Item\Presentation\Http\Controllers\UpdateController;
-use App\Infrastructure\Routing\Application\Services\RoutePath;
 use App\Infrastructure\Routing\Domain\Contracts\RouteProviderInterface;
-use App\Infrastructure\Routing\Presentation\Http\Routing\Contracts\HttpRouteInterface;
-use App\Infrastructure\Routing\Presentation\Http\Routing\ControllerAction;
-use App\Infrastructure\Routing\Presentation\Http\Routing\HttpMethod;
-use App\Infrastructure\Routing\Presentation\Http\Routing\HttpRoute;
+use App\Infrastructure\Routing\Domain\ValueObjects\ControllerAction;
+use App\Infrastructure\Routing\Domain\ValueObjects\HttpMethod;
+use App\Infrastructure\Routing\Domain\ValueObjects\RoutePath;
+use App\Infrastructure\Routing\Presentation\Http\Contracts\HttpRouteInterface;
+use App\Infrastructure\Routing\Presentation\Http\HttpRoute;
 
 /**
  * ItemRouteProvider

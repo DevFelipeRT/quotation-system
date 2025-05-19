@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Routing\Presentation\Http\Routing;
+namespace App\Infrastructure\Routing\Presentation\Http;
 
 use App\Infrastructure\Routing\Domain\Contracts\RouteDispatcherInterface;
 use App\Infrastructure\Routing\Domain\Contracts\RouteResolverInterface;
-use App\Infrastructure\Routing\Presentation\Http\Routing\Contracts\RouteRequestInterface;
-use App\Infrastructure\Routing\Presentation\Http\Routing\Contracts\RoutingEngineInterface;
+use App\Infrastructure\Routing\Presentation\Http\Contracts\RouteRequestInterface;
+use App\Infrastructure\Routing\Presentation\Http\Contracts\RoutingEngineInterface;
 use RuntimeException;
 
 /**

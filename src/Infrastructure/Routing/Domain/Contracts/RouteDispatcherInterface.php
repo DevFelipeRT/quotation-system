@@ -2,7 +2,7 @@
 
 namespace App\Infrastructure\Routing\Domain\Contracts;
 
-use App\Infrastructure\Routing\Presentation\Http\Routing\Contracts\RouteRequestInterface;
+use App\Infrastructure\Routing\Presentation\Http\Contracts\RouteRequestInterface;
 
 /**
  * Interface RouteDispatcherInterface

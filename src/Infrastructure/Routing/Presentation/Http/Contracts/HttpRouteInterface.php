@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Routing\Presentation\Http\Routing\Contracts;
+namespace App\Infrastructure\Routing\Presentation\Http\Contracts;
 
-use App\Infrastructure\Routing\Application\Services\RoutePath;
-use App\Infrastructure\Routing\Presentation\Http\Routing\ControllerAction;
-use App\Infrastructure\Routing\Presentation\Http\Routing\HttpMethod;
+use App\Infrastructure\Routing\Domain\ValueObjects\ControllerAction;
+use App\Infrastructure\Routing\Domain\ValueObjects\HttpMethod;
+use App\Infrastructure\Routing\Domain\ValueObjects\RoutePath;
 
 /**
  * Interface HttpRouteInterface

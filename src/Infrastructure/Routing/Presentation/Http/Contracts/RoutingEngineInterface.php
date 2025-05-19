@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Routing\Presentation\Http\Routing\Contracts;
+namespace App\Infrastructure\Routing\Presentation\Http\Contracts;
 
 /**
  * Interface RoutingEngineInterface

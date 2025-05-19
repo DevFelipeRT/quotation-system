@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Routing\Presentation\Http\Routing;
+namespace App\Infrastructure\Routing\Domain\ValueObjects;
 
 use InvalidArgumentException;
 

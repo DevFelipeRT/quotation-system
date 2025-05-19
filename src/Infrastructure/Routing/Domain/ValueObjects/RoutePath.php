@@ -1,6 +1,8 @@
 <?php
 
-namespace App\Infrastructure\Routing\Application\Services;
+declare(strict_types=1);
+
+namespace App\Infrastructure\Routing\Domain\ValueObjects;
 
 use InvalidArgumentException;
 
