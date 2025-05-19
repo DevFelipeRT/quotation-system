@@ -17,6 +17,8 @@ function printStatus(string $message, string $status = 'INFO'): void
     echo sprintf("[%s] %s%s", strtoupper($status), $message, PHP_EOL);
 }
 
+echo "<pre>";
+
 function printSession(string $title): void
 {
     echo "[SESSION] {$title}\n";

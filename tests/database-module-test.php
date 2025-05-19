@@ -12,6 +12,8 @@ function printStatus(string $message, string $status = 'INFO'): void
     echo sprintf("[%s] %s%s", strtoupper($status), $message, PHP_EOL);
 }
 
+echo "<pre>";
+
 // STEP 1: Bootstrap configuration
 $configContainer = require_once __DIR__ . '/test-bootstrap.php';
 printStatus("Bootstrap executed successfully. Configuration container loaded.", 'STEP');

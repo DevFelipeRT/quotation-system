@@ -5,6 +5,8 @@ use App\Application\Messaging\Application\Types\LoggableMessage;
 use App\Infrastructure\Logging\Domain\LogEntry;
 use App\Infrastructure\Logging\Domain\LogLevelEnum;
 
+echo "<pre>";
+
 function printStep(string $message): void
 {
     echo "[STEP] $message" . PHP_EOL;
