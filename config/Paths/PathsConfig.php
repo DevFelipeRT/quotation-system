@@ -12,6 +12,7 @@ namespace Config\Paths;
  */
 final class PathsConfig
 {
+    private string $basePath;
     private string $envFile;
     private string $logsDir;
     private string $templatesDir;
@@ -27,15 +28,21 @@ final class PathsConfig
      */
     public function __construct(?string $basePath = null)
     {
-        $base = $basePath ?? (defined('BASE_PATH') ? BASE_PATH : dirname(__DIR__, 2));
+        $this->basePath = $basePath ?? (defined('BASE_PATH') ? BASE_PATH : dirname(__DIR__, 2));
 
-        $this->envFile         = $base . '/.env';
-        $this->logsDir         = $base . '/storage/logs';
-        $this->templatesDir    = $base . '/src/Infrastructure/Rendering/Presentation/Templates';
-        $this->viewsDir        = $base . '/src/Presentation/Http/Views';
-        $this->indexFile       = $base . '/public/index.php';
+        $this->envFile         = $this->basePath . '/.env';
+        $this->logsDir         = $this->basePath . '/storage/logs';
+        $this->templatesDir    = $this->basePath . '/src/Infrastructure/Rendering/Presentation/Templates';
+        $this->viewsDir        = $this->basePath . '/src/Presentation/Http/Views';
+        $this->indexFile       = $this->basePath . '/public/index.php';
 
         $this->appDirectory = str_replace('/public', '', dirname($_SERVER['SCRIPT_NAME'] ?? ''));
+    }
+
+    /** @return string */
+    public function getBasePath(): string
+    {
+        return $this->basePath;
     }
 
     /** @return string */

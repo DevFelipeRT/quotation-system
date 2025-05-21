@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Presentation\Http\Controllers;
 
 use App\Infrastructure\Rendering\Application\HtmlView;
-use App\Infrastructure\Routing\Presentation\Http\Routing\Contracts\RouteRequestInterface;
+use App\Infrastructure\Routing\Presentation\Http\Contracts\RouteRequestInterface;
 
 /**
  * HomeController
@@ -34,19 +34,17 @@ final class HomeController extends AbstractController
      */
     private function buildDashboardView(): HtmlView
     {
-        $appConfig = $this->getConfig()->getAppConfig();
         $baseUrl = $this->urlResolver->baseUrl();
         $user = $this->getUserData();
 
         return new HtmlView('dashboard.php', [
-            'appName'     => $appConfig->getName(),
+            'appName'     => APP_NAME,
             'headerTitle' => 'Dashboard',
             'baseUrl'     => $baseUrl,
             'fileName'    => 'dashboard.php',
             'usuario'     => $user,
         ]);
     }
-
 
     /**
      * Returns mock user data for view context.

@@ -25,9 +25,8 @@ final class UpdateController extends Controller
      * @param UpdateUseCase $useCase Use case for updating items.
      * @param LoggerInterface $logger Structured logger injected from infrastructure.
      */
-    public function __construct(UpdateUseCase $useCase, LoggerInterface $logger)
+    public function __construct(UpdateUseCase $useCase)
     {
-        parent::__construct($logger);
         $this->useCase = $useCase;
     }
 
@@ -53,21 +52,9 @@ final class UpdateController extends Controller
                 description: $_POST['description'] ?? ''
             );
 
-            $this->logInfo(
-                message: 'Item atualizado com sucesso.',
-                context: ['id' => $id],
-                channel: 'presentation.item'
-            );
-
             $this->redirect('/itemsManager');
         } catch (Exception $e) {
-            $this->logError(
-                message: 'Erro ao atualizar item.',
-                context: ['erro' => $e->getMessage()],
-                channel: 'presentation.item'
-            );
-
-            $this->respondWithError('Erro ao atualizar o item.', 400);
+            throw new Exception("Erro ao atualizar o item: " . $e->getMessage());
         }
     }
 }

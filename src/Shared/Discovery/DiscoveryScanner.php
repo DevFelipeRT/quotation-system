@@ -13,17 +13,17 @@ use Throwable;
  * DiscoveryScanner
  *
  * Scans a PSR-4-compliant namespace by resolving its directory structure,
- * and discovers classes that implement a given interface.
+ * and discovers fully qualified class names that implement a given interface.
  */
 final class DiscoveryScanner
 {
     /**
-     * Discovers and instantiates all classes under the resolved namespace that implement the specified interface.
+     * Discovers class names under the resolved namespace that implement the specified interface.
      *
      * @template T of object
      * @param class-string<T> $interface
      * @param string $namespace Fully qualified namespace to scan
-     * @return list<T>
+     * @return list<class-string<T>>
      */
     public function discoverImplementing(string $interface, string $namespace): array
     {
@@ -52,7 +52,7 @@ final class DiscoveryScanner
                     continue;
                 }
 
-                $results[] = new $fqcn();
+                $results[] = $fqcn;
             } catch (Throwable $e) {
                 continue;
             }

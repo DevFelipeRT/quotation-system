@@ -12,12 +12,13 @@ use App\Domain\Item\Presentation\Http\Controllers\Controller as ItemController;
 use App\Domain\Item\Presentation\Http\Controllers\CreateController;
 use App\Domain\Item\Presentation\Http\Controllers\DeleteController;
 use App\Domain\Item\Presentation\Http\Controllers\UpdateController;
-use App\Infrastructure\Http\UrlResolverInterface;
 use App\Infrastructure\Logging\Application\LogEntryAssemblerInterface;
 use App\Infrastructure\Logging\Infrastructure\Contracts\LoggerInterface;
 use App\Infrastructure\Rendering\Infrastructure\ViewRendererInterface;
 use App\Infrastructure\Session\Domain\Contracts\SessionHandlerInterface;
+use App\Kernel\Application\UseCaseKernel;
 use App\Presentation\Http\Controllers\HomeController;
+use App\Shared\UrlResolver\UrlResolverInterface;
 use Config\ConfigProvider;
 
 /**
@@ -28,12 +29,9 @@ use Config\ConfigProvider;
  */
 final class ControllerKernel
 {
-    private ConfigProvider $config;
     private SessionHandlerInterface $session;
     private ViewRendererInterface $renderer;
     private UrlResolverInterface $urlResolver;
-    private LoggerInterface $logger;
-    private LogEntryAssemblerInterface $logEntryAssembler;
     private ListUseCase $listUseCase;
     private CreateUseCase $createUseCase;
     private UpdateUseCase $updateUseCase;
@@ -52,27 +50,18 @@ final class ControllerKernel
      * @param DeleteUseCase $deleteUseCase
      */
     public function __construct(
-        ConfigProvider $config,
         SessionHandlerInterface $session,
         ViewRendererInterface $renderer,
         UrlResolverInterface $urlResolver,
-        LoggerInterface $logger,
-        LogEntryAssemblerInterface $logEntryAssembler,
-        ListUseCase $listUseCase,
-        CreateUseCase $createUseCase,
-        UpdateUseCase $updateUseCase,
-        DeleteUseCase $deleteUseCase
+        UseCaseKernel $useCaseKernel,
     ) {
-        $this->config             = $config;
         $this->session            = $session;
         $this->renderer           = $renderer;
         $this->urlResolver        = $urlResolver;
-        $this->logger             = $logger;
-        $this->logEntryAssembler  = $logEntryAssembler;
-        $this->listUseCase        = $listUseCase;
-        $this->createUseCase      = $createUseCase;
-        $this->updateUseCase      = $updateUseCase;
-        $this->deleteUseCase      = $deleteUseCase;
+        $this->listUseCase        = $useCaseKernel->list();
+        $this->createUseCase      = $useCaseKernel->create();
+        $this->updateUseCase      = $useCaseKernel->update();
+        $this->deleteUseCase      = $useCaseKernel->delete();
     }
 
     /**
@@ -84,33 +73,26 @@ final class ControllerKernel
     {
         return [
             HomeController::class => new HomeController(
-                $this->config,
                 $this->session,
                 $this->renderer,
-                $this->urlResolver,
-                $this->logger,
-                $this->logEntryAssembler
+                $this->urlResolver
             ),
 
             ItemController::class => new ItemController(
                 $this->listUseCase,
-                $this->renderer,
-                $this->logger
+                $this->renderer
             ),
 
             CreateController::class => new CreateController(
-                $this->createUseCase,
-                $this->logger
+                $this->createUseCase
             ),
 
             UpdateController::class => new UpdateController(
-                $this->updateUseCase,
-                $this->logger
+                $this->updateUseCase
             ),
 
             DeleteController::class => new DeleteController(
-                $this->deleteUseCase,
-                $this->logger
+                $this->deleteUseCase
             ),
         ];
     }

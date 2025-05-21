@@ -20,6 +20,7 @@ use InvalidArgumentException;
 final class AppConfig
 {
     private string $applicationName;
+    private string $version;
     private string $environment;
     private bool $debug;
     private string $cookieDomain;
@@ -40,6 +41,7 @@ final class AppConfig
     public function __construct(EnvLoader $env)
     {
         $this->applicationName = DefaultAppConfig::APPLICATION_NAME;
+        $this->version         = $this->resolveVersion($env->get('APP_VERSION', DefaultAppConfig::VERSION));
         $this->environment     = $this->resolveEnvironment($env->get('APP_ENV', DefaultAppConfig::ENVIRONMENT));
         $this->debug           = $this->resolveDebug($env->get('APP_DEBUG', DefaultAppConfig::DEBUG ? 'true' : 'false'));
         $this->cookieDomain    = $this->resolveCookieDomain($env->get('COOKIE_DOMAIN', DefaultAppConfig::COOKIE_DOMAIN));
@@ -112,6 +114,14 @@ final class AppConfig
     public function getSessionPrefix(): string
     {
         return $this->sessionPrefix;
+    }
+
+    /**
+     * Returns the application version (e.g., '1.0.0').
+     */
+    public function getVersion(): string
+    {
+        return $this->version;
     }
 
     /**
@@ -223,5 +233,24 @@ final class AppConfig
         }
 
         return $prefix;
+    }
+
+    /**
+     * Validates and resolves the application version.
+     *
+     * @param string $value
+     * @return string
+     *
+     * @throws InvalidArgumentException
+     */
+    private function resolveVersion(string $value): string
+    {
+        $version = trim($value);
+
+        if (!preg_match('/^\d+\.\d+\.\d+$/', $version)) {
+            throw new InvalidArgumentException("Invalid APP_VERSION: '{$version}' (expected format: x.x.x)");
+        }
+
+        return $version;
     }
 }

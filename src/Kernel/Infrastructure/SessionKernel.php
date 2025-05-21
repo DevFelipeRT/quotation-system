@@ -31,7 +31,7 @@ use Config\Session\SessionConfig;
  * This class is the only entry point for session lifecycle control
  * and strictly separates session operations from their event propagation.
  */
-final class SessionKernel
+final class SessionKernel implements SessionHandlerInterface
 {
     /**
      * The internal session handler implementation.
@@ -112,7 +112,7 @@ final class SessionKernel
      *
      * No events are emitted for data clearance.
      */
-    public function clear(): void
+    public function clearData(): void
     {
         $this->handler->clearData();
     }

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Presentation\Http\Controllers;
 
-use App\Infrastructure\Routing\Presentation\Http\Routing\Contracts\RouteRequestInterface;
+use App\Infrastructure\Routing\Presentation\Http\Contracts\RouteRequestInterface;
 
 /**
  * ControllerInterface

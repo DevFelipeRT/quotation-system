@@ -20,7 +20,6 @@ use InvalidArgumentException;
 final class DeleteController extends Controller
 {
     private DeleteUseCase $useCase;
-    private LoggerInterface $logger;
 
     /**
      * DeleteController constructor.
@@ -30,10 +29,8 @@ final class DeleteController extends Controller
      */
     public function __construct(
         DeleteUseCase $useCase,
-        LoggerInterface $logger
     ) {
         $this->useCase = $useCase;
-        $this->logger = $logger;
     }
 
     /**
@@ -45,33 +42,15 @@ final class DeleteController extends Controller
     {
         try {
             $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
-
             if ($id <= 0) {
                 throw new InvalidArgumentException('ID inválido para exclusão.');
             }
-
             $this->useCase->execute($id);
-
-            $this->logger->log(new LogEntry(
-                level: LogLevelEnum::INFO,
-                message: 'Item excluído com sucesso.',
-                context: ['id' => $id],
-                channel: 'presentation.item'
-            ));
-
             header('Location: /itemsManager');
             exit;
 
         } catch (Exception $e) {
-            $this->logger->log(new LogEntry(
-                level: LogLevelEnum::ERROR,
-                message: 'Erro ao excluir item.',
-                context: ['erro' => $e->getMessage()],
-                channel: 'presentation.item'
-            ));
-
-            http_response_code(400);
-            echo 'Erro ao excluir o item.';
+            throw new Exception("Erro ao excluir item: " . $e->getMessage());
         }
     }
 }

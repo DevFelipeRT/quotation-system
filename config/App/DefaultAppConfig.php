@@ -10,6 +10,7 @@ namespace Config\App;
 final class DefaultAppConfig
 {
     public const APPLICATION_NAME = 'Quotation System';
+    public const VERSION = 'undefined';
     public const ENVIRONMENT = 'production';
     public const DEBUG = false;
     public const COOKIE_DOMAIN = 'localhost';

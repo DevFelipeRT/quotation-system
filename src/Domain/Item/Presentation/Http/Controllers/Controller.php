@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Domain\Item\Presentation\Http\Controllers;
 
 use App\Domain\Item\Application\UseCases\ListUseCase;
-use App\Infrastructure\Logging\Domain\LogEntry;
-use App\Infrastructure\Logging\Domain\LogLevelEnum;
 use App\Infrastructure\Logging\LoggerInterface;
 use App\Infrastructure\Rendering\Application\HtmlView;
 use App\Infrastructure\Rendering\Infrastructure\HtmlViewRenderer;
+use App\Infrastructure\Routing\Presentation\Http\Contracts\RouteRequestInterface;
 use App\Presentation\Http\Controllers\AbstractController;
 use Exception;
+use Throwable;
 
 /**
  * Class Controller
@@ -22,8 +22,6 @@ use Exception;
 final class Controller extends AbstractController
 {
     private ListUseCase $listItemsUseCase;
-    private HtmlViewRenderer $viewRenderer;
-    private LoggerInterface $logger;
 
     /**
      * Controller constructor.
@@ -34,26 +32,38 @@ final class Controller extends AbstractController
      */
     public function __construct(
         ListUseCase $listItemsUseCase,
-        HtmlViewRenderer $viewRenderer,
-        LoggerInterface $logger
     ) {
-        parent::__construct($logger);
+        parent::__construct();
         $this->listItemsUseCase = $listItemsUseCase;
-        $this->viewRenderer = $viewRenderer;
-        $this->logger = $logger;
     }
 
     /**
-     * Renders the item management view.
+     * Executes the logic for the route.
      *
-     * @return void
+     * @param RouteRequestInterface $request
+     * @return string
      */
-    public function index(): void
+    protected function execute(RouteRequestInterface $request): string
     {
         try {
-            $items = $this->listItemsUseCase->execute();
-
-            $view = new HtmlView(
+            $view = $this->buildView();
+            return $this->render($view);
+        } catch (Throwable $e) {
+            throw new Exception("Error executing controller: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Builds the view for the item management interface.
+     *
+     * @return HtmlView
+     */
+    private function buildView(): HtmlView
+    {
+        try {
+            $items = $this->getViewData();
+    
+            return new HtmlView(
                 template: 'items_manager.php',
                 data: [
                     'headerTitle' => 'Gerenciar Itens',
@@ -61,24 +71,24 @@ final class Controller extends AbstractController
                     'items'       => $items,
                 ]
             );
-
-            echo $this->viewRenderer->render($view);
-
-            $this->logger->log(new LogEntry(
-                level: LogLevelEnum::INFO,
-                message: 'Interface de gerenciamento de itens exibida com sucesso.',
-                context: [],
-                channel: 'presentation.item'
-            ));
-        } catch (Exception $e) {
-            $this->logger->log(new LogEntry(
-                level: LogLevelEnum::ERROR,
-                message: 'Falha ao exibir a interface de gerenciamento de itens.',
-                context: ['erro' => $e->getMessage()],
-                channel: 'presentation.item'
-            ));
-
-            $this->respondWithError('Erro interno ao carregar a interface de itens.', 500);
+        } catch (Throwable $e) {
+            throw new Exception("Error building view: " . $e->getMessage());
         }
+    }
+
+    /**
+     * Fetches the view data for rendering.
+     *
+     * @return void
+     */
+    private function getViewData(): array
+    {
+        try {
+            $items = $this->listItemsUseCase->execute();
+        } catch (Throwable $e) {
+            throw new Exception("Error fetching items: " . $e->getMessage());
+            $items = [];
+        }
+        return $items;
     }
 }

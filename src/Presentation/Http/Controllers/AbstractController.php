@@ -4,16 +4,13 @@ declare(strict_types=1);
 
 namespace App\Presentation\Http\Controllers;
 
-use App\Infrastructure\Http\UrlResolverInterface;
-use App\Infrastructure\Logging\Application\LogEntryAssemblerInterface;
-use App\Infrastructure\Logging\LoggerInterface;
-use App\Infrastructure\Messaging\Application\Types\LoggableMessage;
+use App\Application\Messaging\Application\Types\LoggableMessage;
 use App\Infrastructure\Rendering\Application\HtmlView;
 use App\Infrastructure\Rendering\Domain\Contracts\ViewInterface;
 use App\Infrastructure\Rendering\Infrastructure\ViewRendererInterface;
-use App\Infrastructure\Routing\Presentation\Http\Routing\Contracts\RouteRequestInterface;
-use App\Infrastructure\Session\SessionHandlerInterface;
-use Config\Container\ConfigContainer;
+use App\Infrastructure\Routing\Presentation\Http\Contracts\RouteRequestInterface;
+use App\Infrastructure\Session\Domain\Contracts\SessionHandlerInterface;
+use App\Shared\UrlResolver\UrlResolverInterface;
 use Throwable;
 
 /**
@@ -34,27 +31,18 @@ use Throwable;
  */
 abstract class AbstractController implements ControllerInterface
 {
-    private ConfigContainer $config;
     private SessionHandlerInterface $session;
     private ViewRendererInterface $viewRenderer;
     protected UrlResolverInterface $urlResolver;
-    private LoggerInterface $logger;
-    private LogEntryAssemblerInterface $logAssembler;
 
     public function __construct(
-        ConfigContainer $config,
         SessionHandlerInterface $session,
         ViewRendererInterface $viewRenderer,
         UrlResolverInterface $urlResolver,
-        LoggerInterface $logger,
-        LogEntryAssemblerInterface $logAssembler
     ) {
-        $this->config = $config;
         $this->session = $session;
         $this->viewRenderer = $viewRenderer;
         $this->urlResolver = $urlResolver;
-        $this->logger = $logger;
-        $this->logAssembler = $logAssembler;
     }
 
     /**
@@ -95,8 +83,8 @@ abstract class AbstractController implements ControllerInterface
             ]
         )->withChannel('controller');
 
-        $entry = $this->logAssembler->assembleFromMessage($message);
-        $this->logger->log($entry);
+        // $entry = $this->logAssembler->assembleFromMessage($message);
+        // $this->logger->log($entry);
     }
 
     /**
@@ -137,14 +125,6 @@ abstract class AbstractController implements ControllerInterface
     {
         header('Location: ' . $url, true, 302);
         exit();
-    }
-
-    /**
-     * Returns the global configuration container.
-     */
-    protected function getConfig(): ConfigContainer
-    {
-        return $this->config;
     }
 
     /**

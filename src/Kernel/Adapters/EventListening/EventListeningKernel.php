@@ -35,7 +35,7 @@ final class EventListeningKernel
         $scanner = new DiscoveryScanner();
 
         $providers = array_map(
-            fn ($p) => $container->get($p::class),
+            fn (string $fqcn) => $container->get($fqcn),
             $scanner->discoverImplementing(
                 EventBindingProviderInterface::class,
                 'App\\Kernel\\Adapters\\EventListening\\Providers'

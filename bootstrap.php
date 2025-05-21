@@ -6,6 +6,7 @@ use Config\ConfigProvider;
 use Config\Env\EnvLoader;
 use Config\Env\EnvValidator;
 use Config\Paths\PathsConfig;
+use Config\SystemConstants;
 
 /**
  * Bootstrap File
@@ -63,15 +64,19 @@ set_exception_handler(static function (Throwable $e): void {
 
 try {
     // Step 1: Resolve paths
-    $paths = new PathsConfig();
+    $paths = new PathsConfig(BASE_PATH);
 
     // Step 2: Load and validate environment variables
     $env = new EnvLoader($paths->getEnvFilePath());
     EnvValidator::validate($env);
 
-    // Step 3: Bootstrap full application config container
-    return new ConfigProvider();
+    // Step 3: Bootstrap full application config provider
+    $configProvider = new ConfigProvider();
 
+    // Step 4: Load system constants
+    SystemConstants::initialize($configProvider);
+
+    return $configProvider;
 } catch (Throwable $e) {
     http_response_code(500);
     echo 'Failed to initialize application configuration.';

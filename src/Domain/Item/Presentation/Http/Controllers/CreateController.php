@@ -24,9 +24,8 @@ final class CreateController extends Controller
      *
      * @param CreateUseCase $useCase Application-layer use case for item creation.
      */
-    public function __construct(CreateUseCase $useCase, LoggerInterface $logger)
+    public function __construct(CreateUseCase $useCase)
     {
-        parent::__construct($logger);
         $this->useCase = $useCase;
     }
 
@@ -38,28 +37,15 @@ final class CreateController extends Controller
     public function __invoke(): void
     {
         try {
-            $item = $this->useCase->execute(
+            $this->useCase->execute(
                 $_POST['name'] ?? '',
                 isset($_POST['price']) ? (float) $_POST['price'] : 0.0,
                 isset($_POST['category_id']) ? (int) $_POST['category_id'] : 0,
                 $_POST['description'] ?? ''
             );
-
-            $this->logInfo(
-                message: 'Item criado com sucesso.',
-                context: ['id' => $item->getId(), 'nome' => $item->getName()],
-                channel: 'presentation.item'
-            );
-
             $this->redirect('/itemsManager');
         } catch (Exception $e) {
-            $this->logError(
-                message: 'Erro ao criar item.',
-                context: ['erro' => $e->getMessage()],
-                channel: 'presentation.item'
-            );
-
-            $this->respondWithError('Erro ao processar os dados do item.', 400);
+            throw new Exception("Error creating item: " . $e->getMessage());
         }
     }
 }
