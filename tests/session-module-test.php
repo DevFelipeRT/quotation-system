@@ -11,7 +11,7 @@ declare(strict_types=1);
  * Relies exclusively on KernelManager for all dependency resolution and orchestration.
  * Fully aligned with Clean Code, SOLID, PSR-12, Object Calisthenics and professional documentation standards.
  *
- * @package Tests\Session
+ * @package Tests
  */
 
 use App\Kernel\KernelManager;

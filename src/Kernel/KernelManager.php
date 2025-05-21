@@ -66,6 +66,7 @@ final class KernelManager
         $this->initializeContainerKernel($configProvider);
         $this->initializeEventListeningKernel();
         $this->initializeDatabaseConnectionKernel($configProvider);
+        $this->initializeDatabaseExecutionKernel();
         $this->initializeAdditionalKernels($configProvider);
     }
 
@@ -125,14 +126,22 @@ final class KernelManager
     }
 
     /**
-     * Step 5: Initialize all other (critical or not) kernels using KernelConfig.
+     * Step 5: Database execution kernel is always critical.
+     */
+    private function initializeDatabaseExecutionKernel(): void
+    {
+        try {
+            $this->databaseExecutionKernel = new DatabaseExecutionKernel($this->dbConnection, $this->eventDispatcher);
+        } catch (Throwable $e) {
+            $this->handleModuleFailure('databaseExecution', $e, true);
+        }
+    }
+
+    /**
+     * Step 6: Initialize all other (critical or not) kernels using KernelConfig.
      */
     private function initializeAdditionalKernels(ConfigProvider $configProvider): void
     {
-        $this->initializeKernelModule('databaseExecution', function () {
-            $this->databaseExecutionKernel = new DatabaseExecutionKernel($this->dbConnection, $this->eventDispatcher);
-        });
-
         $sessionConfig = $configProvider->getSessionConfig();
         $this->initializeKernelModule('session', function () use ($sessionConfig) {
             $this->sessionKernel = new SessionKernel($sessionConfig, $this->eventDispatcher);
