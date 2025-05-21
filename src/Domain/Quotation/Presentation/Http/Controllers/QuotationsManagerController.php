@@ -2,7 +2,7 @@
 
 namespace App\Domain\Quotation\Presentation\Http\Controllers;
 
-use App\Domais\Item\Presentation\Http\Controllers\Controller as ItemController;
+use App\Domain\Item\Presentation\Http\Controllers\Controller as ItemController;
 use App\Presentation\Http\Controllers\AbstractController;
 use SessionHandler;
 

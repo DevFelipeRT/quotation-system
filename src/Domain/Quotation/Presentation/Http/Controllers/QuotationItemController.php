@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Domains\Quotation\Presentation\Http\Controllers;
+namespace App\Domain\Quotation\Presentation\Http\Controllers;
 
 use App\Domain\Quotation\Domain\Entities\Quotation;
 use App\Domain\Quotation\Domain\Entities\QuotationItem;
