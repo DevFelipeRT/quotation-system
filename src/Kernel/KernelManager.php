@@ -13,7 +13,6 @@ use App\Kernel\Infrastructure\SessionKernel;
 use App\Kernel\Presentation\ControllerKernel;
 use App\Kernel\Adapters\EventListening\EventListeningKernel;
 use App\Kernel\Container\ContainerKernel;
-use App\Kernel\Container\ServiceBindings;
 use App\Shared\Container\AppContainerInterface;
 use App\Infrastructure\Rendering\Infrastructure\HtmlViewRenderer;
 use App\Infrastructure\Http\AppUrlResolver;
@@ -35,7 +34,10 @@ use Throwable;
  */
 final class KernelManager
 {
+    private KernelConfig $kernelConfig;
+    // Kernel instances
     private LoggingKernel $loggingKernel;
+    private ContainerKernel $containerKernel;
     private EventListeningKernel $eventListeningKernel;
     private DatabaseConnectionKernel $databaseConnectionKernel;
     private DatabaseExecutionKernel $databaseExecutionKernel;
@@ -43,11 +45,10 @@ final class KernelManager
     private RouterKernel $routerKernel;
     private UseCaseKernel $useCaseKernel;
     private ControllerKernel $controllerKernel;
-    private ContainerKernel $containerKernel;
-    private AppContainerInterface $container;
-    private KernelConfig $kernelConfig;
+    // Module instances
     private LoggerInterface $logger;
     private PsrLoggerInterface $psrLogger;
+    private AppContainerInterface $container;
     private EventDispatcherInterface $eventDispatcher;
     private DatabaseConnectionInterface $dbConnection;
 
@@ -62,11 +63,9 @@ final class KernelManager
         $this->kernelConfig = $configProvider->getKernelConfig();
 
         $this->initializeLoggingKernel($configProvider);
-        $this->initializeBootstrapContainer($configProvider);
+        $this->initializeContainerKernel($configProvider);
         $this->initializeEventListeningKernel();
         $this->initializeDatabaseConnectionKernel($configProvider);
-
-        $this->initializeDefinitiveContainer($configProvider);
         $this->initializeAdditionalKernels($configProvider);
     }
 
@@ -85,14 +84,17 @@ final class KernelManager
     }
 
     /**
-     * Step 2: Bootstrap container with only logger/psrLogger.
+     * Step 2: Container is always critical.
      */
-    private function initializeBootstrapContainer(ConfigProvider $configProvider): void
+    private function initializeContainerKernel(): void
     {
-        $bootstrapBindings = ServiceBindings::bootstrap($this->logger, $this->psrLogger);
-        $bootstrapContainerKernel = new ContainerKernel($configProvider, $bootstrapBindings);
-        $this->container = $bootstrapContainerKernel->getContainer();
-        $this->containerKernel = $bootstrapContainerKernel;
+        try {
+            $this->containerKernel = new ContainerKernel();
+            $this->container = $this->containerKernel->create($this->logger, $this->psrLogger);
+        } catch (Throwable $e) {
+            $this->handleModuleFailure('container', $e, true);
+        }
+        
     }
 
     /**
@@ -123,22 +125,7 @@ final class KernelManager
     }
 
     /**
-     * Step 5: Definitive container with all bindings.
-     */
-    private function initializeDefinitiveContainer(ConfigProvider $configProvider): void
-    {
-        $serviceBindings = ServiceBindings::get(
-            $this->logger,
-            $this->dbConnection,
-            $this->eventDispatcher,
-            $this->psrLogger
-        );
-        $this->containerKernel = new ContainerKernel($configProvider, $serviceBindings);
-        $this->container = $this->containerKernel->getContainer();
-    }
-
-    /**
-     * Step 6: Initialize all other (critical or not) kernels using KernelConfig.
+     * Step 5: Initialize all other (critical or not) kernels using KernelConfig.
      */
     private function initializeAdditionalKernels(ConfigProvider $configProvider): void
     {

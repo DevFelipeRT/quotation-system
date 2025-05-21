@@ -7,20 +7,17 @@ namespace App\Kernel\Adapters\EventListening;
 use App\Adapters\EventListening\Application\Resolver\EventListenerMap;
 use App\Adapters\EventListening\Application\Resolver\EventListenerResolver;
 use App\Adapters\EventListening\Infrastructure\Dispatcher\DefaultEventDispatcher;
-use App\Kernel\Adapters\EventListening\Providers\DatabaseEventBindingProvider;
-use App\Kernel\Adapters\EventListening\Providers\RoutingEventBindingProvider;
-use App\Kernel\Adapters\EventListening\Providers\SessionEventBindingProvider;
+use App\Kernel\Adapters\EventListening\Contracts\EventBindingProviderInterface;
 use App\Shared\Container\AppContainerInterface;
+use App\Shared\Discovery\DiscoveryScanner;
+
 use App\Shared\Event\Contracts\EventDispatcherInterface;
 
 /**
  * EventListeningKernel
  *
  * Centralizes all event-to-listener bindings using modular providers.
- * Ensures every binding provider is registered and its listeners mapped.
- * Exposes the global event dispatcher and runtime event listener resolver.
- *
- * Providers are discovered and registered here.
+ * Providers are discovered automatically via namespace scanning.
  */
 final class EventListeningKernel
 {
@@ -29,44 +26,34 @@ final class EventListeningKernel
 
     /**
      * Constructs and bootstraps the event listening kernel.
-     * All known binding providers are instantiated and merged.
+     * Uses DiscoveryScanner to find and resolve binding providers.
      *
      * @param AppContainerInterface $container
      */
     public function __construct(AppContainerInterface $container)
     {
-        // Descoberta explícita dos providers (pode ser dinâmica, se desejar)
-        $providers = [
-            new DatabaseEventBindingProvider(),
-            new RoutingEventBindingProvider(),
-            new SessionEventBindingProvider(),
-            // Adicione novos providers aqui conforme o sistema cresce.
-        ];
+        $scanner = new DiscoveryScanner();
 
-        // Coleta todos os bindings como [evento => [nomeClasseListener, ...]]
+        $providers = array_map(
+            fn ($p) => $container->get($p::class),
+            $scanner->discoverImplementing(
+                EventBindingProviderInterface::class,
+                'App\\Kernel\\Adapters\\EventListening\\Providers'
+            )
+        );
+
         $bindings = $this->mergeBindingsFromProviders($providers);
         $map = new EventListenerMap($bindings);
 
-        // Cria o resolver e dispatcher usando o container para DI nos listeners
         $this->resolver = new EventListenerResolver($map, $container);
         $this->dispatcher = new DefaultEventDispatcher($this->resolver);
     }
 
-    /**
-     * Returns the runtime event-to-listener resolver.
-     *
-     * @return EventListenerResolver
-     */
     public function resolver(): EventListenerResolver
     {
         return $this->resolver;
     }
 
-    /**
-     * Returns the global event dispatcher for publishing events.
-     *
-     * @return EventDispatcherInterface
-     */
     public function dispatcher(): EventDispatcherInterface
     {
         return $this->dispatcher;
@@ -75,7 +62,7 @@ final class EventListeningKernel
     /**
      * Aggregates all event-listener class bindings from registered providers.
      *
-     * @param array $providers Array of EventBindingProviderInterface implementations.
+     * @param EventBindingProviderInterface[] $providers
      * @return array<class-string, class-string[]>
      */
     private function mergeBindingsFromProviders(array $providers): array

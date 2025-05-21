@@ -5,35 +5,42 @@ declare(strict_types=1);
 namespace App\Shared\Container;
 
 /**
- * AppContainerInterface
+ * Interface AppContainerInterface
  *
- * Defines the contract for the application's service container.
- * Supports registration, lazy instantiation, and dependency resolution.
- * Compatible with PSR-11 concepts, but decoupled from external dependencies.
- *
- * Features:
- * - Services and factories can be registered manually via `set()`.
- * - If a service is not found and the given `$id` is a class name,
- *   the container must attempt to instantiate it using Reflection,
- *   resolving constructor dependencies recursively by type-hint.
- * - Root dependencies (such as LoggerInterface) must be registered manually.
+ * Defines the contract for dependency containers capable of managing service bindings,
+ * singleton instances, and reflective autowiring.
  */
 interface AppContainerInterface
 {
     /**
-     * Retrieve a service or dependency by its identifier (class name or alias).
-     * If no binding is registered, attempts to instantiate the class automatically,
-     * resolving its dependencies via Reflection-based autowiring.
+     * Registers a binding with optional singleton behavior.
      *
-     * @param string $id Class name or service alias.
-     * @return mixed The resolved service instance.
-     * @throws NotFoundException If the service cannot be resolved or autowired.
+     * @param string $id Identifier (usually a class/interface name)
+     * @param callable $factory Factory function to resolve the instance
+     * @param bool $singleton Whether the instance should be reused
      */
-    public function get(string $id);
+    public function bind(string $id, callable $factory, bool $singleton = true): void;
 
     /**
-     * Determine if the container can resolve or autowire the given identifier.
-     * Returns true if a manual binding exists or the class can be autowired.
+     * Registers a singleton binding (always reused).
+     *
+     * @param string $id
+     * @param callable $factory
+     */
+    public function singleton(string $id, callable $factory): void;
+
+    /**
+     * Resolves a service instance by identifier.
+     * Supports autowiring fallback for classes not explicitly bound.
+     *
+     * @param string $id
+     * @return mixed
+     * @throws \App\Shared\Container\NotFoundException
+     */
+    public function get(string $id): mixed;
+
+    /**
+     * Checks if a binding exists for the given identifier.
      *
      * @param string $id
      * @return bool
@@ -41,13 +48,14 @@ interface AppContainerInterface
     public function has(string $id): bool;
 
     /**
-     * Register a service instance or a factory for the given identifier.
-     * If $concrete is a callable, it will be used as a factory.
-     * If $concrete is an object, it is registered as a singleton instance.
+     * Removes a specific binding and instance.
      *
      * @param string $id
-     * @param callable|object $concrete
-     * @return void
      */
-    public function set(string $id, $concrete): void;
+    public function clear(string $id): void;
+
+    /**
+     * Clears all bindings and singleton instances.
+     */
+    public function reset(): void;
 }
