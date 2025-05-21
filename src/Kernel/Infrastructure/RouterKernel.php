@@ -21,7 +21,6 @@ use App\Infrastructure\Routing\Infrastructure\Repository\InMemoryRouteRepository
 use App\Infrastructure\Routing\Infrastructure\Resolver\DefaultRouteResolver;
 use App\Infrastructure\Routing\Presentation\Http\Contracts\HttpRouteInterface;
 use App\Infrastructure\Routing\Presentation\Http\Contracts\RouteRequestInterface;
-use App\Infrastructure\Routing\Presentation\Http\RoutingEngine;
 use App\Infrastructure\Routing\Domain\ValueObjects\ControllerAction;
 use App\Infrastructure\Routing\Infrastructure\Exceptions\RouteNotFoundException;
 use App\Shared\Event\Contracts\EventDispatcherInterface;

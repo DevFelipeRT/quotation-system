@@ -1,26 +1,26 @@
 <?php
 
-namespace Config\Container;
-
+namespace Config;
 
 use Config\App\AppConfig;
 use Config\Database\DatabaseConfig;
 use Config\Database\DatabaseSchemaConfig;
 use Config\Env\EnvLoader;
+use Config\Kernel\KernelConfig;
 use Config\Paths\PathsConfig;
 use Config\Paths\LogPathsConfig;
 use Config\Session\SessionConfig;
 use InvalidArgumentException;
 
 /**
- * Class ConfigContainer
+ * Class ConfigProvider
  *
  * Aggregates and provides centralized access to all configuration modules
  * used throughout the application. Instantiated once during bootstrap.
  *
- * @package Config\Container
+ * @package Config
  */
-final class ConfigContainer
+final class ConfigProvider
 {
     private PathsConfig           $pathsConfig;
     private EnvLoader             $envLoader;
@@ -29,9 +29,10 @@ final class ConfigContainer
     private DatabaseSchemaConfig  $schemaConfig;
     private LogPathsConfig        $logPathsConfig;
     private SessionConfig         $sessionConfig;
+    private KernelConfig          $kernelConfig;
 
     /**
-     * ConfigContainer constructor.
+     * ConfigProvider constructor.
      *
      * Initializes all configuration modules in correct dependency order.
      *
@@ -46,6 +47,7 @@ final class ConfigContainer
         $this->schemaConfig    = new DatabaseSchemaConfig();
         $this->logPathsConfig  = new LogPathsConfig($this->pathsConfig);
         $this->sessionConfig   = new SessionConfig();
+        $this->kernelConfig    = new KernelConfig();
     }
 
     /** @return PathsConfig */
@@ -88,5 +90,11 @@ final class ConfigContainer
     public function getSessionConfig(): SessionConfig
     {
         return $this->sessionConfig;
+    }
+
+    /** @return KernelConfig */
+    public function getKernelConfig(): KernelConfig
+    {
+        return $this->kernelConfig;
     }
 }

@@ -4,21 +4,21 @@ declare(strict_types=1);
 
 namespace App\Kernel\Presentation;
 
-use App\Domains\Item\Application\UseCases\CreateUseCase;
-use App\Domains\Item\Application\UseCases\DeleteUseCase;
-use App\Domains\Item\Application\UseCases\ListUseCase;
-use App\Domains\Item\Application\UseCases\UpdateUseCase;
-use App\Domains\Item\Presentation\Http\Controllers\Controller as ItemController;
-use App\Domains\Item\Presentation\Http\Controllers\CreateController;
-use App\Domains\Item\Presentation\Http\Controllers\DeleteController;
-use App\Domains\Item\Presentation\Http\Controllers\UpdateController;
+use App\Domain\Item\Application\UseCases\CreateUseCase;
+use App\Domain\Item\Application\UseCases\DeleteUseCase;
+use App\Domain\Item\Application\UseCases\ListUseCase;
+use App\Domain\Item\Application\UseCases\UpdateUseCase;
+use App\Domain\Item\Presentation\Http\Controllers\Controller as ItemController;
+use App\Domain\Item\Presentation\Http\Controllers\CreateController;
+use App\Domain\Item\Presentation\Http\Controllers\DeleteController;
+use App\Domain\Item\Presentation\Http\Controllers\UpdateController;
 use App\Infrastructure\Http\UrlResolverInterface;
 use App\Infrastructure\Logging\Application\LogEntryAssemblerInterface;
-use App\Infrastructure\Logging\LoggerInterface;
+use App\Infrastructure\Logging\Infrastructure\Contracts\LoggerInterface;
 use App\Infrastructure\Rendering\Infrastructure\ViewRendererInterface;
-use App\Infrastructure\Session\SessionHandlerInterface;
+use App\Infrastructure\Session\Domain\Contracts\SessionHandlerInterface;
 use App\Presentation\Http\Controllers\HomeController;
-use Config\Container\ConfigContainer;
+use Config\ConfigProvider;
 
 /**
  * ControllerKernel
@@ -28,7 +28,7 @@ use Config\Container\ConfigContainer;
  */
 final class ControllerKernel
 {
-    private ConfigContainer $config;
+    private ConfigProvider $config;
     private SessionHandlerInterface $session;
     private ViewRendererInterface $renderer;
     private UrlResolverInterface $urlResolver;
@@ -40,7 +40,7 @@ final class ControllerKernel
     private DeleteUseCase $deleteUseCase;
 
     /**
-     * @param ConfigContainer $config
+     * @param ConfigProvider $config
      * @param SessionHandlerInterface $session
      * @param ViewRendererInterface $renderer
      * @param UrlResolverInterface $urlResolver
@@ -52,7 +52,7 @@ final class ControllerKernel
      * @param DeleteUseCase $deleteUseCase
      */
     public function __construct(
-        ConfigContainer $config,
+        ConfigProvider $config,
         SessionHandlerInterface $session,
         ViewRendererInterface $renderer,
         UrlResolverInterface $urlResolver,

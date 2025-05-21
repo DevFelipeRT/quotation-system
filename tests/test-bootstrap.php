@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests;
 
-use Config\Container\ConfigContainer;
+use Config\ConfigProvider;
 use Throwable;
 
 try {
@@ -16,7 +16,7 @@ try {
      * Provides a shared instance of the application configuration container
      * for use in real integration tests of system modules.
      */
-    $container = new ConfigContainer();
+    $container = new ConfigProvider();
 
     echo "Bootstrap executed successfully.\n";
     return $container;

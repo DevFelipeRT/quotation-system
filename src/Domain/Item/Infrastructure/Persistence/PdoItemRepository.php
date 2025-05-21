@@ -9,7 +9,7 @@ use App\Infrastructure\Database\Domain\Connection\DatabaseConnectionInterface;
 use App\Infrastructure\Database\Exceptions\QueryExecutionException;
 use App\Infrastructure\Logging\Domain\LogEntry;
 use App\Infrastructure\Logging\Domain\LogLevelEnum;
-use App\Infrastructure\Logging\LoggerInterface;
+use App\Infrastructure\Logging\Infrastructure\Contracts\LoggerInterface;
 use Config\Database\DatabaseSchemaConfig;
 use PDO;
 use PDOException;

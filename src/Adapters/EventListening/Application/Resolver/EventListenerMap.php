@@ -4,25 +4,22 @@ declare(strict_types=1);
 
 namespace App\Adapters\EventListening\Application\Resolver;
 
-use App\Adapters\EventListening\Domain\Contracts\EventListenerInterface;
-use InvalidArgumentException;
-
 /**
- * Represents an immutable and validated mapping of event classes to listeners.
+ * Represents an immutable, validated mapping of event classes to listener class names.
  *
- * This map serves as the canonical registry of event bindings. It validates
- * all listeners at construction time and guarantees that only valid mappings
- * are retained and accessible throughout the application's lifecycle.
+ * This map serves as the canonical registry of event bindings. It guarantees
+ * only valid mappings are accessible throughout the application's lifecycle.
+ * Listeners are resolved dynamically (via container/factory) at dispatch time.
  */
 final class EventListenerMap
 {
     /**
-     * @var array<class-string, EventListenerInterface[]>
+     * @var array<class-string, class-string[]>
      */
     private array $map = [];
 
     /**
-     * @param array<class-string, iterable<EventListenerInterface>> $bindings
+     * @param array<class-string, class-string[]> $bindings
      */
     public function __construct(array $bindings)
     {
@@ -30,10 +27,10 @@ final class EventListenerMap
     }
 
     /**
-     * Returns all listeners associated with the provided event instance.
+     * Returns all listener class names associated with the provided event instance.
      *
      * @param object $event
-     * @return EventListenerInterface[]
+     * @return class-string[]
      */
     public function for(object $event): array
     {
@@ -41,9 +38,9 @@ final class EventListenerMap
     }
 
     /**
-     * Returns the entire event-to-listener mapping.
+     * Returns the entire event-to-listener class mapping.
      *
-     * @return array<class-string, EventListenerInterface[]>
+     * @return array<class-string, class-string[]>
      */
     public function all(): array
     {
@@ -53,45 +50,40 @@ final class EventListenerMap
     /**
      * Builds and validates the internal event-to-listener map.
      *
-     * @param array<class-string, iterable<EventListenerInterface>> $bindings
-     * @return array<class-string, EventListenerInterface[]>
+     * @param array<class-string, class-string[]> $bindings
+     * @return array<class-string, class-string[]>
      */
     private function buildValidatedMap(array $bindings): array
     {
         $map = [];
-
-        foreach ($bindings as $eventClass => $listeners) {
-            $map[$eventClass] = $this->validateListeners($eventClass, $listeners);
+        foreach ($bindings as $eventClass => $listenerClasses) {
+            $map[$eventClass] = $this->validateListenerClasses($eventClass, $listenerClasses);
         }
-
         return $map;
     }
 
     /**
-     * Ensures each listener is valid and conforms to the expected interface.
+     * Ensures each listener class name is a valid, loadable class string.
      *
      * @param string $eventClass
-     * @param iterable $listeners
-     * @return EventListenerInterface[]
+     * @param iterable $listenerClasses
+     * @return class-string[]
      *
-     * @throws InvalidArgumentException
+     * @throws \InvalidArgumentException
      */
-    private function validateListeners(string $eventClass, iterable $listeners): array
+    private function validateListenerClasses(string $eventClass, iterable $listenerClasses): array
     {
         $validated = [];
-
-        foreach ($listeners as $listener) {
-            if (!$listener instanceof EventListenerInterface) {
-                throw new InvalidArgumentException(sprintf(
-                    'Invalid listener for event "%s": must implement EventListenerInterface, got %s.',
+        foreach ($listenerClasses as $listenerClass) {
+            if (!is_string($listenerClass) || !class_exists($listenerClass)) {
+                throw new \InvalidArgumentException(sprintf(
+                    'Invalid listener class for event "%s": got "%s", expected existing class name.',
                     $eventClass,
-                    is_object($listener) ? get_class($listener) : gettype($listener)
+                    is_string($listenerClass) ? $listenerClass : gettype($listenerClass)
                 ));
             }
-
-            $validated[] = $listener;
+            $validated[] = $listenerClass;
         }
-
         return $validated;
     }
 }

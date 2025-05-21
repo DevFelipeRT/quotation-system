@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Config\Container\ConfigContainer;
+use Config\ConfigProvider;
 use Config\Env\EnvLoader;
 use Config\Env\EnvValidator;
 use Config\Paths\PathsConfig;
@@ -70,7 +70,7 @@ try {
     EnvValidator::validate($env);
 
     // Step 3: Bootstrap full application config container
-    return new ConfigContainer();
+    return new ConfigProvider();
 
 } catch (Throwable $e) {
     http_response_code(500);

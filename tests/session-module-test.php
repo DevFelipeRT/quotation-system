@@ -1,179 +1,185 @@
 <?php
 
+declare(strict_types=1);
+
+/**
+ * Session Module Integration Test
+ *
+ * Validates guest and authenticated session flows, direct session data manipulation,
+ * controller-bound session value usage, and robust session destruction.
+ *
+ * Relies exclusively on KernelManager for all dependency resolution and orchestration.
+ * Fully aligned with Clean Code, SOLID, PSR-12, Object Calisthenics and professional documentation standards.
+ *
+ * @package Tests\Session
+ */
+
+use App\Kernel\KernelManager;
 use App\Infrastructure\Session\Domain\ValueObjects\GuestSessionData;
 use App\Infrastructure\Session\Domain\ValueObjects\AuthenticatedSessionData;
 use App\Infrastructure\Session\Domain\ValueObjects\SessionContext;
 use App\Infrastructure\Session\Domain\ValueObjects\UserIdentity;
 use App\Kernel\Infrastructure\SessionKernel;
-use App\Kernel\Adapters\EventListeningKernel;
-use App\Adapters\EventListening\Infrastructure\Dispatcher\DefaultEventDispatcher;
-use App\Kernel\Infrastructure\LoggingKernel;
-use App\Kernel\Adapters\Providers\SessionEventBindingProvider;
 use Tests\Controllers\SessionTestController;
 
-// === Utilitário de diagnóstico ===
+/**
+ * Prints a test status message.
+ *
+ * @param string $message
+ * @param string $status
+ * @return void
+ */
 function printStatus(string $message, string $status = 'INFO'): void
 {
     echo sprintf("[%s] %s%s", strtoupper($status), $message, PHP_EOL);
 }
 
-echo "<pre>";
-
+/**
+ * Prints the PHP session state.
+ *
+ * @param string $title
+ * @return void
+ */
 function printSession(string $title): void
 {
     echo "[SESSION] {$title}\n";
-    echo '<pre>'; print_r($_SESSION); echo '</pre>';
-}
-
-// === Limpeza da sessão (essencial para evitar resíduos de execuções anteriores) ===
-if (session_status() === PHP_SESSION_ACTIVE) {
-    session_destroy();
-}
-$_SESSION = [];
-
-// === STEP 1: Bootstrap configuration ===
-$configContainer = require_once __DIR__ . '/test-bootstrap.php';
-printStatus("Bootstrap executed successfully. Configuration container loaded.", 'STEP');
-
-$sessionConfig = $configContainer->getSessionConfig();
-
-// === STEP 2: Initialize Logging ===
-try {
-    $loggingKernel = new LoggingKernel($configContainer);
-    $logger = $loggingKernel->getLoggerAdapter('psr');
-    printStatus("LoggingKernel initialized with PSR logger.", 'OK');
-} catch (Throwable $e) {
-    printStatus("Failed to initialize LoggingKernel: {$e->getMessage()}", 'FAIL');
-    printSession("State after logging failure");
-    exit(1);
-}
-
-// === STEP 3: Initialize EventListeningKernel + Dispatcher ===
-try {
-    $eventListeningKernel = new EventListeningKernel([
-        new SessionEventBindingProvider($logger),
-    ]);
-
-    $dispatcher = new DefaultEventDispatcher(
-        $eventListeningKernel->resolver()
-    );
-
-    printStatus("Session event dispatcher initialized.", 'OK');
-} catch (Throwable $e) {
-    printStatus("Failed to initialize session dispatcher: {$e->getMessage()}", 'FAIL');
-    printSession("State after dispatcher failure");
-    exit(1);
-}
-
-// === STEP 4: Initialize SessionKernel ===
-try {
-    $sessionKernel = new SessionKernel($sessionConfig, $dispatcher);
-    printStatus("SessionKernel initialized.", 'OK');
-} catch (Throwable $e) {
-    printStatus("Failed to initialize SessionKernel: {$e->getMessage()}", 'FAIL');
-    printSession("State after kernel failure");
-    exit(1);
+    echo '<pre>';
+    print_r($_SESSION);
+    echo '</pre>';
 }
 
 /**
- * ======== FACILITATED FLOW (using kernel helpers) ========
+ * Ensures a clean session state before running the test.
  */
-
-// STEP 5a: Start guest session (helper)
-try {
-    $sessionKernel->startGuestSession();
-    printStatus("Guest session started (helper method).", 'OK');
-    $data = $sessionKernel->getData();
-    printStatus("Session data (guest, facilitated):", 'RESULT');
-    echo '<pre>'; print_r($data->toArray()); echo '</pre>';
-} catch (Throwable $e) {
-    printStatus("Failed to start guest session (facilitated): {$e->getMessage()}", 'FAIL');
-    printSession("Session after failed guest session (facilitated)");
-    exit(1);
+function resetSession(): void
+{
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_destroy();
+    }
+    $_SESSION = [];
 }
 
-// STEP 5b: Start authenticated session (helper)
-try {
+/**
+ * Executes all functional tests for the session module using KernelManager.
+ *
+ * @return void
+ */
+function runSessionIntegrationTestWithKernelManager(): void
+{
+    resetSession();
+
+    echo "<pre>";
+
+    // Step 1: Bootstrap global configuration and KernelManager
+    $configProvider = require __DIR__ . '/test-bootstrap.php';
+    printStatus("Bootstrap executed successfully. Configuration loaded.", 'STEP');
+
+    try {
+        $kernelManager = new KernelManager($configProvider);
+        printStatus("KernelManager initialized.", 'OK');
+    } catch (Throwable $e) {
+        printStatus("Fatal error on KernelManager: " . $e->getMessage(), 'FAIL');
+        echo "<pre>";
+        echo $e;
+        echo "</pre>";
+        exit(1);
+    }
+
+    // Step 2: Obtain SessionKernel from KernelManager
+    $sessionKernel = $kernelManager->getSessionKernel();
+    printStatus("SessionKernel obtained from KernelManager.", 'OK');
+
+    // Functional flows (delegated to helper functions)
+    runGuestSessionFlow($sessionKernel);
+    runAuthenticatedSessionFlow($sessionKernel);
+    runManualGuestSessionFlow($sessionKernel, 'en_US');
+    runManualAuthenticatedSessionFlow($sessionKernel, 99, 'Jane', 'reviewer', 'fr_FR');
+    runControllerSessionFlow($sessionKernel);
+    runSessionDestructionFlow($sessionKernel);
+}
+
+/**
+ * Tests starting a guest session and prints the result.
+ */
+function runGuestSessionFlow(SessionKernel $sessionKernel): void
+{
+    $sessionKernel->startGuestSession();
+    printStatus("Guest session started (helper).", 'OK');
+    printArrayResult("Session data (guest)", $sessionKernel->getData()->toArray());
+}
+
+/**
+ * Tests starting an authenticated session and prints the result.
+ */
+function runAuthenticatedSessionFlow(SessionKernel $sessionKernel): void
+{
     $identity = new UserIdentity(1, 'Alice', 'admin');
     $sessionKernel->startAuthenticatedSession($identity);
-    printStatus("Authenticated session started (helper method).", 'OK');
-    $data = $sessionKernel->getData();
-    printStatus("Session data (authenticated, facilitated):", 'RESULT');
-    echo '<pre>'; print_r($data->toArray()); echo '</pre>';
-} catch (Throwable $e) {
-    printStatus("Failed to start authenticated session (facilitated): {$e->getMessage()}", 'FAIL');
-    printSession("Session after failed authenticated session (facilitated)");
-    exit(1);
+    printStatus("Authenticated session started (helper).", 'OK');
+    printArrayResult("Session data (authenticated)", $sessionKernel->getData()->toArray());
 }
 
 /**
- * ======== ADVANCED FLOW (manual VO creation) ========
+ * Tests manual instantiation and injection of a guest session object.
  */
-
-// STEP 6a: Start session as guest with custom locale
-try {
-    $customLocale = 'en_US';
-    $guest = new GuestSessionData(
-        new SessionContext($customLocale, false)
-    );
+function runManualGuestSessionFlow(SessionKernel $sessionKernel, string $locale): void
+{
+    $guest = new GuestSessionData(new SessionContext($locale, false));
     $sessionKernel->setData($guest);
-    printStatus("Guest session started (advanced/manual).", 'OK');
-    $data = $sessionKernel->getData();
-    printStatus("Session data (guest, advanced):", 'RESULT');
-    echo '<pre>'; print_r($data->toArray()); echo '</pre>';
-} catch (Throwable $e) {
-    printStatus("Failed to set guest session (advanced): {$e->getMessage()}", 'FAIL');
-    printSession("Session after failed guest session (advanced)");
-    exit(1);
+    printStatus("Manual GuestSessionData set.", 'OK');
+    printArrayResult("Session data (guest, manual)", $sessionKernel->getData()->toArray());
 }
 
-// STEP 6b: Start session as authenticated user with custom locale
-try {
-    $customLocale = 'es_ES';
-    $identity = new UserIdentity(42, 'Bob', 'editor');
-    $authenticated = new AuthenticatedSessionData(
-        $identity,
-        new SessionContext($customLocale, true)
-    );
+/**
+ * Tests manual instantiation and injection of an authenticated session object.
+ */
+function runManualAuthenticatedSessionFlow(SessionKernel $sessionKernel, int $id, string $name, string $role, string $locale): void
+{
+    $identity = new UserIdentity($id, $name, $role);
+    $authenticated = new AuthenticatedSessionData($identity, new SessionContext($locale, true));
     $sessionKernel->setData($authenticated);
-    printStatus("Authenticated session started (advanced/manual).", 'OK');
-    $data = $sessionKernel->getData();
-    printStatus("Session data (authenticated, advanced):", 'RESULT');
-    echo '<pre>'; print_r($data->toArray()); echo '</pre>';
-} catch (Throwable $e) {
-    printStatus("Failed to set authenticated session (advanced): {$e->getMessage()}", 'FAIL');
-    printSession("Session after failed authenticated session (advanced)");
-    exit(1);
+    printStatus("Manual AuthenticatedSessionData set.", 'OK');
+    printArrayResult("Session data (authenticated, manual)", $sessionKernel->getData()->toArray());
 }
 
-// ======== CONTROLLER-SPECIFIC DATA TEST (using SessionTestController) ========
-
-// STEP 6c: Store and retrieve a custom value (favorite_color) using the controller
-try {
-    // Create controller with kernel dependency
+/**
+ * Tests session manipulation through a controller.
+ */
+function runControllerSessionFlow(SessionKernel $sessionKernel): void
+{
     $controller = new SessionTestController($sessionKernel);
+    $controller->setFavoriteColor('green');
+    printStatus("Controller set favorite_color to 'green'.", 'OK');
+    printSession("Session after controller setFavoriteColor");
 
-    // Store custom value in the session via the controller
-    $controller->setFavoriteColor('blue');
-    printStatus("Controller set favorite_color to 'blue'.", 'OK');
-    printSession("Session after controller set favorite_color");
-
-    // Retrieve custom value from the session via the controller
     $controller->getFavoriteColor();
     printStatus("Controller retrieved favorite_color from session.", 'OK');
-} catch (Throwable $e) {
-    printStatus("Failed to set/retrieve favorite_color using controller: {$e->getMessage()}", 'FAIL');
-    printSession("Session after failed controller data operation");
-    exit(1);
 }
 
-
-// STEP 7: Destroy the session
-try {
+/**
+ * Tests session destruction.
+ */
+function runSessionDestructionFlow(SessionKernel $sessionKernel): void
+{
     $sessionKernel->destroy();
     printStatus("Session destroyed.", 'OK');
-} catch (Throwable $e) {
-    printStatus("Failed to destroy session: {$e->getMessage()}", 'FAIL');
-    printSession("Session after failed destroy");
-    exit(1);
+    printSession("Session after destroy");
 }
+
+/**
+ * Utility to print labeled array results.
+ *
+ * @param string $label
+ * @param array $data
+ * @return void
+ */
+function printArrayResult(string $label, array $data): void
+{
+    printStatus($label, 'RESULT');
+    echo '<pre>';
+    print_r($data);
+    echo '</pre>';
+}
+
+// Run the complete session module test suite via KernelManager
+runSessionIntegrationTestWithKernelManager();

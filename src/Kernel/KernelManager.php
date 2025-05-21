@@ -4,135 +4,326 @@ declare(strict_types=1);
 
 namespace App\Kernel;
 
-use App\Infrastructure\Database\Domain\Connection\DatabaseConnectionInterface;
-use App\Infrastructure\Logging\Application\LogEntryAssemblerInterface;
-use App\Infrastructure\Logging\LoggerInterface;
 use App\Kernel\Application\UseCaseKernel;
 use App\Kernel\Infrastructure\Database\DatabaseConnectionKernel;
 use App\Kernel\Infrastructure\Database\DatabaseExecutionKernel;
-use App\Kernel\Infrastructure\InfrastructureKernel;
 use App\Kernel\Infrastructure\LoggingKernel;
 use App\Kernel\Infrastructure\RouterKernel;
+use App\Kernel\Infrastructure\SessionKernel;
 use App\Kernel\Presentation\ControllerKernel;
-use Config\Container\ConfigContainer;
-use Config\Database\DatabaseSchemaConfig;
+use App\Kernel\Adapters\EventListening\EventListeningKernel;
+use App\Kernel\Container\ContainerKernel;
+use App\Kernel\Container\ServiceBindings;
+use App\Shared\Container\AppContainerInterface;
+use App\Infrastructure\Rendering\Infrastructure\HtmlViewRenderer;
+use App\Infrastructure\Http\AppUrlResolver;
+use App\Infrastructure\Logging\Application\LogEntryAssembler;
+use App\Infrastructure\Logging\Infrastructure\Contracts\LoggerInterface;
+use App\Infrastructure\Logging\Infrastructure\Contracts\PsrLoggerInterface;
+use App\Infrastructure\Database\Domain\Connection\DatabaseConnectionInterface;
+use App\Shared\Event\Contracts\EventDispatcherInterface;
+use Config\ConfigProvider;
+use Config\Kernel\KernelConfig;
+use Throwable;
 
 /**
  * KernelManager
  *
- * Centralizes initialization and access to all application-level kernels.
- * This class ensures correct construction order and dependency wiring.
+ * Orchestrates all core infrastructure and service kernels, enforcing
+ * module criticity policies defined in KernelConfig.
+ * All steps are strictly separated and all failures are handled explicitly.
  */
 final class KernelManager
 {
-    private ConfigContainer $configContainer;
     private LoggingKernel $loggingKernel;
-    private InfrastructureKernel $infrastructureKernel;
+    private EventListeningKernel $eventListeningKernel;
     private DatabaseConnectionKernel $databaseConnectionKernel;
     private DatabaseExecutionKernel $databaseExecutionKernel;
+    private SessionKernel $sessionKernel;
+    private RouterKernel $routerKernel;
     private UseCaseKernel $useCaseKernel;
     private ControllerKernel $controllerKernel;
-    private RouterKernel $routerKernel;
+    private ContainerKernel $containerKernel;
+    private AppContainerInterface $container;
+    private KernelConfig $kernelConfig;
     private LoggerInterface $logger;
-    private LogEntryAssemblerInterface $logEntryAssembler;
-    private DatabaseConnectionInterface $connection;
+    private PsrLoggerInterface $psrLogger;
+    private EventDispatcherInterface $eventDispatcher;
+    private DatabaseConnectionInterface $dbConnection;
+
+    /** @var array<string, Throwable> */
+    private array $moduleFailures = [];
 
     /**
-     * 
-     *
-     * @param ConfigContainer $config Fully initialized configuration container.
+     * @throws Throwable
      */
-    public function __construct(ConfigContainer $configContainer)
+    public function __construct(ConfigProvider $configProvider)
     {
-        $this->configContainer = $configContainer;
+        $this->kernelConfig = $configProvider->getKernelConfig();
+
+        $this->initializeLoggingKernel($configProvider);
+        $this->initializeBootstrapContainer($configProvider);
+        $this->initializeEventListeningKernel();
+        $this->initializeDatabaseConnectionKernel($configProvider);
+
+        $this->initializeDefinitiveContainer($configProvider);
+        $this->initializeAdditionalKernels($configProvider);
     }
 
     /**
-     * Initializes and wires all kernels based on the application configuration.
+     * Step 1: Logging kernel is always critical.
      */
-    public function boot(): void
+    private function initializeLoggingKernel(ConfigProvider $configProvider): void
     {
-        $this->initializeLogging();
-        $this->initializeInfrastructure();
-        $this->initializeDatabaseConnection();
-        $this->initializeDatabaseExecution();
-        $this->initializeUseCase();
-        $this->initializeControllers();
-        $this->initializeRouter();
+        try {
+            $this->loggingKernel = new LoggingKernel($configProvider);
+            $this->logger = $this->loggingKernel->getLogger();
+            $this->psrLogger = $this->loggingKernel->getPsrLogger();
+        } catch (Throwable $e) {
+            $this->handleModuleFailure('logger', $e, true);
+        }
     }
 
-    private function initializeLogging(): void
+    /**
+     * Step 2: Bootstrap container with only logger/psrLogger.
+     */
+    private function initializeBootstrapContainer(ConfigProvider $configProvider): void
     {
-        $this->loggingKernel = new LoggingKernel($this->configContainer);
-        $this->logger = $this->loggingKernel->getLogger();
-        $this->logEntryAssembler = $this->loggingKernel->getLogEntryAssembler();
+        $bootstrapBindings = ServiceBindings::bootstrap($this->logger, $this->psrLogger);
+        $bootstrapContainerKernel = new ContainerKernel($configProvider, $bootstrapBindings);
+        $this->container = $bootstrapContainerKernel->getContainer();
+        $this->containerKernel = $bootstrapContainerKernel;
     }
 
-    private function initializeInfrastructure(): void
+    /**
+     * Step 3: Event dispatcher is always critical.
+     */
+    private function initializeEventListeningKernel(): void
     {
-        $this->infrastructureKernel = new InfrastructureKernel($this->configContainer, $this->loggingKernel);
+        try {
+            $this->eventListeningKernel = new EventListeningKernel($this->container);
+            $this->eventDispatcher = $this->eventListeningKernel->dispatcher();
+        } catch (Throwable $e) {
+            $this->handleModuleFailure('eventDispatcher', $e, true);
+        }
     }
 
-    private function initializeDatabaseConnection(): void
+    /**
+     * Step 4: Database connection kernel is always critical.
+     */
+    private function initializeDatabaseConnectionKernel(ConfigProvider $configProvider): void
     {
-        $databaseConfig = $this->configContainer->getDatabaseConfig();
-        $this->databaseConnectionKernel = new DatabaseConnectionKernel($databaseConfig, $this->logger);
-        $this->connection = $this->databaseConnectionKernel()->getConnection();
+        try {
+            $databaseConfig = $configProvider->getDatabaseConfig();
+            $this->databaseConnectionKernel = new DatabaseConnectionKernel($databaseConfig, $this->eventDispatcher, true);
+            $this->dbConnection = $this->databaseConnectionKernel->getConnection();
+        } catch (Throwable $e) {
+            $this->handleModuleFailure('database', $e, true);
+        }
     }
 
-    private function initializeDatabaseExecution(): void
+    /**
+     * Step 5: Definitive container with all bindings.
+     */
+    private function initializeDefinitiveContainer(ConfigProvider $configProvider): void
     {
-        $this->databaseExecutionKernel = new DatabaseExecutionKernel($this->connection, $this->logger);
+        $serviceBindings = ServiceBindings::get(
+            $this->logger,
+            $this->dbConnection,
+            $this->eventDispatcher,
+            $this->psrLogger
+        );
+        $this->containerKernel = new ContainerKernel($configProvider, $serviceBindings);
+        $this->container = $this->containerKernel->getContainer();
     }
 
-    private function initializeUseCase(): void
+    /**
+     * Step 6: Initialize all other (critical or not) kernels using KernelConfig.
+     */
+    private function initializeAdditionalKernels(ConfigProvider $configProvider): void
     {
-        $this->useCaseKernel = new UseCaseKernel($this->connection, $this->logger);
+        $this->initializeKernelModule('databaseExecution', function () {
+            $this->databaseExecutionKernel = new DatabaseExecutionKernel($this->dbConnection, $this->eventDispatcher);
+        });
+
+        $sessionConfig = $configProvider->getSessionConfig();
+        $this->initializeKernelModule('session', function () use ($sessionConfig) {
+            $this->sessionKernel = new SessionKernel($sessionConfig, $this->eventDispatcher);
+        });
+
+        $this->initializeKernelModule('router', function () {
+            $this->routerKernel = $this->createRouterKernel($this->eventDispatcher);
+        });
+
+        $this->initializeKernelModule('useCase', function () {
+            $this->useCaseKernel = new UseCaseKernel($this->dbConnection, $this->logger);
+        });
+
+        $this->initializeKernelModule('controller', function () use ($configProvider) {
+            $this->controllerKernel = $this->createControllerKernel(
+                $configProvider,
+                $this->sessionKernel ?? null,
+                $this->logger
+            );
+        });
     }
 
-    private function initializeControllers(): void
+    /**
+     * Handles module initialization failures based on criticality.
+     */
+    private function handleModuleFailure(string $moduleName, Throwable $exception, bool $isCritical): void
     {
-        $this->controllerKernel = new ControllerKernel(
-            $this->configContainer,
-            $this->infrastructureKernel->getSessionHandler(),
-            $this->infrastructureKernel->getViewRenderer(),
-            $this->infrastructureKernel->getUrlResolver(),
-            $this->infrastructureKernel->getLogger(),
-            $this->infrastructureKernel->getLogEntryAssembler(),
-            $this->useCaseKernel->list(),
-            $this->useCaseKernel->create(),
-            $this->useCaseKernel->update(),
-            $this->useCaseKernel->delete()
+        $this->moduleFailures[$moduleName] = $exception;
+
+        if (isset($this->psrLogger)) {
+            $this->psrLogger->error(
+                "[KernelManager] Module '{$moduleName}' failed: {$exception->getMessage()}",
+                ['exception' => $exception]
+            );
+        } else {
+            error_log("[KernelManager] Module '{$moduleName}' failed: {$exception->getMessage()}");
+        }
+
+        if ($isCritical) {
+            throw $exception;
+        }
+    }
+
+    /**
+     * Initializes a kernel module with error handling policy.
+     */
+    private function initializeKernelModule(string $moduleName, callable $initializer): void
+    {
+        $isCritical = in_array($moduleName, $this->kernelConfig->getEssentialModules(), true);
+
+        try {
+            $initializer();
+        } catch (Throwable $e) {
+            $this->handleModuleFailure($moduleName, $e, $isCritical);
+        }
+    }
+
+    private function createRouterKernel(EventDispatcherInterface $eventDispatcher): RouterKernel
+    {
+        $controllerMap = $this->getControllerMap();
+        $controllerClassMap = $this->getControllerClassMap();
+
+        return new RouterKernel($controllerMap, $controllerClassMap, $eventDispatcher);
+    }
+
+    private function createControllerKernel(
+        ConfigProvider $configProvider,
+        ?SessionKernel $sessionKernel,
+        LoggerInterface $logger
+    ): ControllerKernel {
+        $viewRenderer = new HtmlViewRenderer();
+        $pathsConfig = $configProvider->getPathsConfig();
+        $urlResolver = new AppUrlResolver($pathsConfig->getAppDirectory());
+        $logEntryAssembler = new LogEntryAssembler();
+
+        $listUseCase   = $this->useCaseKernel?->getListUseCase();
+        $createUseCase = $this->useCaseKernel?->getCreateUseCase();
+        $updateUseCase = $this->useCaseKernel?->getUpdateUseCase();
+        $deleteUseCase = $this->useCaseKernel?->getDeleteUseCase();
+
+        return new ControllerKernel(
+            $configProvider,
+            $sessionKernel,
+            $viewRenderer,
+            $urlResolver,
+            $logger,
+            $logEntryAssembler,
+            $listUseCase,
+            $createUseCase,
+            $updateUseCase,
+            $deleteUseCase
         );
     }
 
-    private function initializeRouter(): void
+    private function getControllerMap(): array
     {
-        $this->routerKernel = new RouterKernel($this->controllerKernel->map());
+        return [];
     }
 
-    public function infrastructureKernel(): InfrastructureKernel
+    private function getControllerClassMap(): array
     {
-        return $this->infrastructureKernel;
+        return [];
     }
 
-    public function databaseConnectionKernel(): DatabaseConnectionKernel
+    // ====== Kernel and Service Accessors ======
+
+    public function getLoggingKernel(): LoggingKernel
+    {
+        return $this->loggingKernel;
+    }
+
+    public function getLogger(): LoggerInterface
+    {
+        return $this->logger;
+    }
+
+    public function getPsrLogger(): PsrLoggerInterface
+    {
+        return $this->psrLogger;
+    }
+
+    public function getEventListeningKernel(): EventListeningKernel
+    {
+        return $this->eventListeningKernel;
+    }
+
+    public function getDatabaseConnectionKernel(): DatabaseConnectionKernel
     {
         return $this->databaseConnectionKernel;
     }
 
-    public function useCaseKernel(): UseCaseKernel
+    public function getDatabaseConnection(): DatabaseConnectionInterface
     {
-        return $this->useCaseKernel;
+        return $this->dbConnection;
     }
 
-    public function controllerKernel(): ControllerKernel
+    public function getDatabaseExecutionKernel(): ?DatabaseExecutionKernel
     {
-        return $this->controllerKernel;
+        return $this->databaseExecutionKernel ?? null;
     }
 
-    public function routerKernel(): RouterKernel
+    public function getSessionKernel(): ?SessionKernel
     {
-        return $this->routerKernel;
+        return $this->sessionKernel ?? null;
+    }
+
+    public function getRouterKernel(): ?RouterKernel
+    {
+        return $this->routerKernel ?? null;
+    }
+
+    public function getUseCaseKernel(): ?UseCaseKernel
+    {
+        return $this->useCaseKernel ?? null;
+    }
+
+    public function getControllerKernel(): ?ControllerKernel
+    {
+        return $this->controllerKernel ?? null;
+    }
+
+    public function getContainer(): AppContainerInterface
+    {
+        return $this->container;
+    }
+
+    public function getContainerKernel(): ContainerKernel
+    {
+        return $this->containerKernel;
+    }
+
+    /**
+     * Returns all failures encountered during kernel bootstrap.
+     *
+     * @return array<string, Throwable>
+     */
+    public function getModuleFailures(): array
+    {
+        return $this->moduleFailures;
     }
 }

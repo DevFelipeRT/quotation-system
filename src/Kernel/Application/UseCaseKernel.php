@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Kernel\Application;
 
-use App\Domains\Item\Application\UseCases\CreateUseCase;
-use App\Domains\Item\Application\UseCases\DeleteUseCase;
-use App\Domains\Item\Application\UseCases\ListUseCase;
-use App\Domains\Item\Application\UseCases\UpdateUseCase;
-use App\Domains\Item\Infrastructure\Persistence\PdoItemRepository;
+use App\Domain\Item\Application\UseCases\CreateUseCase;
+use App\Domain\Item\Application\UseCases\DeleteUseCase;
+use App\Domain\Item\Application\UseCases\ListUseCase;
+use App\Domain\Item\Application\UseCases\UpdateUseCase;
+use App\Domain\Item\Infrastructure\Persistence\PdoItemRepository;
 use App\Infrastructure\Database\Domain\Connection\DatabaseConnectionInterface;
-use App\Infrastructure\Logging\LoggerInterface;
+use App\Infrastructure\Logging\Infrastructure\Contracts\LoggerInterface;
 
 /**
  * UseCaseKernel

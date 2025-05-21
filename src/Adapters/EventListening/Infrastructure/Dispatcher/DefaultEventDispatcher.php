@@ -6,12 +6,14 @@ namespace App\Adapters\EventListening\Infrastructure\Dispatcher;
 
 use App\Shared\Event\Contracts\EventDispatcherInterface;
 use App\Shared\Event\Contracts\EventListenerLocatorInterface;
+use App\Adapters\EventListening\Domain\Contracts\EventListenerInterface;
+use InvalidArgumentException;
 
 /**
- * Dispatches events to all dynamically resolved listeners.
+ * DefaultEventDispatcher
  *
- * This dispatcher relies on a locator strategy to resolve the
- * appropriate listeners for a given event at runtime.
+ * Dispatches events to all dynamically resolved listeners using SRP-compliant methods.
+ * Listener resolution and execution are strictly separated for clarity, testability, and maintenance.
  */
 final class DefaultEventDispatcher implements EventDispatcherInterface
 {
@@ -34,8 +36,42 @@ final class DefaultEventDispatcher implements EventDispatcherInterface
      */
     public function dispatch(object $event): void
     {
-        foreach ($this->locator->listenersFor($event) as $listener) {
-            $listener($event);
+        $listeners = $this->resolveListeners($event);
+        $this->invokeListeners($listeners, $event);
+    }
+
+    /**
+     * Resolves all listeners for the given event using the locator.
+     *
+     * @param object $event
+     * @return iterable<EventListenerInterface>
+     */
+    private function resolveListeners(object $event): iterable
+    {
+        return $this->locator->listenersFor($event);
+    }
+
+    /**
+     * Invokes each listener with the provided event.
+     *
+     * @param iterable<EventListenerInterface> $listeners
+     * @param object $event
+     * @return void
+     *
+     * @throws InvalidArgumentException
+     */
+    private function invokeListeners(iterable $listeners, object $event): void
+    {
+        foreach ($listeners as $listener) {
+            if (is_callable($listener)) {
+                $listener($event);
+            } else {
+                throw new InvalidArgumentException(sprintf(
+                    'Listener resolved for event "%s" is not invokable: %s',
+                    get_class($event),
+                    is_object($listener) ? get_class($listener) : gettype($listener)
+                ));
+            }
         }
     }
 }
