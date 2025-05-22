@@ -15,10 +15,11 @@ use App\Kernel\Adapters\EventListening\EventListeningKernel;
 use App\Kernel\Container\ContainerKernel;
 use App\Shared\Container\AppContainerInterface;
 use App\Infrastructure\Rendering\Infrastructure\HtmlViewRenderer;
-use App\Infrastructure\Logging\Application\LogEntryAssembler;
 use App\Infrastructure\Logging\Infrastructure\Contracts\LoggerInterface;
 use App\Infrastructure\Logging\Infrastructure\Contracts\PsrLoggerInterface;
 use App\Infrastructure\Database\Domain\Connection\DatabaseConnectionInterface;
+use App\Shared\Container\AppContainer;
+use App\Shared\Discovery\DiscoveryScanner;
 use App\Shared\Event\Contracts\EventDispatcherInterface;
 use App\Shared\UrlResolver\AppUrlResolver;
 use App\Shared\UrlResolver\UrlResolverInterface;
@@ -29,6 +30,7 @@ use Throwable;
 
 final class KernelManager
 {
+    private ConfigProvider $configProvider;
     private KernelConfig $kernelConfig;
     private PathsConfig $pathsConfig;
 
@@ -48,23 +50,34 @@ final class KernelManager
     private EventDispatcherInterface $eventDispatcher;
     private DatabaseConnectionInterface $dbConnection;
     private UrlResolverInterface $urlResolver;
+    private DiscoveryScanner $scanner;
 
     private array $moduleFailures = [];
 
     public function __construct(ConfigProvider $configProvider)
     {
+        $this->configProvider = $configProvider;
         $this->kernelConfig = $configProvider->getKernelConfig();
         $this->pathsConfig = $configProvider->getPathsConfig();
         $this->urlResolver = new AppUrlResolver($this->pathsConfig->getAppDirectory());
+        $this->scanner = new DiscoveryScanner();
 
-        $this->initializeLoggingKernel($configProvider);
+        $this->bootModules();
+    }
+
+    private function bootModules()
+    {
+        $this->initializeLoggingKernel($this->configProvider);
         $this->initializeContainerKernel();
         $this->registerCoreServices();
         $this->initializeEventListeningKernel();
-        $this->initializeDatabaseConnectionKernel($configProvider);
+        $this->initializeDatabaseConnectionKernel($this->configProvider);
         $this->registerDatabaseConnection();
         $this->initializeDatabaseExecutionKernel();
-        $this->initializeAdditionalKernels($configProvider);
+        $this->initializeRouterKernel();
+        $this->initializeSessionKernel($this->configProvider);
+        $this->initializeUseCaseKernel();
+        $this->initializeControllerKernel($this->configProvider);
     }
 
     private function initializeLoggingKernel(ConfigProvider $configProvider): void
@@ -131,28 +144,61 @@ final class KernelManager
         }
     }
 
-    private function initializeAdditionalKernels(ConfigProvider $configProvider): void
+    private function initializeRouterKernel(): void
     {
-        $sessionConfig = $configProvider->getSessionConfig();
-        $this->initializeKernelModule('session', function () use ($sessionConfig) {
+        try {
+            $this->routerKernel = new RouterKernel($this->container, $this->scanner, $this->eventDispatcher);
+        } catch (Throwable $e) {
+            $this->handleModuleFailure('router', $e, true);
+        }
+    }
+
+    private function initializeSessionKernel(ConfigProvider $configProvider): void
+    {
+        try {
+            $sessionConfig = $configProvider->getSessionConfig();
             $this->sessionKernel = new SessionKernel($sessionConfig, $this->eventDispatcher);
-        });
+        } catch (Throwable $e) {
+            $this->handleModuleFailure('session', $e, true);
+        }
+    }
 
-        $this->initializeKernelModule('router', function () {
-            $this->routerKernel = $this->createRouterKernel($this->eventDispatcher);
-        });
+    private function initializeUseCaseKernel(): void
+    {
+        try {
+            $this->useCaseKernel = $this->useCaseKernel = $this->container->get(UseCaseKernel::class);
+        } catch (Throwable $e) {
+            $this->handleModuleFailure('useCase', $e, true);
+        }
+    }
 
-        $this->initializeKernelModule('useCase', function () {
-            $this->useCaseKernel = $this->container->get(UseCaseKernel::class);
-        });
-
-        $this->initializeKernelModule('controller', function () use ($configProvider) {
+    private function initializeControllerKernel(ConfigProvider $configProvider): void
+    {
+        try {
             $this->controllerKernel = $this->createControllerKernel(
                 $configProvider,
-                $this->sessionKernel ?? null,
-                $this->logger
+                $this->sessionKernel
             );
-        });
+        } catch (Throwable $e) {
+            $this->handleModuleFailure('controller', $e, true);
+        }
+    }
+
+    private function createControllerKernel(
+        ConfigProvider $configProvider,
+        SessionKernel $sessionKernel,
+    ): ControllerKernel {
+        $templatesPath = $this->pathsConfig->getTemplatesPath();
+        $viewRenderer = new HtmlViewRenderer($templatesPath, $this->urlResolver);
+        $pathsConfig = $configProvider->getPathsConfig();
+        $urlResolver = new AppUrlResolver($pathsConfig->getAppDirectory());
+
+        return new ControllerKernel(
+            $sessionKernel,
+            $viewRenderer,
+            $urlResolver,
+            $this->useCaseKernel
+        );
     }
 
     private function handleModuleFailure(string $moduleName, Throwable $exception, bool $isCritical): void
@@ -182,41 +228,6 @@ final class KernelManager
         } catch (Throwable $e) {
             $this->handleModuleFailure($moduleName, $e, $isCritical);
         }
-    }
-
-    private function createRouterKernel(EventDispatcherInterface $eventDispatcher): RouterKernel
-    {
-        $controllerMap = $this->getControllerMap();
-        $controllerClassMap = $this->getControllerClassMap();
-
-        return new RouterKernel($controllerMap, $controllerClassMap, $eventDispatcher);
-    }
-
-    private function createControllerKernel(
-        ConfigProvider $configProvider,
-        SessionKernel $sessionKernel,
-    ): ControllerKernel {
-        $templatesPath = $this->pathsConfig->getTemplatesPath();
-        $viewRenderer = new HtmlViewRenderer($templatesPath, $this->urlResolver);
-        $pathsConfig = $configProvider->getPathsConfig();
-        $urlResolver = new AppUrlResolver($pathsConfig->getAppDirectory());
-
-        return new ControllerKernel(
-            $sessionKernel,
-            $viewRenderer,
-            $urlResolver,
-            $this->useCaseKernel
-        );
-    }
-
-    private function getControllerMap(): array
-    {
-        return [];
-    }
-
-    private function getControllerClassMap(): array
-    {
-        return [];
     }
 
     public function getLoggingKernel(): LoggingKernel { return $this->loggingKernel; }

@@ -10,7 +10,6 @@ use App\Adapters\EventListening\Infrastructure\Dispatcher\DefaultEventDispatcher
 use App\Kernel\Adapters\EventListening\Contracts\EventBindingProviderInterface;
 use App\Shared\Container\AppContainerInterface;
 use App\Shared\Discovery\DiscoveryScanner;
-
 use App\Shared\Event\Contracts\EventDispatcherInterface;
 
 /**
@@ -41,7 +40,7 @@ final class EventListeningKernel
                 'App\\Kernel\\Adapters\\EventListening\\Providers'
             )
         );
-
+        var_dump($providers);
         $bindings = $this->mergeBindingsFromProviders($providers);
         $map = new EventListenerMap($bindings);
 

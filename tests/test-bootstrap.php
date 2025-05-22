@@ -13,13 +13,13 @@ try {
     /**
      * TestBootstrap
      *
-     * Provides a shared instance of the application configuration container
+     * Provides a shared instance of the application configuration provider
      * for use in real integration tests of system modules.
      */
-    $container = new ConfigProvider();
+    $provider = new ConfigProvider();
 
     echo "Bootstrap executed successfully.\n";
-    return $container;
+    return $provider;
 } catch (Throwable $e) {
     echo "An error occurred during bootstrap: " . $e->getMessage() . "\n";
     return null;

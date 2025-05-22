@@ -56,6 +56,16 @@ set_error_handler(static function (
 set_exception_handler(static function (Throwable $e): void {
     http_response_code(500);
     echo 'Fatal application error. Execution halted.';
+    file_put_contents(
+        BASE_PATH . '/storage/logs/bootstrap.log',
+        (string) $e . PHP_EOL .
+        'Error: '    . $e->getMessage() . PHP_EOL .
+        'Code: '     . $e->getCode() . PHP_EOL .
+        'In line: '  . $e->getLine() . PHP_EOL .
+        'In trace: ' . $e->getTraceAsString() . PHP_EOL .
+        'In file: '  . $e->getFile() . PHP_EOL .
+        FILE_APPEND
+    );
 });
 
 // ─────────────────────────────────────────────

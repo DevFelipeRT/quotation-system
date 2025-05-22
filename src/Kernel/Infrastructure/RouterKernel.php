@@ -15,7 +15,6 @@ use App\Infrastructure\Routing\Domain\Events\{
 };
 use App\Infrastructure\Routing\Infrastructure\Dispatcher\DefaultRouteDispatcher;
 use App\Infrastructure\Routing\Infrastructure\Matcher\DefaultRouteMatcher;
-use App\Infrastructure\Routing\Infrastructure\Providers\HomeRouteProvider;
 use App\Infrastructure\Routing\Infrastructure\Registration\RouteRegistrar;
 use App\Infrastructure\Routing\Infrastructure\Repository\InMemoryRouteRepository;
 use App\Infrastructure\Routing\Infrastructure\Resolver\DefaultRouteResolver;
@@ -24,60 +23,25 @@ use App\Infrastructure\Routing\Presentation\Http\Contracts\RouteRequestInterface
 use App\Infrastructure\Routing\Domain\ValueObjects\ControllerAction;
 use App\Infrastructure\Routing\Infrastructure\Exceptions\RouteNotFoundException;
 use App\Shared\Event\Contracts\EventDispatcherInterface;
+use App\Shared\Container\AppContainerInterface;
+use App\Shared\Discovery\DiscoveryScanner;
 use Throwable;
 
-/**
- * RouterKernel
- *
- * Orchestrates the full routing lifecycle:
- * - Registers route providers and routes,
- * - Initializes repository, resolver, dispatcher,
- * - Provides a simple dispatch API for external use,
- * - Emits all routing-related domain events in a centralized and explicit manner.
- *
- * Inspired by the SessionKernel pattern for clarity, extensibility and SRP.
- */
 final class RouterKernel
 {
-    /**
-     * @var DefaultRouteResolver
-     */
     private DefaultRouteResolver $resolver;
-
-    /**
-     * @var DefaultRouteDispatcher
-     */
     private DefaultRouteDispatcher $dispatcher;
+    private EventDispatcherInterface $eventDispatcher;
 
-    /**
-     * @var EventDispatcherInterface|null
-     */
-    private ?EventDispatcherInterface $eventDispatcher;
-
-    /**
-     * RouterKernel constructor.
-     *
-     * @param array<class-string, object> $controllerMap
-     * @param array<class-string, class-string> $controllerClassMap
-     * @param EventDispatcherInterface|null $eventDispatcher
-     */
     public function __construct(
-        array $controllerMap,
-        array $controllerClassMap = [],
-        ?EventDispatcherInterface $eventDispatcher = null
+        private AppContainerInterface $container,
+        private DiscoveryScanner $scanner,
+        EventDispatcherInterface $eventDispatcher
     ) {
         $this->eventDispatcher = $eventDispatcher;
-        [$this->resolver, $this->dispatcher] = $this->initializeInfrastructure($controllerMap, $controllerClassMap);
+        [$this->resolver, $this->dispatcher] = $this->initializeInfrastructure();
     }
 
-    /**
-     * Dispatches the given RouteRequest, handling all routing events.
-     *
-     * @param RouteRequestInterface $request
-     * @return mixed Controller result/response
-     *
-     * @throws Throwable Propagates any exception not handled internally.
-     */
     public function dispatch(RouteRequestInterface $request)
     {
         $route = null;
@@ -85,10 +49,16 @@ final class RouterKernel
 
         try {
             $route = $this->resolver->resolve($request);
+            
+            if (!$route instanceof HttpRouteInterface) {
+                throw new \UnexpectedValueException('Resolved route is invalid or null.');
+            }
+
             $this->emitRouteResolved($request, $route);
             $this->emitRouteMatched($request, $route);
 
             $controllerAction = $route->controllerAction();
+
             $this->emitBeforeRouteDispatch($request, $route, $controllerAction);
 
             $result = $this->dispatcher->dispatch($request);
@@ -104,8 +74,6 @@ final class RouterKernel
             throw $e;
         }
     }
-
-    // ====================== EVENT EMITTERS ======================
 
     private function emitRouteMatched(RouteRequestInterface $request, HttpRouteInterface $route): void
     {
@@ -129,7 +97,7 @@ final class RouterKernel
         RouteRequestInterface $request,
         HttpRouteInterface $route,
         ControllerAction $controllerAction,
-        $result
+        mixed $result
     ): void {
         $this->eventDispatcher?->dispatch(new AfterRouteDispatchEvent($request, $route, $controllerAction, $result));
     }
@@ -153,80 +121,43 @@ final class RouterKernel
         $this->eventDispatcher?->dispatch(new RouteResolvedEvent($request, $route, $resolutionType));
     }
 
-    // ====================== INITIALIZATION HELPERS ======================
-
-    /**
-     * Initializes routing infrastructure: repository, resolver, dispatcher.
-     *
-     * @param array<class-string, object> $controllerMap
-     * @param array<class-string, class-string> $controllerClassMap
-     * @return array{DefaultRouteResolver, DefaultRouteDispatcher}
-     */
-    private function initializeInfrastructure(
-        array $controllerMap,
-        array $controllerClassMap
-    ): array {
-        $routes = $this->collectRoutesFromProviders($this->loadDefaultProviders($controllerClassMap));
+    private function initializeInfrastructure(): array
+    {
+        $controllerMap = $this->discoverControllerInstances();
+        $routes = $this->collectRoutesFromProviders($this->loadDefaultProviders());
         $repository = $this->registerRoutes($routes);
         $resolver = $this->createResolver($repository);
         $dispatcher = $this->createDispatcher($resolver, $controllerMap);
         return [$resolver, $dispatcher];
     }
 
-    /**
-     * Loads all default route providers in the system.
-     *
-     * @param array<class-string, class-string> $controllerClassMap
-     * @return RouteProviderInterface[]
-     */
-    private function loadDefaultProviders(array $controllerClassMap = []): array
+    private function loadDefaultProviders(): array
     {
-        $providers = [];
-        $providerDefs = $this->getDefaultProviderDefinitions();
-        foreach ($providerDefs as $providerFQCN => $mapKey) {
-            $controllerClass = $controllerClassMap[$mapKey] ?? null;
-            $providers[] = $this->instantiateProvider($providerFQCN, $controllerClass);
-        }
+        $providers = array_map(
+            fn (string $fqcn) => $this->container->get($fqcn),
+            $this->scanner->discoverImplementing(
+                RouteProviderInterface::class,
+                'App\\Infrastructure\\Routing\\Infrastructure\\Providers'
+            )
+        );
         return $providers;
     }
 
-    /**
-     * Returns the list of default route providers.
-     *
-     * @return array<class-string<RouteProviderInterface>, class-string<RouteProviderInterface>>
-     */
-    private function getDefaultProviderDefinitions(): array
+    private function discoverControllerInstances(): array
     {
-        return [
-            HomeRouteProvider::class => HomeRouteProvider::class,
-            // ItemRouteProvider::class => ItemRouteProvider::class,
-        ];
-    }
+        $controllerFQCNs = $this->scanner->discoverExtending(
+            'App\\Presentation\\Http\\Controllers\\BaseController',
+            'App\\Presentation\\Http\\Controllers'
+        );
 
-    /**
-     * Instantiates a provider, optionally injecting controller FQCN.
-     *
-     * @param class-string<RouteProviderInterface> $providerFQCN
-     * @param class-string|null $controllerClass
-     * @return RouteProviderInterface
-     */
-    private function instantiateProvider(string $providerFQCN, ?string $controllerClass = null): RouteProviderInterface
-    {
-        $ref = new \ReflectionClass($providerFQCN);
-        if ($ref->getConstructor() && $ref->getConstructor()->getNumberOfParameters() > 0) {
-            return $controllerClass
-                ? new $providerFQCN($controllerClass)
-                : new $providerFQCN();
+        $map = [];
+        foreach ($controllerFQCNs as $fqcn) {
+            $map[$fqcn] = $this->container->get($fqcn);
         }
-        return new $providerFQCN();
+
+        return $map;
     }
 
-    /**
-     * Aggregates all routes from the registered providers.
-     *
-     * @param RouteProviderInterface[] $providers
-     * @return HttpRouteInterface[]
-     */
     private function collectRoutesFromProviders(array $providers): array
     {
         $routes = [];
@@ -236,12 +167,6 @@ final class RouterKernel
         return $routes;
     }
 
-    /**
-     * Registers all routes into the in-memory repository.
-     *
-     * @param HttpRouteInterface[] $routes
-     * @return InMemoryRouteRepository
-     */
     private function registerRoutes(array $routes): InMemoryRouteRepository
     {
         $repository = new InMemoryRouteRepository();
@@ -250,25 +175,12 @@ final class RouterKernel
         return $repository;
     }
 
-    /**
-     * Instantiates the route resolver.
-     *
-     * @param InMemoryRouteRepository $repository
-     * @return DefaultRouteResolver
-     */
     private function createResolver(InMemoryRouteRepository $repository): DefaultRouteResolver
     {
         $matcher = new DefaultRouteMatcher();
         return new DefaultRouteResolver($repository, $matcher);
     }
 
-    /**
-     * Instantiates the route dispatcher.
-     *
-     * @param DefaultRouteResolver $resolver
-     * @param array<class-string, object> $controllerMap
-     * @return DefaultRouteDispatcher
-     */
     private function createDispatcher(DefaultRouteResolver $resolver, array $controllerMap): DefaultRouteDispatcher
     {
         return new DefaultRouteDispatcher($resolver, $controllerMap);

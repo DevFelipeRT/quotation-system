@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Routing\Infrastructure\Providers;
 
-use App\Domains\Item\Presentation\Http\Controllers\Controller;
-use App\Domains\Item\Presentation\Http\Controllers\CreateController;
-use App\Domains\Item\Presentation\Http\Controllers\DeleteController;
-use App\Domains\Item\Presentation\Http\Controllers\UpdateController;
+use App\Domain\Item\Presentation\Http\Controllers\Controller;
+use App\Domain\Item\Presentation\Http\Controllers\CreateController;
+use App\Domain\Item\Presentation\Http\Controllers\DeleteController;
+use App\Domain\Item\Presentation\Http\Controllers\UpdateController;
 use App\Infrastructure\Routing\Domain\Contracts\RouteProviderInterface;
 use App\Infrastructure\Routing\Domain\ValueObjects\ControllerAction;
 use App\Infrastructure\Routing\Domain\ValueObjects\HttpMethod;
