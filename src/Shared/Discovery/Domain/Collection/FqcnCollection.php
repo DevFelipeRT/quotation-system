@@ -9,7 +9,7 @@ use IteratorAggregate;
 use ArrayIterator;
 use Traversable;
 
-final class FullyQualifiedClassNameCollection implements IteratorAggregate
+final class FqcnCollection implements IteratorAggregate
 {
     /** @var FullyQualifiedClassName[] */
     private array $items;

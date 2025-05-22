@@ -22,22 +22,28 @@ use App\Infrastructure\Routing\Presentation\Http\Contracts\HttpRouteInterface;
 use App\Infrastructure\Routing\Presentation\Http\Contracts\RouteRequestInterface;
 use App\Infrastructure\Routing\Domain\ValueObjects\ControllerAction;
 use App\Infrastructure\Routing\Infrastructure\Exceptions\RouteNotFoundException;
+use App\Kernel\Discovery\DiscoveryKernel;
 use App\Shared\Event\Contracts\EventDispatcherInterface;
 use App\Shared\Container\AppContainerInterface;
-use App\Shared\Discovery\DiscoveryScanner;
+use App\Shared\Discovery\Application\Service\DiscoveryScanner;
 use Throwable;
 
 final class RouterKernel
 {
-    private DefaultRouteResolver $resolver;
-    private DefaultRouteDispatcher $dispatcher;
+    private AppContainerInterface $container;
+    private DiscoveryScanner $scanner;
     private EventDispatcherInterface $eventDispatcher;
 
+    private DefaultRouteResolver $resolver;
+    private DefaultRouteDispatcher $dispatcher;
+    
     public function __construct(
-        private AppContainerInterface $container,
-        private DiscoveryScanner $scanner,
+        AppContainerInterface $container,
+        DiscoveryKernel $scannerKernel,
         EventDispatcherInterface $eventDispatcher
     ) {
+        $this->container = $container;
+        $this->scanner = $scannerKernel->scanner();
         $this->eventDispatcher = $eventDispatcher;
         [$this->resolver, $this->dispatcher] = $this->initializeInfrastructure();
     }

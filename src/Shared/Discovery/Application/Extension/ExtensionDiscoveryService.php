@@ -7,7 +7,7 @@ namespace App\Application\Extension;
 use App\Shared\Discovery\Application\Service\DiscoveryScanner;
 use App\Shared\Discovery\Domain\ValueObjects\InterfaceName;
 use App\Shared\Discovery\Domain\ValueObjects\NamespaceName;
-use App\Shared\Discovery\Domain\Collection\FullyQualifiedClassNameCollection;
+use App\Shared\Discovery\Domain\Collection\FqcnCollection;
 
 /**
  * Serviço de descoberta de extensões (plugins/modificadores do sistema).
@@ -28,13 +28,13 @@ final class ExtensionDiscoveryService
      *
      * @param string $extensionInterfaceName FQCN da interface de extensão (ex: 'App\Extensions\ExtensionInterface')
      * @param string $extensionsNamespace Namespace onde estão as implementações (ex: 'App\Extensions')
-     * @return FullyQualifiedClassNameCollection Coleção de FQCNs de extensões encontradas.
+     * @return FqcnCollection Coleção de FQCNs de extensões encontradas.
      * @throws \InvalidArgumentException Se argumentos são inválidos ou não existem.
      */
     public function discoverExtensions(
         string $extensionInterfaceName,
         string $extensionsNamespace
-    ): FullyQualifiedClassNameCollection {
+    ): FqcnCollection {
         $interfaceVO = new InterfaceName($extensionInterfaceName);
         $namespaceVO = new NamespaceName($extensionsNamespace);
 

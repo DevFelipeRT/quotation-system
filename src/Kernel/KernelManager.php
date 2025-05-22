@@ -18,8 +18,9 @@ use App\Infrastructure\Rendering\Infrastructure\HtmlViewRenderer;
 use App\Infrastructure\Logging\Infrastructure\Contracts\LoggerInterface;
 use App\Infrastructure\Logging\Infrastructure\Contracts\PsrLoggerInterface;
 use App\Infrastructure\Database\Domain\Connection\DatabaseConnectionInterface;
+use App\Kernel\Discovery\DiscoveryKernel;
 use App\Shared\Container\AppContainer;
-use App\Shared\Discovery\DiscoveryScanner;
+use App\Shared\Discovery\Application\Service\DiscoveryScanner;
 use App\Shared\Event\Contracts\EventDispatcherInterface;
 use App\Shared\UrlResolver\AppUrlResolver;
 use App\Shared\UrlResolver\UrlResolverInterface;
@@ -36,6 +37,7 @@ final class KernelManager
 
     private LoggingKernel $loggingKernel;
     private ContainerKernel $containerKernel;
+    private DiscoveryKernel $discoveryKernel;
     private EventListeningKernel $eventListeningKernel;
     private DatabaseConnectionKernel $databaseConnectionKernel;
     private DatabaseExecutionKernel $databaseExecutionKernel;
@@ -50,7 +52,7 @@ final class KernelManager
     private EventDispatcherInterface $eventDispatcher;
     private DatabaseConnectionInterface $dbConnection;
     private UrlResolverInterface $urlResolver;
-    private DiscoveryScanner $scanner;
+    
 
     private array $moduleFailures = [];
 
@@ -60,7 +62,7 @@ final class KernelManager
         $this->kernelConfig = $configProvider->getKernelConfig();
         $this->pathsConfig = $configProvider->getPathsConfig();
         $this->urlResolver = new AppUrlResolver($this->pathsConfig->getAppDirectory());
-        $this->scanner = new DiscoveryScanner();
+        $this->discoveryKernel = new DiscoveryKernel('App', BASE_PATH . '/src');
 
         $this->bootModules();
     }
@@ -147,7 +149,7 @@ final class KernelManager
     private function initializeRouterKernel(): void
     {
         try {
-            $this->routerKernel = new RouterKernel($this->container, $this->scanner, $this->eventDispatcher);
+            $this->routerKernel = new RouterKernel($this->container, $this->discoveryKernel->scanner(), $this->eventDispatcher);
         } catch (Throwable $e) {
             $this->handleModuleFailure('router', $e, true);
         }

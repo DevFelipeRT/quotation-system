@@ -78,29 +78,29 @@ function writeBasicTestFiles(string $psr4Dir, string $namespacePrefix): void
     ensureDir("{$psr4Dir}/Foo/Sub");
 
     file_put_contents("{$psr4Dir}/Foo/DummyInterface.php", <<<PHP
-<?php
-namespace {$namespacePrefix}\Foo;
-interface DummyInterface {}
-PHP
+        <?php
+        namespace {$namespacePrefix}\Foo;
+        interface DummyInterface {}
+        PHP
     );
     file_put_contents("{$psr4Dir}/Foo/ValidClass.php", <<<PHP
-<?php
-namespace {$namespacePrefix}\Foo;
-class ValidClass implements DummyInterface {}
-PHP
+        <?php
+        namespace {$namespacePrefix}\Foo;
+        class ValidClass implements DummyInterface {}
+        PHP
     );
     file_put_contents("{$psr4Dir}/Foo/InvalidClass.php", <<<PHP
-<?php
-namespace {$namespacePrefix}\Foo;
-class InvalidClass {}
-PHP
+        <?php
+        namespace {$namespacePrefix}\Foo;
+        class InvalidClass {}
+        PHP
     );
     file_put_contents("{$psr4Dir}/Foo/Sub/SubValidClass.php", <<<PHP
-<?php
-namespace {$namespacePrefix}\Foo\Sub;
-use {$namespacePrefix}\Foo\DummyInterface;
-class SubValidClass implements DummyInterface {}
-PHP
+        <?php
+        namespace {$namespacePrefix}\Foo\Sub;
+        use {$namespacePrefix}\Foo\DummyInterface;
+        class SubValidClass implements DummyInterface {}
+        PHP
     );
 }
 
@@ -113,29 +113,29 @@ function writeKernelTestFiles(string $psr4Dir, string $namespacePrefix): void
     ensureDir("{$psr4Dir}/Extensions/Other");
 
     file_put_contents("{$psr4Dir}/Extensions/ExtensionInterface.php", <<<PHP
-<?php
-namespace {$namespacePrefix}\Extensions;
-interface ExtensionInterface {}
-PHP
+        <?php
+        namespace {$namespacePrefix}\Extensions;
+        interface ExtensionInterface {}
+        PHP
     );
     file_put_contents("{$psr4Dir}/Extensions/FooExtension.php", <<<PHP
-<?php
-namespace {$namespacePrefix}\Extensions;
-class FooExtension implements ExtensionInterface {}
-PHP
+        <?php
+        namespace {$namespacePrefix}\Extensions;
+        class FooExtension implements ExtensionInterface {}
+        PHP
     );
     file_put_contents("{$psr4Dir}/Extensions/Domain/DomainExtension.php", <<<PHP
-<?php
-namespace {$namespacePrefix}\Extensions\Domain;
-use {$namespacePrefix}\Extensions\ExtensionInterface;
-class DomainExtension implements ExtensionInterface {}
-PHP
+        <?php
+        namespace {$namespacePrefix}\Extensions\Domain;
+        use {$namespacePrefix}\Extensions\ExtensionInterface;
+        class DomainExtension implements ExtensionInterface {}
+        PHP
     );
     file_put_contents("{$psr4Dir}/Extensions/Other/Ignored.php", <<<PHP
-<?php
-namespace {$namespacePrefix}\Extensions\Other;
-class Ignored {}
-PHP
+        <?php
+        namespace {$namespacePrefix}\Extensions\Other;
+        class Ignored {}
+        PHP
     );
 }
 
@@ -212,6 +212,7 @@ $kernel = new DiscoveryKernel($kconfig['namespacePrefix'], $kconfig['psr4Dir']);
 // a) Descoberta padrão
 $foundDefault = [];
 $default = $kernel->discoverExtensions();
+var_dump($default);
 foreach ($default as $fqcnObj) {
     $foundDefault[] = $fqcnObj->value();
     printStatus("Default: " . $fqcnObj->value());

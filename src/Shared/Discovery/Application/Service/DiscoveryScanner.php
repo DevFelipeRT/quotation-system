@@ -8,7 +8,7 @@ use App\Shared\Discovery\Domain\ValueObjects\InterfaceName;
 use App\Shared\Discovery\Domain\ValueObjects\NamespaceName;
 use App\Shared\Discovery\Domain\ValueObjects\DirectoryPath;
 use App\Shared\Discovery\Domain\ValueObjects\FullyQualifiedClassName;
-use App\Shared\Discovery\Domain\Collection\FullyQualifiedClassNameCollection;
+use App\Shared\Discovery\Domain\Collection\FqcnCollection;
 use App\Shared\Discovery\Domain\Contracts\NamespaceToDirectoryResolver;
 use App\Shared\Discovery\Domain\Contracts\FileToFqcnResolver;
 use App\Shared\Discovery\Domain\Contracts\PhpFileFinder;
@@ -34,7 +34,7 @@ final class DiscoveryScanner
     public function discoverImplementing(
         InterfaceName $interface,
         NamespaceName $namespace
-    ): FullyQualifiedClassNameCollection {
+    ): FqcnCollection {
         $directory = $this->namespaceToDirectoryResolver->resolve($namespace);
         $phpFiles = $this->phpFileFinder->findAll($directory);
 
@@ -54,7 +54,7 @@ final class DiscoveryScanner
             $implementations[] = $fqcn;
         }
 
-        return new FullyQualifiedClassNameCollection($implementations);
+        return new FqcnCollection($implementations);
     }
 
     private function resolveFqcnSafely(

@@ -10,7 +10,7 @@ use App\Shared\Discovery\Infrastructure\FileToFqcnResolverPsr4;
 use App\Shared\Discovery\Infrastructure\PhpFileFinderRecursive;
 use App\Shared\Discovery\Domain\ValueObjects\InterfaceName;
 use App\Shared\Discovery\Domain\ValueObjects\NamespaceName;
-use App\Shared\Discovery\Domain\Collection\FullyQualifiedClassNameCollection;
+use App\Shared\Discovery\Domain\Collection\FqcnCollection;
 
 /**
  * DiscoveryKernel
@@ -44,9 +44,9 @@ final class DiscoveryKernel
      *
      * @param string|null $namespace         Namespace to search (optional).
      * @param bool        $fallbackToProject If true, applies fallback search logic.
-     * @return FullyQualifiedClassNameCollection
+     * @return FqcnCollection
      */
-    public function discoverExtensions(?string $namespace = null, bool $fallbackToProject = false): FullyQualifiedClassNameCollection
+    public function discoverExtensions(?string $namespace = null, bool $fallbackToProject = false): FqcnCollection
     {
         $interfaceName = $this->psr4Prefix . '\\Extensions\\ExtensionInterface';
         $namespacesToScan = $this->buildNamespacesToScan($namespace, $fallbackToProject);
@@ -56,7 +56,7 @@ final class DiscoveryKernel
     /**
      * Discovers all FQCNs implementing a given interface in a namespace.
      */
-    public function discoverImplementations(string $interfaceName, string $namespace): FullyQualifiedClassNameCollection
+    public function discoverImplementations(string $interfaceName, string $namespace): FqcnCollection
     {
         $scanner = $this->scanner();
         $interfaceVO = new InterfaceName($interfaceName);
@@ -103,7 +103,7 @@ final class DiscoveryKernel
     /**
      * Tries each namespace, returning the first non-empty implementation set.
      */
-    private function findFirstNamespaceWithImplementations(string $interfaceName, array $namespaces): FullyQualifiedClassNameCollection
+    private function findFirstNamespaceWithImplementations(string $interfaceName, array $namespaces): FqcnCollection
     {
         foreach ($namespaces as $namespace) {
             try {
@@ -116,6 +116,6 @@ final class DiscoveryKernel
                 continue;
             }
         }
-        return new FullyQualifiedClassNameCollection([]);
+        return new FqcnCollection([]);
     }
 }
