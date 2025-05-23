@@ -89,52 +89,217 @@ $container = (new ContainerBuilder())
 
 ---
 
-## 5. Usage
+## 5. Usage: Patterns and Practical Scenarios
 
-### 5.1 Registering and Resolving Services
+The following section expands on the usage of the Container module, offering practical, real-world examples for a wide range of dependency management situations. For each scenario, it demonstrates which container feature or contract to use, the rationale for its application, and recommendations for best results.
+
+---
+
+### 5.1 Transient vs Singleton: Deciding the Lifecycle
+
+**Scenario:** Service should be stateless (e.g., value objects, helpers, temporary calculations).
 
 ```php
-$container->bind('foo', fn() => new Foo());
-$foo = $container->get('foo');
-
-$container->singleton('bar', fn() => new Bar());
-$bar = $container->get('bar');
+// Transient: a new instance on every request
+$container->bind('uuid_generator', fn() => new UuidGenerator(), false); // false = transient
+$uuid1 = $container->get('uuid_generator');
+$uuid2 = $container->get('uuid_generator');
+assert($uuid1 !== $uuid2);
 ```
 
-### 5.2 Autowiring
+**When to use:**
+
+* Use transient for stateless, short-lived, or computation-only services.
+
+**Scenario:** Service must be shared (e.g., DB connection, logger, config, cache pool).
 
 ```php
-class Baz {
-    public function __construct(Foo $foo, Bar $bar) { /* ... */ }
+$container->singleton('logger', fn() => new Logger('/var/log/app.log'));
+$logger1 = $container->get('logger');
+$logger2 = $container->get('logger');
+assert($logger1 === $logger2);
+```
+
+**When to use:**
+
+* Use singleton for expensive, shared resources or cross-cutting concerns.
+
+---
+
+### 5.2 Autowiring for Clean, Decoupled Constructors
+
+**Scenario:** You have a service class whose dependencies should be automatically resolved by type (constructor injection).
+
+```php
+class Repository {
+    public function __construct(DbConnection $conn, Logger $logger) { /* ... */ }
 }
-$baz = $container->get(Baz::class); // Automatically resolves dependencies
+$repo = $container->get(Repository::class); // Will autowire DbConnection and Logger
 ```
 
-### 5.3 Providers
+**Best Practice:**
+
+* Prefer autowiring for services with simple, decoupled constructor dependencies.
+* For classes needing runtime/contextual parameters, prefer explicit bindings.
+
+---
+
+### 5.3 Explicit Binding for Custom Instantiation Logic
+
+**Scenario:** Service requires custom logic, external data, or non-type-hinted dependencies.
 
 ```php
-class MyProvider implements ServiceProviderInterface {
+$container->bind('user_context', function() {
+    return new UserContext(session_id(), $_SERVER['REMOTE_ADDR']);
+}, true);
+```
+
+**When to use:**
+
+* When a dependency needs runtime values or cannot be autowired.
+
+---
+
+### 5.4 Service Providers for Modular Bootstrapping
+
+**Scenario:** You want to encapsulate a group of related bindings (e.g., for a feature module, third-party package, or infrastructure layer).
+
+```php
+class QueueProvider implements ServiceProviderInterface {
     public function register(ContainerInterface $container): void {
-        $container->bind('foo', fn() => new Foo());
+        $container->singleton('queue', fn() => new QueueService());
+        $container->singleton('job_dispatcher', fn() => new JobDispatcher($container->get('queue')));
     }
 }
-$container->registerProvider(new MyProvider());
+$container->registerProvider(new QueueProvider());
 ```
 
-### 5.4 Clearing and Resetting
+**When to use:**
+
+* For feature modules, infrastructure layers, or to decouple bootstrapping logic.
+
+---
+
+### 5.5 Custom Scopes for Advanced Lifecycles
+
+**Scenario:** You need a request-scoped, pooled, or other custom lifecycle.
 
 ```php
-$container->clear('foo');
-$container->reset();
+class RequestScope implements ContainerScopeInterface {
+    // ... pool or context logic here ...
+}
+$container->setScope(BindingType::TRANSIENT, new RequestScope());
 ```
 
-### 5.5 Custom Scopes
+**When to use:**
+
+* Advanced use cases such as HTTP request context, task pooling, or multi-tenant lifecycles.
+
+---
+
+### 5.6 Clearing and Resetting
+
+**Scenario:** You need to remove or reset bindings during testing or container rebuilding.
 
 ```php
-use App\Shared\Container\Infrastructure\Bindings\BindingType;
-use App\Shared\Container\Infrastructure\Scope\TransientScope;
-$container->setScope(BindingType::SINGLETON, new TransientScope());
+$container->clear('foo');   // Removes a single binding
+$container->reset();        // Removes all explicit bindings and their instances
 ```
+
+**Best Practice:**
+
+* Use only in test scenarios or controlled system bootstrapping.
+
+---
+
+### 5.7 Detecting and Handling Circular Dependencies
+
+**Scenario:** You want to ensure your architecture is safe from accidental cycles.
+
+```php
+// This will throw CircularDependencyException if Foo <-> Bar depend on each other
+try {
+    $container->get(Foo::class);
+} catch (CircularDependencyException $e) {
+    // Handle, log, or redesign the dependency graph
+}
+```
+
+**Best Practice:**
+
+* Refactor to avoid cycles; container will detect and report, but design should prevent them.
+
+---
+
+### 5.8 has() Method: Checking for Explicit Bindings
+
+**Scenario:** Conditionally act based on service registration status.
+
+```php
+if ($container->has('special_feature')) {
+    $feature = $container->get('special_feature');
+}
+```
+
+**Note:**
+
+* `has()` only checks explicit bindings, not autowirable classes.
+
+---
+
+### 5.9 Using the Container in Factories and Higher-Level Services
+
+**Scenario:** When writing custom factories, providers, or modules that themselves need to resolve or manage dependencies.
+
+```php
+class ServiceFactory {
+    public function __construct(private ContainerInterface $container) {}
+    public function make(): Service {
+        return $this->container->get(Service::class);
+    }
+}
+```
+
+---
+
+### 5.10 Integration with Legacy or Non-Type-Hinted Code
+
+**Scenario:** Integrating legacy services or PHP code that lacks modern type hints.
+
+```php
+$container->bind('legacy_helper', function() {
+    return new LegacyHelper(/* ... */);
+}, true);
+$legacy = $container->get('legacy_helper');
+```
+
+**Best Practice:**
+
+* Use explicit bindings for any dependency that cannot be resolved by autowiring.
+
+---
+
+### 5.11 Extending and Overriding the Container for Specialized Needs
+
+**Scenario:** Replace autowiring logic, add instrumentation, or enforce custom policies.
+
+```php
+class LoggingResolver implements ResolverInterface {
+    public function resolve(string $id, ContainerInterface $container, array $stack = []): mixed {
+        error_log("Resolving: $id");
+        // Fallback to ReflectionResolver or custom logic
+    }
+}
+$container = new Container(new LoggingResolver());
+```
+
+**When to use:**
+
+* For cross-cutting concerns, diagnostics, or enforcing architectural rules.
+
+---
+
+This expanded usage section provides practical guidance for a wide array of situations, maximizing the utility and safety of the DI Container in real-world applications.
 
 ---
 
