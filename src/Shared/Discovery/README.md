@@ -101,6 +101,10 @@ The Discovery module coordinates the process of scanning, identifying, and regis
 
 **This predictable flow ensures that all discovered elements are handled in a strongly-typed, decoupled, and auditable manner—maximizing reliability and maintainability across the system.**
 
+### Batch Scanning and Multi-Namespace Support
+
+The Discovery module allows projects to configure multiple namespace-to-directory mappings. To scan across several namespaces or directories, simply repeat the scan operation for each target and combine the results as needed. Coordination of batch discovery is done at the application or integration layer, not within the core API. This keeps responsibilities clear, ensuring that resolvers handle mapping logic while the application controls multi-scope operations efficiently.
+
 ### Extensibility
 
 The infrastructure layer can be swapped for custom or legacy logic, as long as domain contracts are implemented. The `DiscoveryKernel` itself can be subclassed or extended to override configuration, provide alternate resolvers, or inject project-specific behavior. The rest of the system remains agnostic to these changes, ensuring robustness, flexibility, and maintainability.
@@ -281,17 +285,37 @@ $controllers = $fqcnCollection->filter(function($fqcn) {
 
 ---
 
+### 6. Batch Discovery Across Multiple Namespaces or Directories
+
+**Scenario:** *You maintain several modules or feature sets, each under its own namespace or directory, and need to discover classes from all of them together for unified registration or analysis.*
+
+```php
+$namespaces = ['App\\Modules', 'App\\Extensions'];
+$all = [];
+foreach ($namespaces as $ns) {
+    $all[] = $scanner->scan($ns);
+}
+// Optionally, merge FqcnCollections or process the results.
+```
+
+*Best For:* Unified provider registration, large-scale plugin systems, onboarding workflows, or cross-domain processing where coordination across multiple roots is required.
+
+To achieve this, simply list the target namespaces or directories and perform an individual scan for each one. Aggregate or process the results as needed, such as building a unified service registry, registering providers, or performing cross-domain analysis. This approach maintains API simplicity while supporting advanced modularity at the integration layer.
+
+---
+
 ### Usage Pattern Summary Table
 
-| Pattern                                              | Scenario                                                  | Best For                                            |
-| ---------------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------- |
-| DiscoveryKernel::scanner                             | Bulk discovery for auto-wiring or analysis                | Static or bulk code registration in modular systems |
-| DiscoveryKernel::discoverExtensions                  | Plugins/extensions, runtime modularization                | Feature toggles, dynamic bootstrapping              |
-| DiscoveryKernel::discoverImplementations             | Handler/strategy/event-driven auto-registration           | Interface-driven runtime extensibility              |
-| Container Integration with auto-discovered providers | Modular DI, dynamic bootstrapping, onboarding             | Plug-and-play modules, onboarding new features      |
-| Manual Service Wiring / Filtering                    | Legacy, migration, advanced filtering, test customization | Selective registration, hybrid/migration setups     |
+| Pattern                                              | Scenario                                                      | Best For                                            |
+| ---------------------------------------------------- | ------------------------------------------------------------- | --------------------------------------------------- |
+| DiscoveryKernel::scanner                             | Bulk discovery for auto-wiring or analysis                    | Static or bulk code registration in modular systems |
+| DiscoveryKernel::discoverExtensions                  | Plugins/extensions, runtime modularization                    | Feature toggles, dynamic bootstrapping              |
+| DiscoveryKernel::discoverImplementations             | Handler/strategy/event-driven auto-registration               | Interface-driven runtime extensibility              |
+| Container Integration with auto-discovered providers | Modular DI, dynamic bootstrapping, onboarding                 | Plug-and-play modules, onboarding new features      |
+| Manual Service Wiring / Filtering                    | Legacy, migration, advanced filtering, test customization     | Selective registration, hybrid/migration setups     |
+| **Batch Discovery Across Multiple Roots**            | Unified processing or registration across multiple namespaces | Large-scale onboarding, plugin/extension platforms  |
 
-> **Tip:** For all scalable, maintainable systems, use the DiscoveryKernel as your integration point and always favor contract-driven, container-integrated flows for maximum flexibility.
+**Tip:** For all scalable, maintainable systems, use the DiscoveryKernel as your integration point and always favor contract-driven, container-integrated flows for maximum flexibility.
 
 ---
 
