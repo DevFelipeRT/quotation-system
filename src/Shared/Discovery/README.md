@@ -168,12 +168,13 @@ $discoveryKernel = new DiscoveryKernel($psr4Prefix, $baseSourceDir);
 
 ## Practical Usage Examples
 
-This section presents advanced, real-world scenarios for leveraging the Discovery module—especially when integrated into modular systems, DI containers, or auto-registration flows.
-All examples are based on the actual code and recommended patterns for scalable projects.
+This section presents advanced, real-world scenarios for leveraging the Discovery module—especially when integrated into modular systems, DI containers, or auto-registration flows. Each example is mapped to a concrete usage scenario and includes best-practice recommendations for its application.
 
 ---
 
-### 1. Standard Discovery via DiscoveryKernel (Recommended for Most Setups)
+### 1. Standard Discovery via DiscoveryKernel
+
+**Scenario:** *You have a modular project and want to enumerate all classes in a namespace for static analysis, auto-wiring, or bulk registration (e.g., listing all available services, controllers, or entities).*
 
 ```php
 use App\Kernel\Discovery\DiscoveryKernel;
@@ -187,11 +188,13 @@ foreach ($fqcnCollection as $fqcn) {
 }
 ```
 
-**Best for:** General module/class discovery, modular system startup, and static dependency mapping.
+**Best For:** General module/class discovery, code introspection, onboarding automation, and static dependency mapping in modular systems.
 
 ---
 
 ### 2. Discovering Extensions or Plugins
+
+**Scenario:** *Your system is extensible via plugins, extensions, or modules. At startup or reload, you need to discover all extension classes for registration, initialization, or dynamic wiring.*
 
 ```php
 $kernel = new DiscoveryKernel('App\\Extensions', '/path/to/project/src/Extensions');
@@ -202,13 +205,13 @@ foreach ($extensions as $extensionFqcn) {
 }
 ```
 
-**Best for:** Plugin architectures, dynamic registration of modules, or systems with runtime extensibility.
+**Best For:** Plugin architectures, dynamic registration of modules, runtime modularization, feature toggle systems.
 
 ---
 
 ### 3. Dynamic Provider Auto-Registration with Container Integration
 
-> **Highly recommended for scalable systems with lots of modular providers/extensions.**
+**Scenario:** *You maintain a growing platform with multiple teams or features. New modules add providers implementing a standard contract. You want every compliant provider to be automatically registered with the DI container, without ever updating a static config or code list.*
 
 ```php
 use App\Shared\Container\Container;
@@ -223,16 +226,17 @@ $providers = $kernel->discoverImplementations(
 );
 
 foreach ($providers as $fqcn) {
-    // Register each discovered provider with the container
     $container->registerProvider(new ($fqcn->toString())());
 }
 ```
 
-**Best for:** Automatic modularization, auto-registration of service providers, plug-and-play extensions.
+**Best For:** Automatic modularization, zero-boilerplate provider registration, onboarding new modules/teams, scalable DI.
 
 ---
 
 ### 4. Discovering All Implementations of an Interface (e.g., Handlers, Strategies)
+
+**Scenario:** *You want to implement the Command Pattern, CQRS, event-driven logic, or support dynamic handlers/strategies. The system should auto-discover every class that implements a given contract (e.g., all event listeners or domain handlers in a namespace), enabling runtime registration or auto-wiring.*
 
 ```php
 $handlers = $kernel->discoverImplementations(
@@ -245,11 +249,13 @@ foreach ($handlers as $handlerFqcn) {
 }
 ```
 
-**Best for:** Dynamic registration of handlers, strategies, listeners, or any interface-driven component.
+**Best For:** Dynamic registration of handlers, strategies, listeners, interface-driven modularity, CQRS/event-driven architectures.
 
 ---
 
 ### 5. Custom Scenarios: Manual Wiring or Advanced Filtering
+
+**Scenario:** *You are integrating legacy code, have unique naming or location patterns, or need selective registration (e.g., only controllers, only classes with a given suffix, etc). This is also useful for advanced tests, hybrid bridges, or migrations between standards.*
 
 ```php
 use App\Shared\Discovery\Infrastructure\NamespaceToDirectoryResolverPsr4;
@@ -271,19 +277,19 @@ $controllers = $fqcnCollection->filter(function($fqcn) {
 });
 ```
 
-**Best for:** Legacy scenarios, advanced filtering, hybrid/bridged systems, or test-specific setups.
+**Best For:** Legacy migration, selective/conditional wiring, advanced test setups, hybrid standards, custom filtering.
 
 ---
 
 ### Usage Pattern Summary Table
 
-| Pattern                                              | Best for                                                |
-| ---------------------------------------------------- | ------------------------------------------------------- |
-| DiscoveryKernel::scanner                             | General use, static class/module discovery              |
-| DiscoveryKernel::discoverExtensions                  | Extensions, plugins, modular bootstrapping              |
-| DiscoveryKernel::discoverImplementations             | Interface-based auto-registration (handlers, providers) |
-| Container Integration with auto-discovered providers | Modular DI, auto-wiring, plug-and-play                  |
-| Manual Service Wiring / Filtering                    | Custom, legacy, test, or highly-specialized logic       |
+| Pattern                                              | Scenario                                                  | Best For                                            |
+| ---------------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------- |
+| DiscoveryKernel::scanner                             | Bulk discovery for auto-wiring or analysis                | Static or bulk code registration in modular systems |
+| DiscoveryKernel::discoverExtensions                  | Plugins/extensions, runtime modularization                | Feature toggles, dynamic bootstrapping              |
+| DiscoveryKernel::discoverImplementations             | Handler/strategy/event-driven auto-registration           | Interface-driven runtime extensibility              |
+| Container Integration with auto-discovered providers | Modular DI, dynamic bootstrapping, onboarding             | Plug-and-play modules, onboarding new features      |
+| Manual Service Wiring / Filtering                    | Legacy, migration, advanced filtering, test customization | Selective registration, hybrid/migration setups     |
 
 > **Tip:** For all scalable, maintainable systems, use the DiscoveryKernel as your integration point and always favor contract-driven, container-integrated flows for maximum flexibility.
 
