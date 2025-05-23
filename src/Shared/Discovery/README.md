@@ -63,12 +63,19 @@ Provides concrete implementations for all domain contracts, making the module op
 
 ### 4. DiscoveryKernel Integration
 
-The `DiscoveryKernel` acts as the integration and configuration entry point for the Discovery module. It is responsible for:
+The `DiscoveryKernel` acts as both the entry point and the main façade for all Discovery module operations. It is responsible for:
 
-* Receiving core configuration parameters (such as PSR-4 prefix and source directory).
-* Instantiating and exposing a pre-configured `DiscoveryScanner` that is ready for immediate use.
-* Ensuring all infrastructure contracts are wired correctly, according to project conventions.
-* Integrating seamlessly with the system’s global or modular kernel array, just like other functional kernels.
+* Receiving the root PSR-4 prefix and the base source directory as configuration.
+* Instantiating and exposing a ready-to-use `DiscoveryScanner` (singleton).
+* Providing direct methods for:
+
+  * Discovering all classes (via `scanner()`).
+  * Discovering available extension modules/plugins (`discoverExtensions()`).
+  * Discovering all implementations of a given interface under a namespace (`discoverImplementations()`).
+* Encapsulating and orchestrating all infrastructure and service wiring, in a way that is consistent with the system’s modular kernel pattern.
+* Enabling seamless integration with the application's boot process, DI container, or custom providers.
+
+**This design means the DiscoveryKernel is the only entry point you need to access all standard Discovery functionality, ensuring consistency and maintainability throughout your system.**
 
 **Main file:**
 
@@ -76,14 +83,23 @@ The `DiscoveryKernel` acts as the integration and configuration entry point for 
 
 ### Flow of Control
 
-1. A discovery request is received by an application service (e.g., `DiscoveryScanner`), either directly or via `DiscoveryKernel`.
-2. The service uses domain contracts to:
+The Discovery module coordinates the process of scanning, identifying, and registering PHP classes in a predictable and auditable way. The flow of control is as follows:
 
-   * Map the namespace root to its physical directory.
-   * Recursively scan for `.php` files.
-   * Convert each PHP file path to its FQCN.
-   * Aggregate results into a `FqcnCollection` value object.
-3. The service returns a safe, filtered, and validated collection ready for further application use (such as extension registration or auto-wiring).
+1. **Kernel Initialization**: The `DiscoveryKernel` is instantiated with the root PSR-4 prefix and the corresponding base source directory. This configures all internal services and makes the kernel ready to serve discovery requests.
+2. **Service Access**: Consumers (such as the application bootstrap, DI container, or providers) use the kernel as the single point of entry—either invoking `scanner()` for generic scanning or the specialized `discoverExtensions()`/`discoverImplementations()` methods for common discovery patterns.
+3. **Resolution Pipeline**:
+
+   * The kernel delegates to the configured `DiscoveryScanner`, which uses domain contracts and infrastructure services to:
+
+     * Map a namespace to its physical directory.
+     * Recursively scan for `.php` files.
+     * Convert each PHP file to its FQCN, using value object enforcement for type safety.
+   * For `discoverExtensions()`, an additional layer of semantic filtering is applied to only return valid extension modules.
+   * For `discoverImplementations()`, the scanner locates and verifies all classes implementing a given interface within the specified namespace.
+4. **Result Aggregation**: Results are always returned as immutable, typed `FqcnCollection` value objects—ready for further application use, such as module registration, dependency injection, or runtime introspection.
+5. **Extensibility Point**: At any stage, consumers may inject custom contracts, extend the kernel, or override discovery logic to support advanced scenarios (legacy projects, non-PSR-4, custom plugins, etc.), without breaking the overall architectural flow.
+
+**This predictable flow ensures that all discovered elements are handled in a strongly-typed, decoupled, and auditable manner—maximizing reliability and maintainability across the system.**
 
 ### Extensibility
 
@@ -107,21 +123,42 @@ The infrastructure layer can be swapped for custom or legacy logic, as long as d
 
 ### Bootstrap and Kernel Registration (Recommended)
 
-* The preferred way to integrate and configure the Discovery module is by registering an instance of `DiscoveryKernel`. This kernel will centralize all configuration and expose a ready-to-use `DiscoveryScanner`.
-* Example:
+The recommended approach for integrating the Discovery module into your system is to instantiate and register the `DiscoveryKernel` during the application bootstrap or within the central DI container configuration. This pattern ensures all discovery services are available and consistently configured for all modules and providers.
+
+#### **Bootstrap Example**
 
 ```php
 use App\Kernel\Discovery\DiscoveryKernel;
 
-// Register the kernel with the desired PSR-4 prefix and source directory
-$discoveryKernel = new DiscoveryKernel('App\\Modules', '/path/to/project/src/Modules');
+$psr4Prefix = 'App\\Modules';
+$baseSourceDir = '/path/to/project/src/Modules';
 
-// Retrieve a fully configured scanner
-$scanner = $discoveryKernel->scanner();
+// Instantiate and register the kernel globally (as a singleton or in your container)
+$discoveryKernel = new DiscoveryKernel($psr4Prefix, $baseSourceDir);
 ```
 
-* In a full application, the `DiscoveryKernel` can be registered alongside other system kernels in a central Kernel array or bootstrap script.
-* Manual DI bindings for the core contracts are only needed for advanced customizations or if not using the kernel.
+#### **Accessing Discovery Services**
+
+* Use `$discoveryKernel->scanner()` for general class discovery in any namespace under the configured prefix.
+* Use `$discoveryKernel->discoverExtensions()` to list all extension modules/plugins under the configured prefix, optionally filtered by namespace.
+* Use `$discoveryKernel->discoverImplementations($interfaceName, $namespace)` to dynamically locate all classes implementing a contract/interface in a given namespace.
+
+#### **Integration with DI Container**
+
+* Register the `DiscoveryKernel` as a singleton within your DI Container, making it injectable into providers, modules, or application services that require discovery operations.
+* Example:
+
+  ```php
+  $container->singleton(DiscoveryKernel::class, fn() =>
+      new DiscoveryKernel('App\\Modules', '/path/to/project/src/Modules'));
+  ```
+* This allows seamless sharing of a preconfigured kernel instance across the entire application lifecycle.
+
+#### **Boot Order Recommendation**
+
+* Always ensure the `DiscoveryKernel` is initialized and available **before** any modules, providers, or services that depend on dynamic discovery.
+* Prefer explicit dependency wiring or constructor injection over global/static access to maximize testability and traceability.
+
 
 ### Upgrading
 
@@ -131,58 +168,18 @@ $scanner = $discoveryKernel->scanner();
 
 ## Practical Usage Examples
 
-This section demonstrates and explains the real usage flows of the Discovery module. Every example was developed and validated directly from the source code, covering all supported approaches:
+This section presents advanced, real-world scenarios for leveraging the Discovery module—especially when integrated into modular systems, DI containers, or auto-registration flows.
+All examples are based on the actual code and recommended patterns for scalable projects.
 
 ---
 
-### 1. Using Discovery via DiscoveryKernel (Recommended)
-
-Best for: Most applications, modular systems, maintainable production code, or where you want kernel-based configuration and lifecycle integration.
+### 1. Standard Discovery via DiscoveryKernel (Recommended for Most Setups)
 
 ```php
 use App\Kernel\Discovery\DiscoveryKernel;
 
-$psr4Prefix = 'App\\Modules';
-$baseSourceDir = '/path/to/project/src/Modules';
-
-$discoveryKernel = new DiscoveryKernel($psr4Prefix, $baseSourceDir);
-$scanner = $discoveryKernel->scanner();
-
-$namespace = 'App\\Modules\\Invoices';
-$fqcnCollection = $scanner->scan($namespace);
-
-foreach ($fqcnCollection as $fqcn) {
-    echo $fqcn->toString() . PHP_EOL;
-}
-```
-
-**When to use:**
-
-* Preferred for most real-world projects
-* Multi-module and extensible codebases
-* When you want to avoid manual configuration and ensure auditability
-
----
-
-### 2. Manual Service Wiring (Advanced/Custom Setup)
-
-Best for: Advanced customization, legacy integration, or fine-grained control over discovery infrastructure contracts (test doubles, custom strategies, etc).
-
-```php
-use App\Shared\Discovery\Application\Service\DiscoveryScanner;
-use App\Shared\Discovery\Infrastructure\NamespaceToDirectoryResolverPsr4;
-use App\Shared\Discovery\Infrastructure\PhpFileFinderRecursive;
-use App\Shared\Discovery\Infrastructure\FileToFqcnResolverPsr4;
-
-$namespaceMap = [
-    'App\\Modules\\Invoices' => '/path/to/project/src/Modules/Invoices',
-];
-
-$namespaceResolver = new NamespaceToDirectoryResolverPsr4($namespaceMap);
-$fileFinder = new PhpFileFinderRecursive();
-$fileToFqcn = new FileToFqcnResolverPsr4('App\\Modules\\Invoices', $namespaceMap);
-
-$scanner = new DiscoveryScanner($namespaceResolver, $fileToFqcn, $fileFinder);
+$kernel = new DiscoveryKernel('App\\Modules', '/path/to/project/src/Modules');
+$scanner = $kernel->scanner();
 $fqcnCollection = $scanner->scan('App\\Modules\\Invoices');
 
 foreach ($fqcnCollection as $fqcn) {
@@ -190,88 +187,221 @@ foreach ($fqcnCollection as $fqcn) {
 }
 ```
 
-**When to use:**
-
-* Custom infrastructure or alternative discovery logic
-* Full control for legacy/edge cases, testing, or overriding domain contracts
+**Best for:** General module/class discovery, modular system startup, and static dependency mapping.
 
 ---
 
-### 3. Extension/Plugin Discovery via ExtensionDiscoveryService
-
-Best for: Plugin/module architectures, dynamic runtime extensibility, auto-registration of modular features.
+### 2. Discovering Extensions or Plugins
 
 ```php
-use App\Kernel\Discovery\DiscoveryKernel;
-use App\Shared\Discovery\Application\Extension\ExtensionDiscoveryService;
-
-$psr4Prefix = 'App\\Extensions';
-$baseSourceDir = '/path/to/project/src/Extensions';
-$discoveryKernel = new DiscoveryKernel($psr4Prefix, $baseSourceDir);
-$scanner = $discoveryKernel->scanner();
-
-$extensionService = new ExtensionDiscoveryService($scanner);
-$extensions = $extensionService->discoverExtensions();
+$kernel = new DiscoveryKernel('App\\Extensions', '/path/to/project/src/Extensions');
+$extensions = $kernel->discoverExtensions();
 
 foreach ($extensions as $extensionFqcn) {
-    // Register, initialize or inject each extension
-    echo $extensionFqcn->toString() . PHP_EOL;
+    // Register or initialize extension
 }
 ```
 
-**When to use:**
-
-* Applications with extension points, plugin marketplaces, event/listener registration, or dynamic modular loading
+**Best for:** Plugin architectures, dynamic registration of modules, or systems with runtime extensibility.
 
 ---
 
-### 4. Custom Contract Implementation (Legacy/Non-PSR-4 or Selective Discovery)
+### 3. Dynamic Provider Auto-Registration with Container Integration
 
-Best for: Projects with non-standard file conventions, legacy codebases, or highly selective/filtered discovery needs.
+> **Highly recommended for scalable systems with lots of modular providers/extensions.**
 
 ```php
-use App\Shared\Discovery\Domain\Contracts\PhpFileFinder;
-use App\Shared\Discovery\Domain\ValueObjects\DirectoryPath;
-use App\Shared\Discovery\Application\Service\DiscoveryScanner;
-use App\Shared\Discovery\Infrastructure\NamespaceToDirectoryResolverPsr4;
-use App\Shared\Discovery\Infrastructure\FileToFqcnResolverPsr4;
+use App\Shared\Container\Container;
+use App\Kernel\Discovery\DiscoveryKernel;
 
-class OnlyControllerFilesFinder implements PhpFileFinder {
-    public function findFiles(DirectoryPath $directory): array {
-        $all = glob($directory->toString() . '/*Controller.php');
-        return $all ?: [];
-    }
-}
+$container = new Container();
+$kernel = new DiscoveryKernel('App\\Modules', '/path/to/project/src/Modules');
 
-$namespaceMap = [ 'App\\Modules\\Invoices' => '/path/to/project/src/Modules/Invoices' ];
-$namespaceResolver = new NamespaceToDirectoryResolverPsr4($namespaceMap);
-$fileToFqcn = new FileToFqcnResolverPsr4('App\\Modules\\Invoices', $namespaceMap);
-$customFinder = new OnlyControllerFilesFinder();
+$providers = $kernel->discoverImplementations(
+    \App\Shared\Container\Contracts\ContainerProviderInterface::class,
+    'App\\Modules'
+);
 
-$scanner = new DiscoveryScanner($namespaceResolver, $fileToFqcn, $customFinder);
-fqcnCollection = $scanner->scan('App\\Modules\\Invoices');
-
-foreach ($fqcnCollection as $fqcn) {
-    echo $fqcn->toString() . PHP_EOL;
+foreach ($providers as $fqcn) {
+    // Register each discovered provider with the container
+    $container->registerProvider(new ($fqcn->toString())());
 }
 ```
 
-**When to use:**
-
-* Selective file patterns, legacy code, advanced filtering or integration with external autoloaders
+**Best for:** Automatic modularization, auto-registration of service providers, plug-and-play extensions.
 
 ---
 
-### Summary Table: Usage Options
+### 4. Discovering All Implementations of an Interface (e.g., Handlers, Strategies)
 
-| Option                         | Recommended For                                     |
-| ------------------------------ | --------------------------------------------------- |
-| DiscoveryKernel                | Most projects, modular systems, production usage    |
-| Manual Service Wiring          | Advanced customization, testing, legacy integration |
-| ExtensionDiscoveryService      | Plugin/module systems, runtime extensibility        |
-| Custom Contract Implementation | Legacy layouts, special project requirements        |
+```php
+$handlers = $kernel->discoverImplementations(
+    \App\Modules\Billing\Domain\Handler\InvoiceHandlerInterface::class,
+    'App\\Modules\\Billing\\Domain\\Handler'
+);
 
-> **Recommendation:** For all maintainable, scalable systems, favor DiscoveryKernel and default contracts. Use manual or custom setups only for advanced, legacy, or experimental needs.
+foreach ($handlers as $handlerFqcn) {
+    $container->bind($handlerFqcn->toString(), $handlerFqcn->toString());
+}
+```
+
+**Best for:** Dynamic registration of handlers, strategies, listeners, or any interface-driven component.
+
+---
+
+### 5. Custom Scenarios: Manual Wiring or Advanced Filtering
+
+```php
+use App\Shared\Discovery\Infrastructure\NamespaceToDirectoryResolverPsr4;
+use App\Shared\Discovery\Infrastructure\PhpFileFinderRecursive;
+use App\Shared\Discovery\Infrastructure\FileToFqcnResolverPsr4;
+use App\Shared\Discovery\Application\Service\DiscoveryScanner;
+
+$namespaceMap = ['App\\Custom' => '/path/to/project/src/Custom'];
+$namespaceResolver = new NamespaceToDirectoryResolverPsr4($namespaceMap);
+$fileFinder = new PhpFileFinderRecursive();
+$fileToFqcn = new FileToFqcnResolverPsr4('App\\Custom', $namespaceMap);
+
+$scanner = new DiscoveryScanner($namespaceResolver, $fileToFqcn, $fileFinder);
+$fqcnCollection = $scanner->scan('App\\Custom');
+
+// Example: filter only controllers
+$controllers = $fqcnCollection->filter(function($fqcn) {
+    return str_ends_with($fqcn->toString(), 'Controller');
+});
+```
+
+**Best for:** Legacy scenarios, advanced filtering, hybrid/bridged systems, or test-specific setups.
+
+---
+
+### Usage Pattern Summary Table
+
+| Pattern                                              | Best for                                                |
+| ---------------------------------------------------- | ------------------------------------------------------- |
+| DiscoveryKernel::scanner                             | General use, static class/module discovery              |
+| DiscoveryKernel::discoverExtensions                  | Extensions, plugins, modular bootstrapping              |
+| DiscoveryKernel::discoverImplementations             | Interface-based auto-registration (handlers, providers) |
+| Container Integration with auto-discovered providers | Modular DI, auto-wiring, plug-and-play                  |
+| Manual Service Wiring / Filtering                    | Custom, legacy, test, or highly-specialized logic       |
+
+> **Tip:** For all scalable, maintainable systems, use the DiscoveryKernel as your integration point and always favor contract-driven, container-integrated flows for maximum flexibility.
+
+---
+
+## Integration with the Container Module
+
+The Discovery module is architected to operate as a first-class citizen alongside the Dependency Injection Container, enabling sophisticated scenarios of modularization, auto-registration, and dynamic wiring. This integration supports not only best practices in Clean Architecture and DDD, but also real scalability for large or plugin-driven systems.
+
+---
+
+### Why Integrate Discovery and the Container?
+
+* **Eliminate Boilerplate:** Dynamically register every provider, handler, or service without manual list management.
+* **True Plug-and-Play:** Drop a compliant module or provider into the source tree and it is registered automatically at bootstrap.
+* **Extensibility:** Easily extend the system with plugins, extensions, or feature modules, all auto-discoverable and injectable.
+* **Separation of Concerns:** Let Discovery handle code scanning/identification, while the Container manages instantiation and lifecycle.
+* **Maximum Testability:** Both modules support contract-driven injection, enabling full mockability in integration or module tests.
+
+---
+
+### Provider Auto-Discovery and Registration
+
+A best-practice pattern is to use the DiscoveryKernel to scan for all service providers (classes implementing `ContainerProviderInterface`) across your modules, and register them automatically in the DI container. This approach fully decouples provider registration from static lists or configuration files.
+
+**Example: Full Provider Auto-Registration at Bootstrap**
+
+```php
+use App\Shared\Container\Container;
+use App\Kernel\Discovery\DiscoveryKernel;
+
+$container = new Container();
+$kernel = new DiscoveryKernel('App\\Modules', '/path/to/project/src/Modules');
+
+$providers = $kernel->discoverImplementations(
+    \App\Shared\Container\Contracts\ContainerProviderInterface::class,
+    'App\\Modules'
+);
+
+foreach ($providers as $fqcn) {
+    $container->registerProvider(new ($fqcn->toString())());
+}
+```
+
+**Key Points:**
+
+* Any module that implements the standard interface is automatically registered and initialized.
+* To add a new provider, simply create the class and ensure it implements `ContainerProviderInterface`—Discovery + Container does the rest.
+* No risk of human error from forgotten manual provider registration.
+
+---
+
+### Dynamic Service and Handler Registration within Providers
+
+Providers themselves can use Discovery for advanced scenarios:
+
+* **Auto-binding event listeners, command handlers, strategies, or any interface-driven class.**
+* This pattern is ideal for event-driven, CQRS, or plugin-heavy architectures.
+
+**Example: Handler Auto-Binding from within a Provider**
+
+```php
+class MyModuleProvider implements ContainerProviderInterface {
+    public function register(Container $container): void {
+        // The DiscoveryKernel can be injected, resolved from the container, or kept as a singleton
+        global $discoveryKernel;
+        $handlers = $discoveryKernel->discoverImplementations(
+            \App\Modules\MyDomain\Contracts\EventHandlerInterface::class,
+            'App\\Modules\\MyDomain\\Handlers'
+        );
+        foreach ($handlers as $fqcn) {
+            $container->bind($fqcn->toString(), $fqcn->toString());
+        }
+    }
+}
+```
+
+**Key Points:**
+
+* The provider does not need to know concrete handler class names in advance.
+* Easily accommodates growth: new handlers are discovered and registered automatically as code evolves.
+
+---
+
+### Advanced Patterns
+
+* **Conditional Registration:** Providers can filter discovered classes based on annotations, naming conventions, or environment checks before registration.
+* **Feature Toggle:** Only register providers/handlers if certain extensions or plugins are present (as discovered by Discovery).
+* **Hybrid Mode:** Use multiple DiscoveryKernels to target different namespaces or layers (e.g., `App\\Modules`, `App\\Extensions`).
+* **Scope Control via Container:** Discovery can identify which services should be singleton or transient, allowing providers to register them with the correct scope in the Container (e.g., tagging classes or using conventions for scope assignment).
+* **Provider Discovery for Custom Scopes:** Register providers in custom scopes (such as per-tenant, per-request, or per-feature) dynamically, enabling isolation and flexible lifecycles.
+* **Lazy/Deferred Service Registration:** Discovery may be invoked on-demand (e.g., upon first request for a feature) to register providers or services only when actually needed, minimizing memory footprint.
+* **Cross-module Dependency Resolution:** Discovery can be used to locate services or providers across module boundaries, allowing the Container to wire cross-cutting concerns (e.g., shared infrastructure, event buses, cross-module handlers) without static dependencies.
+* **Runtime Extension Loading:** Extensions/plugins discovered at runtime can register themselves or be injected on-the-fly, supporting hot-pluggable architectures and marketplace models.
+
+---
+
+### Boot Order and Best Practices
+
+* **Bootstrap Order:** Always instantiate the DiscoveryKernel **before** any provider auto-discovery or registration logic.
+* **Singleton Kernel:** Register the DiscoveryKernel as a singleton in the container to avoid multiple instantiations and guarantee consistent discovery state.
+* **Interface Contracts:** Require all auto-registered providers to implement `ContainerProviderInterface` for a uniform, maintainable registration pattern.
+* **Documentation:** Explicitly document your integration logic and patterns for future maintainers.
+
+---
+
+### Typical Use Cases
+
+* Modular business logic with drop-in modules (microkernel pattern)
+* Plugin and extension systems in enterprise, EAD, or marketplace platforms
+* Dynamic event-driven architectures (listeners auto-registered)
+* Cross-module service resolution and shared infrastructure
+* Codebase evolution with minimal configuration churn
+* Automated, zero-boilerplate service registration for rapid development and onboarding
+* Deferred/lazy provider/service loading to optimize startup
+* Context-specific (scoped) provider registration for multitenancy or isolation
+
+> **Pro Tip:** For full testability, inject mocks or alternate DiscoveryKernels into the container for test environments. Both Discovery and Container are built for contract-driven replacement and isolation.
 
 ---
 
@@ -312,57 +442,55 @@ The Discovery module is organized around five core concepts, each implemented an
 
 ## API Reference
 
-### Application Layer
+### DiscoveryKernel
 
-* **DiscoveryKernel**
+* `__construct(string $psr4Prefix, string $baseSourceDir)`
 
-  * `__construct(string $psr4Prefix, string $baseSourceDir)`: Initializes the kernel.
-  * `scanner(): DiscoveryScanner`: Returns a pre-configured, singleton scanner.
-* **DiscoveryScanner**
+  * Initializes the kernel with a namespace root and base source directory. Must be called before any discovery operation.
+* `scanner(): DiscoveryScanner`
 
-  * `scan(string $namespace): FqcnCollection` — Scans a namespace for all classes.
-  * `scanDirectory(DirectoryPath $directory): FqcnCollection` — Scans a directory.
-* **ExtensionDiscoveryService**
+  * Returns a fully configured, singleton DiscoveryScanner, for generic class discovery and advanced scanning needs.
+* `discoverExtensions(?string $namespace = null, bool $fallbackToProject = false): FqcnCollection`
 
-  * `__construct(DiscoveryScanner $scanner)`
-  * `discoverExtensions(): FqcnCollection`
+  * Discovers all available extension modules or plugins under the provided (or root) namespace, returning a strongly-typed collection of FQCNs.
+* `discoverImplementations(string $interfaceName, string $namespace): FqcnCollection`
 
-### Domain Layer
+  * Finds all classes implementing a given interface within a specified namespace, returning a value-object–safe FQCN collection.
 
-* **PhpFileFinder**
+### DiscoveryScanner
 
-  * `findFiles(DirectoryPath $directory): array`
-* **NamespaceToDirectoryResolver**
+* `scan(string $namespace): FqcnCollection`
 
-  * `resolve(NamespaceName $namespace): DirectoryPath`
-* **FileToFqcnResolver**
+  * Scans a namespace for all PHP classes.
+* `scanDirectory(DirectoryPath $directory): FqcnCollection`
 
-  * `resolve(DirectoryPath $root, string $file): FullyQualifiedClassName`
-* **FqcnCollection**
+  * Scans a specific directory for all PHP classes.
 
-  * `__construct(FullyQualifiedClassName ...$fqcns)`
-  * `add(FullyQualifiedClassName $fqcn): self`
-  * `filter(callable $predicate): self`
-  * `toArray(): array`
-  * `getIterator(): Traversable`
-* **Value Objects**
+### ExtensionDiscoveryService
 
-  * `FullyQualifiedClassName::__construct(string $fqcn)` / `toString(): string`
-  * `NamespaceName::__construct(string $namespace)` / `toString(): string`
-  * `InterfaceName::__construct(string $interfaceName)` / `toString(): string`
-  * `DirectoryPath::__construct(string $path)` / `toString(): string`
+* `__construct(DiscoveryScanner $scanner)`
+* `discoverExtensions(): FqcnCollection`
 
-### Infrastructure Layer
+### Domain Contracts & Value Objects
 
-* **PhpFileFinderRecursive**
+* `PhpFileFinder::findFiles(DirectoryPath $directory): array`
+* `NamespaceToDirectoryResolver::resolve(NamespaceName $namespace): DirectoryPath`
+* `FileToFqcnResolver::resolve(DirectoryPath $root, string $file): FullyQualifiedClassName`
+* `FqcnCollection::__construct(FullyQualifiedClassName ...$fqcns)`
+* `FqcnCollection::add(FullyQualifiedClassName $fqcn): self`
+* `FqcnCollection::filter(callable $predicate): self`
+* `FqcnCollection::toArray(): array`
+* `FqcnCollection::getIterator(): Traversable`
+* `FullyQualifiedClassName::__construct(string $fqcn)` / `toString(): string`
+* `NamespaceName::__construct(string $namespace)` / `toString(): string`
+* `InterfaceName::__construct(string $interfaceName)` / `toString(): string`
+* `DirectoryPath::__construct(string $path)` / `toString(): string`
 
-  * `findFiles(DirectoryPath $directory): array`
-* **NamespaceToDirectoryResolverPsr4**
+### Infrastructure Implementations
 
-  * `resolve(NamespaceName $namespace): DirectoryPath`
-* **FileToFqcnResolverPsr4**
-
-  * `resolve(DirectoryPath $root, string $file): FullyQualifiedClassName`
+* `PhpFileFinderRecursive::findFiles(DirectoryPath $directory): array`
+* `NamespaceToDirectoryResolverPsr4::resolve(NamespaceName $namespace): DirectoryPath`
+* `FileToFqcnResolverPsr4::resolve(DirectoryPath $root, string $file): FullyQualifiedClassName`
 
 ---
 
