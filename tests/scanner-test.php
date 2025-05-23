@@ -212,7 +212,6 @@ $kernel = new DiscoveryKernel($kconfig['namespacePrefix'], $kconfig['psr4Dir']);
 // a) Descoberta padrão
 $foundDefault = [];
 $default = $kernel->discoverExtensions();
-var_dump($default);
 foreach ($default as $fqcnObj) {
     $foundDefault[] = $fqcnObj->value();
     printStatus("Default: " . $fqcnObj->value());
