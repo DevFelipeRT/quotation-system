@@ -305,23 +305,23 @@ This expanded usage section provides practical guidance for a wide array of situ
 
 ## Integration with the Discovery Module
 
-The Container module is designed to operate in harmony with the Discovery module, enabling fully automated, scalable, and modular dependency registration. This approach unlocks advanced use cases—such as zero-boilerplate provider management, plug-and-play extensions, cross-module resolution, and dynamic service wiring—while preserving the core principles of SOLID, Clean Architecture, and DDD.
+The Container module is fully compatible with the Discovery module, enabling powerful patterns for automatic provider registration, dynamic wiring, and scalable modularization. When combined, they eliminate manual configuration of service providers and accelerate onboarding of new modules or extensions.
+
+### Why Integrate the Container and Discovery?
+
+* **Zero Manual Registration:** All compliant providers or services are discovered and registered automatically at bootstrap.
+* **Plug-and-Play Extension:** Add a new provider or handler class in the codebase and it will be auto-registered if it implements the correct contract/interface.
+* **Runtime Modularity:** Dynamically load, register, and wire new features or plugins without changing configuration files.
+* **Separation of Responsibilities:** Discovery scans and filters the codebase, the Container manages instantiation and lifecycle.
+* **Testability:** Contract-driven registration supports mocks and isolated testing out of the box.
 
 ---
 
-### Why Integrate Container and Discovery?
+### Service Provider Auto-Registration
 
-* **Zero Boilerplate:** Eliminate manual provider/service registration by leveraging Discovery to identify and wire all eligible components.
-* **Plug-and-Play Modules:** Drop in any module/provider compliant with system contracts and it is auto-registered at bootstrap.
-* **Full Modularity:** Support for extensions, plugins, and cross-domain integration without altering core configuration files.
-* **Scalable Growth:** Dynamically register services, handlers, listeners, or features as the codebase evolves—no refactor required.
-* **Auditability:** All auto-registered services are discoverable, inspectable, and maintain strong type safety.
+A standard integration pattern is to use the `DiscoveryKernel` to discover all service providers implementing `ContainerProviderInterface` and automatically register them in the Container.
 
----
-
-### Provider Auto-Discovery and Auto-Registration
-
-A best practice is to use the DiscoveryKernel to locate all provider classes implementing `ContainerProviderInterface` within target namespaces, then register each one automatically:
+**Example: Service Provider Auto-Registration**
 
 ```php
 use App\Shared\Container\Container;
@@ -336,17 +336,23 @@ $providers = $kernel->discoverImplementations(
 );
 
 foreach ($providers as $fqcn) {
-    $container->registerProvider(new ($fqcn->toString())());
+    $container->registerProvider(new ($fqcn->value())());
 }
 ```
 
-**Best For:** Large applications, plugin/extension systems, or projects with frequent modular evolution.
+**Key Points:**
+
+* Any class implementing the provider contract is auto-registered; to add a new one, just implement `ContainerProviderInterface`.
+* No need to update registration code when new providers are created.
+* Prevents common errors like forgotten or duplicate registrations.
 
 ---
 
-### Dynamic Service/Handler Discovery from Providers
+### Handler, Listener, or Strategy Registration via Providers
 
-Providers can leverage Discovery at registration time to find and bind all classes implementing a specific contract (e.g., event listeners, command handlers):
+Providers themselves can use Discovery to find and bind related components (e.g., event listeners, handlers) during their own registration logic.
+
+**Example: Handler Registration from within a Provider**
 
 ```php
 class MyModuleProvider implements ContainerProviderInterface {
@@ -357,45 +363,36 @@ class MyModuleProvider implements ContainerProviderInterface {
             'App\\Modules\\MyDomain\\Handlers'
         );
         foreach ($handlers as $fqcn) {
-            $container->bind($fqcn->toString(), $fqcn->toString());
+            $container->bind($fqcn->value(), $fqcn->value());
         }
     }
 }
 ```
 
-**Best For:** CQRS/event-driven systems, dynamic module/plugin loading, or interface-driven architectures.
+**Key Points:**
+
+* Providers need not be aware of individual handler class names.
+* Any compliant handler is discovered and registered as the codebase evolves.
+* Scales well for CQRS, plugin systems, or event-driven architectures.
 
 ---
 
-### Advanced Patterns
+### Advanced Patterns and Recommendations
 
-* **Conditional/Contextual Binding:** Providers can filter discovered services by annotation, environment, or naming convention before binding.
-* **Scoped Registration:** Register discovered services/providers in custom scopes (singleton, transient, per-tenant, per-request) as dictated by conventions or tags identified by Discovery.
-* **Cross-Module and Runtime Extension Wiring:** Leverage Discovery to dynamically resolve and bind dependencies across domain/module boundaries, enabling truly decoupled shared infrastructure.
-* **Deferred/Lazy Registration:** Use Discovery on-demand, registering services only when accessed for the first time, to optimize performance or reduce startup time.
-* **Feature Toggles and Conditional Loading:** Register or skip providers/services based on dynamic criteria, such as enabled extensions, environment, or runtime checks.
-
----
-
-### Bootstrapping and Best Practices
-
-* **Bootstrap Order:** Always instantiate and configure the DiscoveryKernel before running any provider auto-registration.
-* **Singleton Registration:** Prefer registering DiscoveryKernel as a singleton in the container for shared access.
-* **Contract-Driven:** Enforce `ContainerProviderInterface` for all auto-discovered providers for reliability and maintainability.
-* **Document Integration:** Clearly document custom integration logic and auto-registration strategies.
+* **Conditional Registration:** Filter classes by attribute, naming, or configuration before binding.
+* **Multiple Discovery Kernels:** Use separate kernels for different namespace roots (e.g., modules vs. extensions).
+* **Tag-Based or Scope-Based Registration:** Use conventions, tags, or annotations to control binding scopes.
+* **Custom Contracts:** Implement custom discovery contracts for non-standard scenarios.
+* **Deferred/Lazy Registration:** Register providers or services on demand for efficiency.
 
 ---
 
-### Typical Use Cases
+### Best Practices
 
-* Drop-in business modules or plugins with zero config
-* Event-driven auto-binding (handlers, listeners, etc.)
-* Shared infrastructure across modules/domains
-* Dynamic plugin/marketplace models
-* Scalable onboarding for new features/teams
-* Test environments with mockable discovery/container
-
-> **Pro Tip:** Mocks/fakes of DiscoveryKernel and contract interfaces can be injected during tests to simulate dynamic service environments with full isolation.
+* **Initialize Early:** Instantiate and configure `DiscoveryKernel` before any dynamic registration begins.
+* **Singleton Kernel:** Keep a single instance of `DiscoveryKernel` accessible throughout the application.
+* **Document Integration:** Maintain clear documentation and onboarding examples for the integration between Container and Discovery.
+* **Test with Mocks:** Leverage contract-driven discovery for isolated and reliable automated tests.
 
 ---
 

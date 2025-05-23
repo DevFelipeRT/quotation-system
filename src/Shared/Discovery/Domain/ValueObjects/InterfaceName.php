@@ -14,13 +14,7 @@ final class InterfaceName
      */
     public function __construct(string $interfaceName)
     {
-        if (trim($interfaceName) === '') {
-            throw new \InvalidArgumentException('Interface name cannot be empty.');
-        }
-        if (!interface_exists($interfaceName)) {
-            throw new \InvalidArgumentException("Given name '{$interfaceName}' is not a valid interface.");
-        }
-        $this->value = $interfaceName;
+        $this->value = $this->validate($interfaceName);
     }
 
     /**
@@ -37,5 +31,19 @@ final class InterfaceName
     public function equals(InterfaceName $other): bool
     {
         return $this->value === $other->value();
+    }
+
+    /**
+     * Returns the validated name of the interface.
+     */
+    private function validate(string $interfaceName): string
+    {
+        if (trim($interfaceName) === '') {
+            throw new \InvalidArgumentException('Interface name cannot be empty.');
+        }
+        if (!interface_exists($interfaceName)) {
+            throw new \InvalidArgumentException("Given name '{$interfaceName}' is not a valid interface.");
+        }
+        return $interfaceName;
     }
 }

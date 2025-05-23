@@ -59,4 +59,12 @@ final class FqcnCollection implements IteratorAggregate
     {
         return count($this->items);
     }
+
+    /**
+     * @return FullyQualifiedClassName[]
+     */
+    public function toArray(): array
+    {
+        return $this->items;
+    }
 }

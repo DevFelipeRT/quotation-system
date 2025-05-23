@@ -56,8 +56,9 @@ final class DiscoveryKernel
     /**
      * Discovers all FQCNs implementing a given interface in a namespace.
      */
-    public function discoverImplementations(string $interfaceName, string $namespace): FqcnCollection
+    public function discoverImplementations(string $interfaceName, ?string $namespace = null): FqcnCollection
     {
+        $namespace = $namespace ?? ($this->psr4Prefix);
         $scanner = $this->scanner();
         $interfaceVO = new InterfaceName($interfaceName);
         $namespaceVO = new NamespaceName($namespace);
