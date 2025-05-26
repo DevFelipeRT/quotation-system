@@ -7,6 +7,7 @@ namespace App\Shared\Discovery\Application\Contracts;
 use App\Shared\Discovery\Domain\ValueObjects\InterfaceName;
 use App\Shared\Discovery\Domain\ValueObjects\NamespaceName;
 use App\Shared\Discovery\Domain\Collection\FqcnCollection;
+use App\Shared\Discovery\Domain\ValueObjects\FullyQualifiedClassName;
 
 interface DiscoveryScannerInterface
 {
@@ -19,6 +20,18 @@ interface DiscoveryScannerInterface
      */
     public function discoverImplementing(
         InterfaceName $interface,
+        NamespaceName $namespace
+    ): FqcnCollection;
+
+    /**
+     * Discovers all concrete classes extending the given base class within a namespace.
+     *
+     * @param FullyQualifiedClassName $baseClass   The base (abstract or concrete) class.
+     * @param NamespaceName $namespace             The namespace in which to search.
+     * @return FqcnCollection                      Collection of subclasses found.
+     */
+    public function discoverExtending(
+        FullyQualifiedClassName $baseClass,
         NamespaceName $namespace
     ): FqcnCollection;
 }

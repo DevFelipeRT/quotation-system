@@ -19,7 +19,7 @@ use Throwable;
  * Handles rendering of the item management interface.
  * Loads data via the application use case and renders the corresponding HTML view.
  */
-final class Controller extends AbstractController
+class Controller extends AbstractController
 {
     private ListUseCase $listItemsUseCase;
 

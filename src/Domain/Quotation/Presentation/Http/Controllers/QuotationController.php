@@ -3,7 +3,8 @@
 namespace App\Domain\Quotation\Presentation\Http\Controllers;
 
 use App\Domain\Quotation\Domain\Entities\Quotation;
-use App\Infrastructure\Session\SessionHandler;
+use App\Infrastructure\Routing\Presentation\Http\Contracts\RouteRequestInterface;
+
 use App\Models\QuotationModel;
 use App\Presentation\Http\Controllers\AbstractController;
 use Exception;
@@ -15,10 +16,14 @@ class QuotationController extends AbstractController
 {
     private QuotationModel $quotationModel;
 
-    public function __construct(?SessionHandler $session = null)
+    public function __construct()
     {
         $this->quotationModel = new QuotationModel;
-        parent::__construct($this->quotationModel, $session);
+    }
+
+    protected function execute(RouteRequestInterface $request): string
+    {
+        return 'execute method not implemented in QuotationController.';
     }
 
     // Métodos CRUD de Orçamento
