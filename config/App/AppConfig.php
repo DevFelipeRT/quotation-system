@@ -20,9 +20,10 @@ use InvalidArgumentException;
 final class AppConfig
 {
     private string $applicationName;
+    private string $psr4Prefix;
     private string $version;
     private string $environment;
-    private bool $debug;
+    private bool   $debug;
     private string $cookieDomain;
     private string $locale;
     private string $timezone;
@@ -41,6 +42,7 @@ final class AppConfig
     public function __construct(EnvLoader $env)
     {
         $this->applicationName = DefaultAppConfig::APPLICATION_NAME;
+        $this->psr4Prefix      = DefaultAppConfig::PSR4_PREFIX;
         $this->version         = $this->resolveVersion($env->get('APP_VERSION', DefaultAppConfig::VERSION));
         $this->environment     = $this->resolveEnvironment($env->get('APP_ENV', DefaultAppConfig::ENVIRONMENT));
         $this->debug           = $this->resolveDebug($env->get('APP_DEBUG', DefaultAppConfig::DEBUG ? 'true' : 'false'));
@@ -56,6 +58,14 @@ final class AppConfig
     public function getName(): string
     {
         return $this->applicationName;
+    }
+
+    /**
+     * Returns the PSR-4 namespace prefix used for autoloading.
+     */
+    public function getPsr4Prefix(): string
+    {
+        return $this->psr4Prefix;
     }
 
     /**

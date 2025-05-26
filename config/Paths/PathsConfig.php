@@ -13,6 +13,7 @@ namespace Config\Paths;
 final class PathsConfig
 {
     private string $basePath;
+    private string $srcDir;
     private string $envFile;
     private string $logsDir;
     private string $templatesDir;
@@ -30,6 +31,7 @@ final class PathsConfig
     {
         $this->basePath = $basePath ?? (defined('BASE_PATH') ? BASE_PATH : dirname(__DIR__, 2));
 
+        $this->srcDir          = $this->basePath . '/src';
         $this->envFile         = $this->basePath . '/.env';
         $this->logsDir         = $this->basePath . '/storage/logs';
         $this->templatesDir    = $this->basePath . '/src/Infrastructure/Rendering/Presentation/Templates';
@@ -43,6 +45,12 @@ final class PathsConfig
     public function getBasePath(): string
     {
         return $this->basePath;
+    }
+
+    /** @return string */
+    public function getSrcDir(): string
+    {
+        return $this->srcDir;
     }
 
     /** @return string */

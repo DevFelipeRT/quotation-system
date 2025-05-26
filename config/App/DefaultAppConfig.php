@@ -17,6 +17,7 @@ final class DefaultAppConfig
     public const LOCALE = 'pt_BR';
     public const TIMEZONE = 'UTC';
     public const SESSION_PREFIX = 'qtsession_';
+    public const PSR4_PREFIX = 'App\\';
 
     /**
      * Prevent instantiation.
