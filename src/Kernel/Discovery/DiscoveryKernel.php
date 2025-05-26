@@ -11,6 +11,8 @@ use App\Shared\Discovery\Infrastructure\PhpFileFinderRecursive;
 use App\Shared\Discovery\Domain\ValueObjects\InterfaceName;
 use App\Shared\Discovery\Domain\ValueObjects\NamespaceName;
 use App\Shared\Discovery\Domain\Collection\FqcnCollection;
+use App\Shared\Discovery\Domain\ValueObjects\FullyQualifiedClassName;
+use Config\SystemConstants;
 
 /**
  * DiscoveryKernel
@@ -24,10 +26,12 @@ final class DiscoveryKernel
     private string $baseSourceDir;
     private ?DiscoveryScanner $scanner = null;
 
-    public function __construct(string $psr4Prefix, string $baseSourceDir)
+    public function __construct(?string $psr4Prefix = null, ?string $baseSourceDir = null)
     {
-        $this->psr4Prefix = trim($psr4Prefix, '\\');
-        $this->baseSourceDir = rtrim($baseSourceDir, DIRECTORY_SEPARATOR);
+        $this->psr4Prefix = trim($psr4Prefix ?? PSR4_PREFIX, '\\');
+        var_dump($this->psr4Prefix);
+        $this->baseSourceDir = rtrim($baseSourceDir ?? SRC_DIR, DIRECTORY_SEPARATOR);
+        var_dump($this->baseSourceDir);
     }
 
     public function scanner(): DiscoveryScanner
@@ -39,30 +43,45 @@ final class DiscoveryKernel
     }
 
     /**
-     * Discovers extension FQCNs (classes implementing ExtensionInterface)
-     * in the given namespace or, if enabled, with fallback logic.
-     *
-     * @param string|null $namespace         Namespace to search (optional).
-     * @param bool        $fallbackToProject If true, applies fallback search logic.
-     * @return FqcnCollection
+     * Discovers all FQCNs implementing a given interface.
+     * Searches the specified namespace or uses the PSR-4 prefix
      */
-    public function discoverExtensions(?string $namespace = null, bool $fallbackToProject = false): FqcnCollection
-    {
-        $interfaceName = $this->psr4Prefix . '\\Extensions\\ExtensionInterface';
-        $namespacesToScan = $this->buildNamespacesToScan($namespace, $fallbackToProject);
-        return $this->findFirstNamespaceWithImplementations($interfaceName, $namespacesToScan);
-    }
-
-    /**
-     * Discovers all FQCNs implementing a given interface in a namespace.
-     */
-    public function discoverImplementations(string $interfaceName, ?string $namespace = null): FqcnCollection
+    public function discoverImplementing(string $interfaceName, ?string $namespace = null): FqcnCollection
     {
         $namespace = $namespace ?? ($this->psr4Prefix);
         $scanner = $this->scanner();
         $interfaceVO = new InterfaceName($interfaceName);
+        echo 'Discovering implementations of: ' . $interfaceVO->value() . PHP_EOL;
         $namespaceVO = new NamespaceName($namespace);
-        return $scanner->discoverImplementing($interfaceVO, $namespaceVO);
+        var_dump($namespaceVO);
+        echo 'Searching in namespace: ' . $namespaceVO->value() . PHP_EOL;
+
+        try {
+            $result = $scanner->discoverImplementing($interfaceVO, $namespaceVO);
+            var_dump($result);
+        } catch (\InvalidArgumentException $e) {
+            echo 'Error: ' . $e->getMessage() . PHP_EOL;
+            throw $e;
+        }
+        
+        return $result;
+    }
+
+    public function discoverExtending(string $relativeClass): FqcnCollection
+    {
+        $scanner = $this->scanner();
+        $fqcnVO = new FullyQualifiedClassName($relativeClass);
+        echo 'Discovering extensions of: ' . $fqcnVO->value() . PHP_EOL;
+
+        try {
+            $result = $scanner->discoverExtending($fqcnVO);
+            var_dump($result);
+        } catch (\InvalidArgumentException $e) {
+            echo 'Error: ' . $e->getMessage() . PHP_EOL;
+            throw $e;
+        }
+
+        return $result;
     }
 
     // ---------- Private helpers (real SRP, justified decomposition) ----------
@@ -74,49 +93,5 @@ final class DiscoveryKernel
             new FileToFqcnResolverPsr4(),
             new PhpFileFinderRecursive()
         );
-    }
-
-    /**
-     * Builds the search namespaces respecting fallback order.
-     */
-    private function buildNamespacesToScan(?string $namespace, bool $fallback): array
-    {
-        $namespaces = [];
-        $primary = $namespace ?? ($this->psr4Prefix . '\\Extensions');
-        $this->appendIfMissing($namespaces, $primary);
-        if ($fallback) {
-            $this->appendIfMissing($namespaces, $this->psr4Prefix . '\\Extensions');
-            $this->appendIfMissing($namespaces, $this->psr4Prefix);
-        }
-        return $namespaces;
-    }
-
-    /**
-     * Adds $namespace to $list if not already present.
-     */
-    private function appendIfMissing(array &$list, string $namespace): void
-    {
-        if (!in_array($namespace, $list, true)) {
-            $list[] = $namespace;
-        }
-    }
-
-    /**
-     * Tries each namespace, returning the first non-empty implementation set.
-     */
-    private function findFirstNamespaceWithImplementations(string $interfaceName, array $namespaces): FqcnCollection
-    {
-        foreach ($namespaces as $namespace) {
-            try {
-                $result = $this->discoverImplementations($interfaceName, $namespace);
-                if (!$result->isEmpty()) {
-                    return $result;
-                }
-            } catch (\InvalidArgumentException $e) {
-                // Directory for namespace does not exist. Continue to next.
-                continue;
-            }
-        }
-        return new FqcnCollection([]);
     }
 }

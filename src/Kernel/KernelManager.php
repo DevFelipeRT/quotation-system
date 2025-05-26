@@ -19,8 +19,7 @@ use App\Infrastructure\Logging\Infrastructure\Contracts\LoggerInterface;
 use App\Infrastructure\Logging\Infrastructure\Contracts\PsrLoggerInterface;
 use App\Infrastructure\Database\Domain\Connection\DatabaseConnectionInterface;
 use App\Kernel\Discovery\DiscoveryKernel;
-use App\Shared\Container\AppContainer;
-use App\Shared\Discovery\Application\Service\DiscoveryScanner;
+use App\Shared\Container\Domain\Contracts\ContainerInterface;
 use App\Shared\Event\Contracts\EventDispatcherInterface;
 use App\Shared\UrlResolver\AppUrlResolver;
 use App\Shared\UrlResolver\UrlResolverInterface;
@@ -48,7 +47,8 @@ final class KernelManager
 
     private LoggerInterface $logger;
     private PsrLoggerInterface $psrLogger;
-    private AppContainerInterface $container;
+    private ContainerInterface $container;
+    
     private EventDispatcherInterface $eventDispatcher;
     private DatabaseConnectionInterface $dbConnection;
     private UrlResolverInterface $urlResolver;
