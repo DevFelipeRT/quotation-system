@@ -16,4 +16,12 @@ interface NamespaceToDirectoryResolver
      * @return DirectoryPath
      */
     public function resolve(NamespaceName $namespace): DirectoryPath;
+
+    /**
+     * Returns the root namespace handled by this resolver.
+     *
+     * @return NamespaceName
+     */
+    public function getRootNamespace(): NamespaceName;
+
 }
