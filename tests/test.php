@@ -53,18 +53,27 @@ try {
 
 $fqncCollection = $collection->toArray();
 
+echo PHP_EOL;
+
 echo 'Scanner results:' . PHP_EOL;
 foreach ($fqncCollection as $fqcn) {
     echo 'FQCN: ';
     echo $fqcn->value() . PHP_EOL;
 }
+echo PHP_EOL;
 
 try {
     $fqnc = new FullyQualifiedClassName(AbstractController::class);
-    
-    $extensions = $scanner->discoverExtending(
-
-    );
+    $extensions = $scanner->discoverExtending($fqnc);
 } catch (\Throwable $e) {
-    # code...
+    errorHandler($e);
 }
+
+$extensionsArray = $extensions->toArray();
+
+echo 'Extensions scanning results:' . PHP_EOL;
+foreach ($extensionsArray as $extension) {
+    echo 'Extension FQCN: ';
+    echo $extension->value() . PHP_EOL;
+}
+echo PHP_EOL;

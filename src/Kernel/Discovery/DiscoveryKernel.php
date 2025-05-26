@@ -12,7 +12,6 @@ use App\Shared\Discovery\Domain\ValueObjects\InterfaceName;
 use App\Shared\Discovery\Domain\ValueObjects\NamespaceName;
 use App\Shared\Discovery\Domain\Collection\FqcnCollection;
 use App\Shared\Discovery\Domain\ValueObjects\FullyQualifiedClassName;
-use Config\SystemConstants;
 
 /**
  * DiscoveryKernel
