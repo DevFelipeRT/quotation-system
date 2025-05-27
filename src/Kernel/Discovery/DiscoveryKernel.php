@@ -27,9 +27,9 @@ final class DiscoveryKernel
 
     public function __construct(?string $psr4Prefix = null, ?string $baseSourceDir = null)
     {
-        $this->psr4Prefix = trim($psr4Prefix ?? PSR4_PREFIX, '\\');
+        $this->psr4Prefix = trim($psr4Prefix, '\\');
         var_dump($this->psr4Prefix);
-        $this->baseSourceDir = rtrim($baseSourceDir ?? SRC_DIR, DIRECTORY_SEPARATOR);
+        $this->baseSourceDir = rtrim($baseSourceDir, DIRECTORY_SEPARATOR);
         var_dump($this->baseSourceDir);
     }
 
@@ -66,6 +66,10 @@ final class DiscoveryKernel
         return $result;
     }
 
+    /**
+     * Discovers all FQCNs extending a given class.
+     * Searches the specified namespace or uses the PSR-4 prefix
+     */
     public function discoverExtending(string $relativeClass): FqcnCollection
     {
         $scanner = $this->scanner();
