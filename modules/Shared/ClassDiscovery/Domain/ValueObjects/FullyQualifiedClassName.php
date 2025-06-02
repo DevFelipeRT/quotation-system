@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Discovery\Domain\ValueObjects;
+namespace ClassDiscovery\Domain\ValueObjects;
 
 final class FullyQualifiedClassName
 {

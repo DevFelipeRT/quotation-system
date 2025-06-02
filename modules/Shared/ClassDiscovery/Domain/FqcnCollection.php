@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Discovery\Domain\Collection;
+namespace ClassDiscovery\Domain;
 
-use Discovery\Domain\ValueObjects\FullyQualifiedClassName;
+use ClassDiscovery\Domain\ValueObjects\FullyQualifiedClassName;
 use IteratorAggregate;
 use ArrayIterator;
 use Traversable;

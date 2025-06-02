@@ -1,11 +1,11 @@
 <?php declare(strict_types=1);
 
 use App\Kernel\Adapters\EventListening\Contracts\EventBindingProviderInterface;
-use App\Kernel\Discovery\DiscoveryKernel;
 use App\Presentation\Http\Controllers\AbstractController;
-use App\Shared\Discovery\Domain\ValueObjects\FullyQualifiedClassName;
-use App\Shared\Discovery\Domain\ValueObjects\InterfaceName;
-use App\Shared\Discovery\Domain\ValueObjects\NamespaceName;
+use Discovery\Domain\ValueObjects\FullyQualifiedClassName;
+use Discovery\Domain\ValueObjects\InterfaceName;
+use Discovery\Domain\ValueObjects\NamespaceName;
+use Discovery\Infrastructure\DiscoveryKernel;
 
 require_once __DIR__ . '/test-bootstrap.php';
 require_once BASE_PATH . '/autoload.php';

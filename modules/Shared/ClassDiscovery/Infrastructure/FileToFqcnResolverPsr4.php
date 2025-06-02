@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Discovery\Infrastructure;
+namespace ClassDiscovery\Infrastructure;
 
-use Discovery\Domain\Contracts\FileToFqcnResolver;
-use Discovery\Domain\ValueObjects\DirectoryPath;
-use Discovery\Domain\ValueObjects\NamespaceName;
-use Discovery\Domain\ValueObjects\FullyQualifiedClassName;
+use ClassDiscovery\Application\Contracts\FileToFqcnResolver;
+use ClassDiscovery\Domain\ValueObjects\DirectoryPath;
+use ClassDiscovery\Domain\ValueObjects\NamespaceName;
+use ClassDiscovery\Domain\ValueObjects\FullyQualifiedClassName;
 use RuntimeException;
 
 final class FileToFqcnResolverPsr4 implements FileToFqcnResolver

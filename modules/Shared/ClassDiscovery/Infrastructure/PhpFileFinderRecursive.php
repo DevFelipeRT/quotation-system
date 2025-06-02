@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Discovery\Infrastructure;
+namespace ClassDiscovery\Infrastructure;
 
-use Discovery\Domain\Contracts\PhpFileFinder;
-use Discovery\Domain\ValueObjects\DirectoryPath;
+use ClassDiscovery\Application\Contracts\PhpFileFinder;
+use ClassDiscovery\Domain\ValueObjects\DirectoryPath;
 
 final class PhpFileFinderRecursive implements PhpFileFinder
 {

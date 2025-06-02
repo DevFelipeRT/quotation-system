@@ -2,23 +2,24 @@
 
 declare(strict_types=1);
 
-namespace Discovery\Application\Service;
+namespace ClassDiscovery\Application\Service;
 
-use Discovery\Application\Contracts\DiscoveryScannerInterface;
-use Discovery\Application\Contracts\ScannerFacadeInterface;
-use Discovery\Domain\Collection\FqcnCollection;
-use Discovery\Application\Service\DiscoveryScanner;
-use Discovery\Domain\ValueObjects\FullyQualifiedClassName;
-use Discovery\Domain\ValueObjects\InterfaceName;
-use Discovery\Domain\ValueObjects\NamespaceName;
+use ClassDiscovery\Application\Contracts\ClassDiscoveryServiceInterface;
+use ClassDiscovery\Domain\FqcnCollection;
+use ClassDiscovery\Domain\ValueObjects\FullyQualifiedClassName;
+use ClassDiscovery\Domain\ValueObjects\InterfaceName;
+use ClassDiscovery\Domain\ValueObjects\NamespaceName;
 
-final class DiscoveryScannerFacade implements 
-    ScannerFacadeInterface,
-    DiscoveryScannerInterface
+use PublicContracts\ClassDiscovery\ClassDiscoveryFacadeInterface;
+
+
+final class ClassDiscoveryFacade implements 
+    ClassDiscoveryFacadeInterface,
+    ClassDiscoveryServiceInterface
 {
-    private DiscoveryScanner $scanner;
+    private ClassDiscoveryService $scanner;
 
-    public function __construct(DiscoveryScanner $scanner)
+    public function __construct(ClassDiscoveryService $scanner)
     {
         $this->scanner = $scanner;
     }
@@ -28,18 +29,20 @@ final class DiscoveryScannerFacade implements
      *
      * @param string $interfaceName The fully qualified name of the interface.
      * @param string|null $namespace The namespace to restrict the search to, or null for the default PSR-4 prefix.
-     * @return FqcnCollection
+     * @return string[]
      */
-    public function implementing(string $interfaceName, ?string $namespace = null): FqcnCollection
+    public function implementing(string $interfaceName, ?string $namespace = null): array
     {
         $interfaceVO = new InterfaceName($interfaceName);
         $namespaceVO = is_null($namespace) ? null : new NamespaceName($namespace);
 
         try {
-            return $this->discoverImplementing($interfaceVO, $namespaceVO);
+            $collection = $this->discoverImplementing($interfaceVO, $namespaceVO);
         } catch (\InvalidArgumentException $e) {
             throw $e;
         }
+
+        return $this->toArrayOfValues($collection);
     }
 
     /**
@@ -47,18 +50,20 @@ final class DiscoveryScannerFacade implements
      *
      * @param string $className The fully qualified name of the class.
      * @param string|null $namespace The namespace to restrict the search to, or null for the default PSR-4 prefix.
-     * @return FqcnCollection
+     * @return string[]
      */
-    public function extending(string $className, ?string $namespace = null): FqcnCollection
+    public function extending(string $className, ?string $namespace = null): array
     {
         $fqcnVO = new FullyQualifiedClassName($className);
         $namespaceVO = is_null($namespace) ? null : new NamespaceName($namespace);
 
         try {
-            return $this->discoverExtending($fqcnVO, $namespaceVO);
+            $collection = $this->discoverExtending($fqcnVO, $namespaceVO);
         } catch (\InvalidArgumentException $e) {
             throw $e;
         }
+
+        return $this->toArrayOfValues($collection);
     }
 
     /**
@@ -97,5 +102,13 @@ final class DiscoveryScannerFacade implements
         } catch (\InvalidArgumentException $e) {
             throw $e;
         }
+    }
+
+    private function toArrayOfValues(FqcnCollection $collection): array
+    {
+        return array_map(
+            fn(FullyQualifiedClassName $fqcn) => $fqcn->value(),
+            $collection->toArray()
+        );
     }
 }

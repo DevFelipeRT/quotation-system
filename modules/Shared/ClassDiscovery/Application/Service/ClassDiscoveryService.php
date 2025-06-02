@@ -2,17 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Discovery\Application\Service;
+namespace ClassDiscovery\Application\Service;
 
-use Discovery\Application\Contracts\DiscoveryScannerInterface;
-use Discovery\Domain\ValueObjects\InterfaceName;
-use Discovery\Domain\ValueObjects\NamespaceName;
-use Discovery\Domain\ValueObjects\DirectoryPath;
-use Discovery\Domain\ValueObjects\FullyQualifiedClassName;
-use Discovery\Domain\Collection\FqcnCollection;
-use Discovery\Domain\Contracts\NamespaceToDirectoryResolver;
-use Discovery\Domain\Contracts\FileToFqcnResolver;
-use Discovery\Domain\Contracts\PhpFileFinder;
+use ClassDiscovery\Application\Contracts\ClassDiscoveryServiceInterface;
+use ClassDiscovery\Application\Contracts\NamespaceToDirectoryResolver;
+use ClassDiscovery\Application\Contracts\FileToFqcnResolver;
+use ClassDiscovery\Application\Contracts\PhpFileFinder;
+use ClassDiscovery\Domain\ValueObjects\InterfaceName;
+use ClassDiscovery\Domain\ValueObjects\NamespaceName;
+use ClassDiscovery\Domain\ValueObjects\DirectoryPath;
+use ClassDiscovery\Domain\ValueObjects\FullyQualifiedClassName;
+use ClassDiscovery\Domain\FqcnCollection;
+
 use ReflectionClass;
 use Throwable;
 
@@ -28,7 +29,7 @@ use Throwable;
  *
  * Any file or class failing a check is silently skipped.
  */
-final class DiscoveryScanner implements DiscoveryScannerInterface
+final class ClassDiscoveryService implements ClassDiscoveryServiceInterface
 {
     private NamespaceToDirectoryResolver $namespaceToDirectoryResolver;
     private FileToFqcnResolver $fileToFqcnResolver;

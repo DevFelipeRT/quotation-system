@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Discovery\Application\Contracts;
+namespace ClassDiscovery\Application\Contracts;
 
-use Discovery\Domain\ValueObjects\InterfaceName;
-use Discovery\Domain\ValueObjects\NamespaceName;
-use Discovery\Domain\Collection\FqcnCollection;
-use Discovery\Domain\ValueObjects\FullyQualifiedClassName;
+use ClassDiscovery\Domain\ValueObjects\InterfaceName;
+use ClassDiscovery\Domain\ValueObjects\NamespaceName;
+use ClassDiscovery\Domain\FqcnCollection;
+use ClassDiscovery\Domain\ValueObjects\FullyQualifiedClassName;
 
-interface DiscoveryScannerInterface
+interface ClassDiscoveryServiceInterface
 {
     /**
      * Discover all classes implementing a given interface in a namespace(optional).

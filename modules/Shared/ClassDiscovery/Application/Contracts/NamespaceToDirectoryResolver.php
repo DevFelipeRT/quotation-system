@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Discovery\Domain\Contracts;
+namespace ClassDiscovery\Application\Contracts;
 
-use Discovery\Domain\ValueObjects\NamespaceName;
-use Discovery\Domain\ValueObjects\DirectoryPath;
+use ClassDiscovery\Domain\ValueObjects\NamespaceName;
+use ClassDiscovery\Domain\ValueObjects\DirectoryPath;
 
 interface NamespaceToDirectoryResolver
 {

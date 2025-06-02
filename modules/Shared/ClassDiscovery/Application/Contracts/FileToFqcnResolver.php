@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Discovery\Domain\Contracts;
+namespace ClassDiscovery\Application\Contracts;
 
-use Discovery\Domain\ValueObjects\DirectoryPath;
-use Discovery\Domain\ValueObjects\NamespaceName;
-use Discovery\Domain\ValueObjects\FullyQualifiedClassName;
+use ClassDiscovery\Domain\ValueObjects\DirectoryPath;
+use ClassDiscovery\Domain\ValueObjects\NamespaceName;
+use ClassDiscovery\Domain\ValueObjects\FullyQualifiedClassName;
 
 interface FileToFqcnResolver
 {
