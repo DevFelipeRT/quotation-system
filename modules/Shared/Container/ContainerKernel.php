@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Container\Infrastructure;
+namespace Container;
 
-use Container\Domain\Contracts\ContainerInterface;
-use Container\Domain\Contracts\ServiceProviderInterface;
+use PublicContracts\Container\ContainerInterface;
+use PublicContracts\Container\ServiceProviderInterface;
 
 /**
  * Class ContainerKernel
@@ -17,7 +17,7 @@ use Container\Domain\Contracts\ServiceProviderInterface;
  * service providers, apply custom scopes, or define explicit bindings via the
  * `ContainerBuilder`. Once built, the container is stored as a singleton.
  *
- * @package Container\Infrastructure
+ * @package Container
  */
 final class ContainerKernel
 {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Container\Domain\Exceptions;
+namespace Container\Exceptions;
 
 /**
  * Class CircularDependencyException

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Container\Infrastructure\Bindings;
+namespace Container\Bindings;
 
 use Closure;
 

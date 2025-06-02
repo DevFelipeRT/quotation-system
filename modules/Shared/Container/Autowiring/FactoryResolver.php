@@ -2,9 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Container\Infrastructure\Autowiring;
+namespace Container\Autowiring;
 
-use Container\Domain\Contracts\ContainerInterface;
+use Container\Contracts\ResolverInterface;
+use PublicContracts\Container\ContainerInterface;
 
 /**
  * Class FactoryResolver

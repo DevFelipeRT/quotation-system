@@ -2,10 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Container\Domain\Contracts;
-
-use Container\Domain\Exceptions\NotFoundException;
-use Container\Domain\Exceptions\ContainerException;
+namespace PublicContracts\Container;
 
 /**
  * Interface ContainerInterface

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Container\Infrastructure\Scope;
+namespace Container\Scope;
 
-use Container\Domain\Contracts\ContainerScopeInterface;
+use Container\Contracts\ContainerScopeInterface;
 
 /**
  * Class SingletonScope

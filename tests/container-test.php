@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-use App\Shared\Container\Domain\Contracts\ContainerInterface;
-use App\Shared\Container\Domain\Contracts\ServiceProviderInterface;
-use App\Shared\Container\Domain\Exceptions\CircularDependencyException;
-use App\Shared\Container\Domain\Exceptions\NotFoundException;
-use App\Shared\Container\Infrastructure\Bindings\BindingType;
-use App\Shared\Container\Infrastructure\ContainerBuilder;
-use App\Shared\Container\Infrastructure\Scope\TransientScope;
+use Container\Domain\Contracts\ContainerInterface;
+use Container\Domain\Contracts\ServiceProviderInterface;
+use Container\Domain\Exceptions\CircularDependencyException;
+use Container\Domain\Exceptions\NotFoundException;
+use Container\Infrastructure\Bindings\BindingType;
+use Container\Infrastructure\ContainerBuilder;
+use Container\Infrastructure\Scope\TransientScope;
 
 // Test setup
 echo "<pre>";

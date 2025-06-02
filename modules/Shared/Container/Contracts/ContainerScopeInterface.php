@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Container\Domain\Contracts;
+namespace Container\Contracts;
 
 /**
  * Interface ContainerScopeInterface
