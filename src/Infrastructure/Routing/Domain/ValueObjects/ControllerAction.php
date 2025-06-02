@@ -9,7 +9,7 @@ use InvalidArgumentException;
 /**
  * ControllerAction
  *
- * Represents a reference to a controller and an action method,
+ * Represents a validated reference to a controller class and an action method,
  * without instantiating or executing them directly.
  */
 final class ControllerAction
@@ -18,21 +18,19 @@ final class ControllerAction
     private readonly string $method;
 
     /**
+     * ControllerAction constructor.
+     *
      * @param string $controllerClass Fully-qualified controller class name.
      * @param string $method Name of the method to invoke.
+     * @throws InvalidArgumentException If the class or method are invalid.
      */
     public function __construct(string $controllerClass, string $method)
     {
-        if (!class_exists($controllerClass)) {
-            throw new InvalidArgumentException("Controller class {$controllerClass} does not exist.");
-        }
+        $this->controllerClass = $this->normalizeControllerClass($controllerClass);
+        $this->method = $this->normalizeMethod($method);
 
-        if (!method_exists($controllerClass, $method)) {
-            throw new InvalidArgumentException("Method {$method} does not exist in class {$controllerClass}.");
-        }
-
-        $this->controllerClass = $controllerClass;
-        $this->method = $method;
+        $this->validateControllerClass($this->controllerClass);
+        $this->validateControllerMethod($this->controllerClass, $this->method);
     }
 
     /**
@@ -40,7 +38,7 @@ final class ControllerAction
      *
      * @return string
      */
-    public function controllerClass(): string
+    public function class(): string
     {
         return $this->controllerClass;
     }
@@ -75,5 +73,54 @@ final class ControllerAction
     public function __toString(): string
     {
         return "{$this->controllerClass}::{$this->method}";
+    }
+
+    /**
+     * Normalizes the controller class name.
+     *
+     * @param string $controllerClass
+     * @return string
+     */
+    private function normalizeControllerClass(string $controllerClass): string
+    {
+        return ltrim(trim($controllerClass), '\\');
+    }
+
+    /**
+     * Normalizes the method name.
+     *
+     * @param string $method
+     * @return string
+     */
+    private function normalizeMethod(string $method): string
+    {
+        return trim($method);
+    }
+
+    /**
+     * Validates that the controller class exists.
+     *
+     * @param string $controllerClass
+     * @throws InvalidArgumentException
+     */
+    private function validateControllerClass(string $controllerClass): void
+    {
+        if (!class_exists($controllerClass)) {
+            throw new InvalidArgumentException("Controller class {$controllerClass} does not exist.");
+        }
+    }
+
+    /**
+     * Validates that the controller method exists in the given class.
+     *
+     * @param string $controllerClass
+     * @param string $method
+     * @throws InvalidArgumentException
+     */
+    private function validateControllerMethod(string $controllerClass, string $method): void
+    {
+        if (!method_exists($controllerClass, $method)) {
+            throw new InvalidArgumentException("Method {$method} does not exist in class {$controllerClass}.");
+        }
     }
 }

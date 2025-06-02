@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Adapters\EventListening\Application\Resolver;
 
 use App\Adapters\EventListening\Domain\Contracts\EventListenerInterface;
-use App\Shared\Container\AppContainerInterface;
+use App\Shared\Container\Domain\Contracts\ContainerInterface;
 use App\Shared\Event\Contracts\EventListenerLocatorInterface;
 use InvalidArgumentException;
 
@@ -21,11 +21,11 @@ use InvalidArgumentException;
 final class EventListenerResolver implements EventListenerLocatorInterface
 {
     private EventListenerMap $map;
-    private AppContainerInterface $container;
+    private ContainerInterface $container;
 
     public function __construct(
         EventListenerMap $map,
-        AppContainerInterface $container
+        ContainerInterface $container
     ) {
         $this->map = $map;
         $this->container = $container;

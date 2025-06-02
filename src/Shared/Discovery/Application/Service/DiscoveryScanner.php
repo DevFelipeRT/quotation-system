@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Shared\Discovery\Application\Service;
 
+use App\Shared\Discovery\Application\Contracts\DiscoveryScannerInterface;
 use App\Shared\Discovery\Domain\ValueObjects\InterfaceName;
 use App\Shared\Discovery\Domain\ValueObjects\NamespaceName;
 use App\Shared\Discovery\Domain\ValueObjects\DirectoryPath;
@@ -27,7 +28,7 @@ use Throwable;
  *
  * Any file or class failing a check is silently skipped.
  */
-final class DiscoveryScanner
+final class DiscoveryScanner implements DiscoveryScannerInterface
 {
     private NamespaceToDirectoryResolver $namespaceToDirectoryResolver;
     private FileToFqcnResolver $fileToFqcnResolver;

@@ -9,7 +9,7 @@ use App\Shared\Discovery\Domain\ValueObjects\NamespaceName;
 use App\Shared\Discovery\Domain\Collection\FqcnCollection;
 use App\Shared\Discovery\Domain\ValueObjects\FullyQualifiedClassName;
 
-interface DiscoveryScannerInterface
+interface ScannerFacadeInterface extends DiscoveryScannerInterface
 {
     /**
      * Discover all classes implementing a given interface in a namespace(optional).
@@ -34,4 +34,22 @@ interface DiscoveryScannerInterface
         FullyQualifiedClassName $baseClass,
         ?NamespaceName $namespace = null
     ): FqcnCollection;
+
+    /**
+     * Discover all classes implementing a given interface in a namespace(optional).
+     *
+     * @param string $interfaceName The fully qualified name of the interface.
+     * @param string|null $namespace The namespace to restrict the search to, or null for the default PSR-4 prefix.
+     * @return FqcnCollection
+     */
+    public function implementing(string $interfaceName, ?string $namespace = null): FqcnCollection;
+
+    /**
+     * Discovers all concrete classes extending the given base class within a namespace(optional).
+     *
+     * @param string $className The fully qualified name of the class.
+     * @param string|null $namespace The namespace to restrict the search to, or null for the default PSR-4 prefix.
+     * @return FqcnCollection
+     */
+    public function extending(string $className, ?string $namespace = null): FqcnCollection;
 }

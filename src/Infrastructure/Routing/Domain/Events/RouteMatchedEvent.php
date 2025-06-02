@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Routing\Domain\Events;
 
 use App\Infrastructure\Routing\Domain\Events\Contracts\RoutingEventInterface;
-use App\Infrastructure\Routing\Presentation\Http\Contracts\RouteRequestInterface;
+use App\Infrastructure\Routing\Presentation\Http\Contracts\ServerRequestInterface;
 use App\Infrastructure\Routing\Presentation\Http\Contracts\HttpRouteInterface;
 
 /**
@@ -17,9 +17,9 @@ use App\Infrastructure\Routing\Presentation\Http\Contracts\HttpRouteInterface;
 final class RouteMatchedEvent implements RoutingEventInterface
 {
     /**
-     * @var RouteRequestInterface
+     * @var ServerRequestInterface
      */
-    private RouteRequestInterface $request;
+    private ServerRequestInterface $request;
 
     /**
      * @var HttpRouteInterface
@@ -34,12 +34,12 @@ final class RouteMatchedEvent implements RoutingEventInterface
     /**
      * RouteMatchedEvent constructor.
      *
-     * @param RouteRequestInterface $request The matched request.
+     * @param ServerRequestInterface $request The matched request.
      * @param HttpRouteInterface $route The route matched to this request.
      * @param \DateTimeImmutable|null $occurredAt Event timestamp (optional, defaults to now).
      */
     public function __construct(
-        RouteRequestInterface $request,
+        ServerRequestInterface $request,
         HttpRouteInterface $route,
         ?\DateTimeImmutable $occurredAt = null
     ) {
@@ -51,7 +51,7 @@ final class RouteMatchedEvent implements RoutingEventInterface
     /**
      * Returns the matched request.
      */
-    public function request(): RouteRequestInterface
+    public function request(): ServerRequestInterface
     {
         return $this->request;
     }

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Routing\Domain\Events;
 
 use App\Infrastructure\Routing\Domain\Events\Contracts\RoutingEventInterface;
-use App\Infrastructure\Routing\Presentation\Http\Contracts\RouteRequestInterface;
+use App\Infrastructure\Routing\Presentation\Http\Contracts\ServerRequestInterface;
 use App\Infrastructure\Routing\Presentation\Http\Contracts\HttpRouteInterface;
 use App\Infrastructure\Routing\Domain\ValueObjects\ControllerAction;
 use Throwable;
@@ -21,9 +21,9 @@ use Throwable;
 final class RouteDispatchFailedEvent implements RoutingEventInterface
 {
     /**
-     * @var RouteRequestInterface
+     * @var ServerRequestInterface
      */
-    private RouteRequestInterface $request;
+    private ServerRequestInterface $request;
 
     /**
      * @var HttpRouteInterface|null
@@ -48,14 +48,14 @@ final class RouteDispatchFailedEvent implements RoutingEventInterface
     /**
      * RouteDispatchFailedEvent constructor.
      *
-     * @param RouteRequestInterface $request The original request.
+     * @param ServerRequestInterface $request The original request.
      * @param Throwable $exception The exception or error thrown.
      * @param HttpRouteInterface|null $route The matched route (if available).
      * @param ControllerAction|null $controllerAction The controller action (if available).
      * @param \DateTimeImmutable|null $occurredAt [optional] Event timestamp.
      */
     public function __construct(
-        RouteRequestInterface $request,
+        ServerRequestInterface $request,
         Throwable $exception,
         ?HttpRouteInterface $route = null,
         ?ControllerAction $controllerAction = null,
@@ -71,7 +71,7 @@ final class RouteDispatchFailedEvent implements RoutingEventInterface
     /**
      * Returns the original request.
      */
-    public function request(): RouteRequestInterface
+    public function request(): ServerRequestInterface
     {
         return $this->request;
     }

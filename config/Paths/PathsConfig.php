@@ -48,7 +48,7 @@ final class PathsConfig
     }
 
     /** @return string */
-    public function getSrcDir(): string
+    public function getSourceDirectory(): string
     {
         return $this->srcDir;
     }

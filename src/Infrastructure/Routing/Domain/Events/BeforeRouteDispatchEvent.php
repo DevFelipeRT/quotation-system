@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Routing\Domain\Events;
 
 use App\Infrastructure\Routing\Domain\Events\Contracts\RoutingEventInterface;
-use App\Infrastructure\Routing\Presentation\Http\Contracts\RouteRequestInterface;
+use App\Infrastructure\Routing\Presentation\Http\Contracts\ServerRequestInterface;
 use App\Infrastructure\Routing\Presentation\Http\Contracts\HttpRouteInterface;
 use App\Infrastructure\Routing\Domain\ValueObjects\ControllerAction;
 
@@ -19,9 +19,9 @@ use App\Infrastructure\Routing\Domain\ValueObjects\ControllerAction;
 final class BeforeRouteDispatchEvent implements RoutingEventInterface
 {
     /**
-     * @var RouteRequestInterface
+     * @var ServerRequestInterface
      */
-    private RouteRequestInterface $request;
+    private ServerRequestInterface $request;
 
     /**
      * @var HttpRouteInterface
@@ -41,13 +41,13 @@ final class BeforeRouteDispatchEvent implements RoutingEventInterface
     /**
      * BeforeRouteDispatchEvent constructor.
      *
-     * @param RouteRequestInterface $request The incoming HTTP request.
+     * @param ServerRequestInterface $request The incoming HTTP request.
      * @param HttpRouteInterface $route The matched route.
      * @param ControllerAction $controllerAction The controller action about to be dispatched.
      * @param \DateTimeImmutable|null $occurredAt [optional] Event timestamp.
      */
     public function __construct(
-        RouteRequestInterface $request,
+        ServerRequestInterface $request,
         HttpRouteInterface $route,
         ControllerAction $controllerAction,
         ?\DateTimeImmutable $occurredAt = null
@@ -61,7 +61,7 @@ final class BeforeRouteDispatchEvent implements RoutingEventInterface
     /**
      * Returns the incoming request.
      */
-    public function request(): RouteRequestInterface
+    public function request(): ServerRequestInterface
     {
         return $this->request;
     }

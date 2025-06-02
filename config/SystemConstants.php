@@ -50,7 +50,7 @@ final class SystemConstants
             'SYS_APP_NAME'  => $appConfig->getName(),
             'VERSION'       => $appConfig->getVersion(),
             'BASE_PATH'     => $basePath,
-            'SRC_DIR'      => $pathsConfig->getSrcDir(),
+            'SRC_DIR'       => $pathsConfig->getSourceDirectory(),
             'IS_CLI'        => PHP_SAPI === 'cli',
             'PSR4_PREFIX'   => $appConfig->getPsr4Prefix(),
         ];

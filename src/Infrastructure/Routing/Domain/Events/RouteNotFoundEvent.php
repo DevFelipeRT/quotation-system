@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Routing\Domain\Events;
 
 use App\Infrastructure\Routing\Domain\Events\Contracts\RoutingEventInterface;
-use App\Infrastructure\Routing\Presentation\Http\Contracts\RouteRequestInterface;
+use App\Infrastructure\Routing\Presentation\Http\Contracts\ServerRequestInterface;
 
 /**
  * RouteNotFoundEvent
@@ -17,9 +17,9 @@ use App\Infrastructure\Routing\Presentation\Http\Contracts\RouteRequestInterface
 final class RouteNotFoundEvent implements RoutingEventInterface
 {
     /**
-     * @var RouteRequestInterface
+     * @var ServerRequestInterface
      */
-    private RouteRequestInterface $request;
+    private ServerRequestInterface $request;
 
     /**
      * @var \DateTimeImmutable
@@ -37,12 +37,12 @@ final class RouteNotFoundEvent implements RoutingEventInterface
     /**
      * RouteNotFoundEvent constructor.
      *
-     * @param RouteRequestInterface $request The unmatched request.
+     * @param ServerRequestInterface $request The unmatched request.
      * @param string|null $message Optional reason/context.
      * @param \DateTimeImmutable|null $occurredAt Event timestamp (optional, defaults to now).
      */
     public function __construct(
-        RouteRequestInterface $request,
+        ServerRequestInterface $request,
         ?string $message = null,
         ?\DateTimeImmutable $occurredAt = null
     ) {
@@ -54,7 +54,7 @@ final class RouteNotFoundEvent implements RoutingEventInterface
     /**
      * Returns the unmatched request.
      */
-    public function request(): RouteRequestInterface
+    public function request(): ServerRequestInterface
     {
         return $this->request;
     }

@@ -9,10 +9,14 @@ use InvalidArgumentException;
 /**
  * Class HttpMethod
  *
- * Represents a validated, immutable HTTP method.
+ * Represents a validated and immutable HTTP method.
+ * Ensures that only standard and safe HTTP methods are accepted.
  */
 final class HttpMethod
 {
+    /**
+     * List of allowed HTTP methods.
+     */
     private const ALLOWED_METHODS = [
         'GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD',
     ];
@@ -20,17 +24,16 @@ final class HttpMethod
     private readonly string $value;
 
     /**
-     * @param string $value The HTTP method name (e.g. GET).
-     * @throws InvalidArgumentException If method is not allowed.
+     * HttpMethod constructor.
+     *
+     * @param string $value The HTTP method name (e.g., GET).
+     * @throws InvalidArgumentException If the method is invalid or not supported.
      */
     public function __construct(string $value)
     {
-        $upper = strtoupper($value);
-        if (!in_array($upper, self::ALLOWED_METHODS, true)) {
-            throw new InvalidArgumentException("Invalid HTTP method: {$value}");
-        }
-
-        $this->value = $upper;
+        $normalized = $this->normalizeMethod($value);
+        $this->validateMethod($normalized);
+        $this->value = $normalized;
     }
 
     /**
@@ -73,5 +76,37 @@ final class HttpMethod
     public function __toString(): string
     {
         return $this->value;
+    }
+
+    /**
+     * Normalizes the HTTP method (trims and uppercases).
+     *
+     * @param string $method
+     * @return string
+     */
+    private function normalizeMethod(string $method): string
+    {
+        return strtoupper(trim($method));
+    }
+
+    /**
+     * Validates the HTTP method for correctness and security.
+     *
+     * @param string $method
+     * @throws InvalidArgumentException If the method is invalid or unsupported.
+     */
+    private function validateMethod(string $method): void
+    {
+        if ($method === '') {
+            throw new InvalidArgumentException("HTTP method cannot be empty.");
+        }
+
+        if (!preg_match('/^[A-Z]+$/', $method)) {
+            throw new InvalidArgumentException("HTTP method contains invalid characters: {$method}");
+        }
+
+        if (!in_array($method, self::ALLOWED_METHODS, true)) {
+            throw new InvalidArgumentException("Invalid or unsupported HTTP method: {$method}");
+        }
     }
 }

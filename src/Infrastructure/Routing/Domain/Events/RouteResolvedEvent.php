@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Infrastructure\Routing\Domain\Events;
 
 use App\Infrastructure\Routing\Domain\Events\Contracts\RoutingEventInterface;
-use App\Infrastructure\Routing\Presentation\Http\Contracts\RouteRequestInterface;
+use App\Infrastructure\Routing\Presentation\Http\Contracts\ServerRequestInterface;
 use App\Infrastructure\Routing\Presentation\Http\Contracts\HttpRouteInterface;
 use \DateTimeImmutable;
 
@@ -19,9 +19,9 @@ use \DateTimeImmutable;
 final class RouteResolvedEvent implements RoutingEventInterface
 {
     /**
-     * @var RouteRequestInterface
+     * @var ServerRequestInterface
      */
-    private RouteRequestInterface $request;
+    private ServerRequestInterface $request;
 
     /**
      * @var HttpRouteInterface
@@ -41,13 +41,13 @@ final class RouteResolvedEvent implements RoutingEventInterface
     /**
      * RouteResolvedEvent constructor.
      *
-     * @param RouteRequestInterface $request The original request.
+     * @param ServerRequestInterface $request The original request.
      * @param HttpRouteInterface $resolvedRoute The final resolved route.
      * @param string|null $resolutionType [optional] Type or reason for resolution (e.g., 'rewrite', 'alias', 'redirect').
      * @param DateTimeImmutable|null $occurredAt [optional] Event timestamp.
      */
     public function __construct(
-        RouteRequestInterface $request,
+        ServerRequestInterface $request,
         HttpRouteInterface $resolvedRoute,
         ?string $resolutionType = null,
         ?DateTimeImmutable $occurredAt = null
@@ -61,7 +61,7 @@ final class RouteResolvedEvent implements RoutingEventInterface
     /**
      * Returns the original request.
      */
-    public function request(): RouteRequestInterface
+    public function request(): ServerRequestInterface
     {
         return $this->request;
     }

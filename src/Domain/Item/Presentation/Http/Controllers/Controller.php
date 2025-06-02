@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Item\Presentation\Http\Controllers;
 
-use App\Domain\Item\Application\UseCases\ListUseCase;
+use App\Domain\Item\Application\UseCases\ListItemUseCase;
 use App\Infrastructure\Logging\LoggerInterface;
 use App\Infrastructure\Rendering\Application\HtmlView;
 use App\Infrastructure\Rendering\Infrastructure\HtmlViewRenderer;
@@ -21,17 +21,17 @@ use Throwable;
  */
 class Controller extends AbstractController
 {
-    private ListUseCase $listItemsUseCase;
+    private ListItemUseCase $listItemsUseCase;
 
     /**
      * Controller constructor.
      *
-     * @param ListUseCase $listItemsUseCase Application use case for fetching items.
+     * @param ListItemUseCase $listItemsUseCase Application use case for fetching items.
      * @param HtmlViewRenderer $viewRenderer View renderer for HTML responses.
      * @param LoggerInterface $logger Structured logger for diagnostics.
      */
     public function __construct(
-        ListUseCase $listItemsUseCase,
+        ListItemUseCase $listItemsUseCase,
     ) {
         parent::__construct();
         $this->listItemsUseCase = $listItemsUseCase;

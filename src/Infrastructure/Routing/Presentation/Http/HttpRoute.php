@@ -8,6 +8,7 @@ use App\Infrastructure\Routing\Domain\ValueObjects\ControllerAction;
 use App\Infrastructure\Routing\Domain\ValueObjects\HttpMethod;
 use App\Infrastructure\Routing\Domain\ValueObjects\RoutePath;
 use App\Infrastructure\Routing\Presentation\Http\Contracts\HttpRouteInterface;
+use InvalidArgumentException;
 
 /**
  * Class HttpRoute
@@ -33,6 +34,8 @@ final class HttpRoute implements HttpRouteInterface
         ControllerAction $controllerAction,
         string $name
     ) {
+        $this->validateName($name);
+
         $this->method = $method;
         $this->path = $path;
         $this->controllerAction = $controllerAction;
@@ -57,5 +60,24 @@ final class HttpRoute implements HttpRouteInterface
     public function name(): string
     {
         return $this->name;
+    }
+
+    /**
+     * Validates the route name for emptiness and format.
+     *
+     * @param string $name
+     * @return void
+     * @throws InvalidArgumentException
+     */
+    private function validateName(string $name): void
+    {
+        if (trim($name) === '') {
+            throw new InvalidArgumentException('Route name must not be empty.');
+        }
+        if (!preg_match('/^[a-zA-Z0-9_.-]+$/', $name)) {
+            throw new InvalidArgumentException(
+                "Invalid route name format: '{$name}'. Allowed: letters, numbers, underscore, dot, hyphen."
+            );
+        }
     }
 }

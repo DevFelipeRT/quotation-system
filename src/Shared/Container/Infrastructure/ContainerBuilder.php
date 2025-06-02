@@ -10,23 +10,47 @@ use App\Shared\Container\Infrastructure\Bindings\BindingType;
 use App\Shared\Container\Infrastructure\Scope\SingletonScope;
 use App\Shared\Container\Infrastructure\Scope\TransientScope;
 
+/**
+ * Class ContainerBuilder
+ *
+ * Builds and configures the application's dependency container.
+ *
+ * This builder provides a fluent interface for defining service bindings,
+ * registering custom scopes, and applying service providers before generating
+ * a fully functional Container instance.
+ *
+ * Designed to support modular configuration and runtime flexibility.
+ *
+ * @package App\Shared\Container\Infrastructure
+ */
 class ContainerBuilder
 {
     /**
-     * @var array<string, array{callable, bool}> [$id => [$factory, $singleton]]
+     * Service bindings to be registered in the container.
+     *
+     * Format: [service ID => [factory callable, isSingleton]]
+     *
+     * @var array<string, array{callable, bool}>
      */
     protected array $bindings = [];
 
     /**
+     * List of service providers to be registered.
+     *
      * @var ServiceProviderInterface[]
      */
     protected array $providers = [];
 
     /**
+     * Mapping of binding types to scope implementations.
+     *
      * @var array<string, object>
      */
     protected array $scopes = [];
 
+    /**
+     * Initializes default binding scopes: singleton and transient.
+     */
     public function __construct()
     {
         $this->scopes = [
@@ -36,7 +60,14 @@ class ContainerBuilder
     }
 
     /**
-     * Registra binding. Defina escopos antes de registrar bindings!
+     * Registers a service binding in the container.
+     *
+     * If a custom scope is defined prior to registration, it will take effect.
+     *
+     * @param string $id Service identifier (usually FQCN or alias).
+     * @param callable $factory Factory function used to create the instance.
+     * @param bool $singleton Whether the binding is singleton-scoped.
+     * @return $this
      */
     public function bind(string $id, callable $factory, bool $singleton = false): self
     {
@@ -44,11 +75,26 @@ class ContainerBuilder
         return $this;
     }
 
+    /**
+     * Registers a singleton binding.
+     *
+     * Alias for `bind(..., true)`.
+     *
+     * @param string $id
+     * @param callable $factory
+     * @return $this
+     */
     public function singleton(string $id, callable $factory): self
     {
         return $this->bind($id, $factory, true);
     }
 
+    /**
+     * Adds a service provider to be applied during container build.
+     *
+     * @param ServiceProviderInterface $provider
+     * @return $this
+     */
     public function addProvider(ServiceProviderInterface $provider): self
     {
         $this->providers[] = $provider;
@@ -56,29 +102,40 @@ class ContainerBuilder
     }
 
     /**
-     * Define/override scope. ATENÇÃO: limpa TODOS os bindings já registrados!
+     * Adds or overrides a scope implementation.
+     *
+     * Warning: calling this method will clear all previously registered bindings
+     * to avoid inconsistent behavior caused by scope changes.
+     *
+     * @param BindingType $type
+     * @param object $scope
+     * @return $this
      */
     public function addScope(BindingType $type, object $scope): self
     {
         $this->scopes[$type->value] = $scope;
-        // Ao alterar escopo, para garantir consistência, limpa todos os bindings
-        $this->bindings = [];
+        $this->bindings = []; // Clear bindings to avoid scope mismatch
         return $this;
     }
 
     /**
-     * Gera o Container, registrando todos os bindings e providers.
+     * Finalizes and builds the Container instance.
+     *
+     * This method applies all defined scopes, bindings, and service providers
+     * into a fresh Container instance.
+     *
+     * @return ContainerInterface Fully initialized container.
      */
-    public function build(): Container
+    public function build(): ContainerInterface
     {
         $container = new Container(null, null);
 
-        // Registra escopos customizados (se houver)
+        // Apply custom scopes
         foreach ($this->scopes as $key => $scope) {
             $container->setScope(BindingType::from($key), $scope);
         }
 
-        // Registra bindings explicitamente
+        // Register explicit bindings
         foreach ($this->bindings as $id => [$factory, $singleton]) {
             if ($singleton) {
                 $container->singleton($id, $factory);
@@ -87,7 +144,7 @@ class ContainerBuilder
             }
         }
 
-        // Registra providers
+        // Apply service providers
         foreach ($this->providers as $provider) {
             $container->registerProvider($provider);
         }
