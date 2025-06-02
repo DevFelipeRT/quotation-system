@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Adapters\EventListening\Domain\Contracts;
+namespace EventListening\Domain\Contracts;
 
 /**
  * Contract for event listeners that react to domain-level events.

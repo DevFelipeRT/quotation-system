@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Routing\Infrastructure\Contracts;
+namespace Routing\Infrastructure\Contracts;
 
-use App\Infrastructure\Routing\Presentation\Http\Contracts\HttpRouteInterface;
-use App\Infrastructure\Routing\Presentation\Http\Contracts\ServerRequestInterface;
+use Routing\Presentation\Http\Contracts\HttpRouteInterface;
+use Routing\Presentation\Http\Contracts\ServerRequestInterface;
 
 /**
  * Defines a contract for resolving HTTP routes based on incoming requests.

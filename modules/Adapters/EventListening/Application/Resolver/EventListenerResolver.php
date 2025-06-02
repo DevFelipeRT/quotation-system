@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Adapters\EventListening\Application\Resolver;
+namespace EventListening\Application\Resolver;
 
-use App\Adapters\EventListening\Domain\Contracts\EventListenerInterface;
-use App\Shared\Container\Domain\Contracts\ContainerInterface;
+use EventListening\Domain\Contracts\EventListenerInterface;
+use Container\Domain\Contracts\ContainerInterface;
 use App\Shared\Event\Contracts\EventListenerLocatorInterface;
 use InvalidArgumentException;
 

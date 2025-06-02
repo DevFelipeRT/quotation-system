@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Database\Domain\Execution\RequestBuilders;
+namespace Database\Domain\Execution\RequestBuilders;
 
-use App\Infrastructure\Database\Domain\Execution\DatabaseRequestInterface;
+use Database\Domain\Execution\DatabaseRequestInterface;
 use PDO;
 
 /**

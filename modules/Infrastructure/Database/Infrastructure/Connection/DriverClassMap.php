@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Database\Infrastructure\Connection;
+namespace Database\Infrastructure\Connection;
 
-use App\Infrastructure\Database\Infrastructure\Connection\Drivers\{
+use Database\Infrastructure\Connection\Drivers\{
     MySqlConnection,
     PostgreSqlConnection,
     SqliteConnection
 };
-use App\Infrastructure\Database\Validation\DriverValidator;
+use Database\Validation\DriverValidator;
 use InvalidArgumentException;
 
 /**

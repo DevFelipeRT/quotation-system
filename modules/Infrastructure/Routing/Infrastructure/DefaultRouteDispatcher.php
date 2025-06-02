@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Routing\Infrastructure;
+namespace Routing\Infrastructure;
 
-use App\Infrastructure\Routing\Infrastructure\Contracts\RouteDispatcherInterface;
-use App\Infrastructure\Routing\Infrastructure\Contracts\ControllerFactoryInterface;
-use App\Infrastructure\Routing\Presentation\Http\Contracts\HttpRouteInterface;
-use App\Infrastructure\Routing\Presentation\Http\Contracts\ServerRequestInterface;
-use App\Infrastructure\Routing\Infrastructure\Exceptions\RouteDispatchException;
+use Routing\Infrastructure\Contracts\RouteDispatcherInterface;
+use Routing\Infrastructure\Contracts\ControllerFactoryInterface;
+use Routing\Presentation\Http\Contracts\HttpRouteInterface;
+use Routing\Presentation\Http\Contracts\ServerRequestInterface;
+use Routing\Infrastructure\Exceptions\RouteDispatchException;
 
 /**
  * Default implementation of RouteDispatcherInterface.

@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Infrastructure\Rendering\Infrastructure;
+namespace Rendering\Infrastructure;
 
-use App\Infrastructure\Rendering\Domain\Contracts\ViewInterface;
+use Rendering\Domain\Contracts\ViewInterface;
 
 /**
  * ViewRendererInterface

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Session\Domain\ValueObjects;
+namespace Session\Domain\ValueObjects;
 
-use App\Infrastructure\Session\Exceptions\InvalidSessionIdentityException;
+use Session\Exceptions\InvalidSessionIdentityException;
 
 /**
  * Represents the identity of an authenticated user within a session context.

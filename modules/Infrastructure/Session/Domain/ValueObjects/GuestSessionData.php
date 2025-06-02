@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Session\Domain\ValueObjects;
+namespace Session\Domain\ValueObjects;
 
 /**
  * Represents a guest (unauthenticated) session.

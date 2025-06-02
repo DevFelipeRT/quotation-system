@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Session\Domain\Events;
+namespace Session\Domain\Events;
 
-use App\Infrastructure\Session\Domain\Contracts\SessionDataInterface;
+use Session\Domain\Contracts\SessionDataInterface;
 use DateTimeImmutable;
 use DateTimeZone;
 

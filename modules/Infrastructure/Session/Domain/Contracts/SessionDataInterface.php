@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Session\Domain\Contracts;
+namespace Session\Domain\Contracts;
 
-use App\Infrastructure\Session\Domain\ValueObjects\SessionContext;
+use Session\Domain\ValueObjects\SessionContext;
 
 /**
  * Defines the contract for all session data representations.

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Application\Messaging\Domain;
+namespace Messaging\Domain;
 
 use DateTimeImmutable;
 

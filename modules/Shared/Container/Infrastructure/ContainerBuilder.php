@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Shared\Container\Infrastructure;
+namespace Container\Infrastructure;
 
-use App\Shared\Container\Domain\Contracts\ContainerInterface;
-use App\Shared\Container\Domain\Contracts\ServiceProviderInterface;
-use App\Shared\Container\Infrastructure\Bindings\BindingType;
-use App\Shared\Container\Infrastructure\Scope\SingletonScope;
-use App\Shared\Container\Infrastructure\Scope\TransientScope;
+use Container\Domain\Contracts\ContainerInterface;
+use Container\Domain\Contracts\ServiceProviderInterface;
+use Container\Infrastructure\Bindings\BindingType;
+use Container\Infrastructure\Scope\SingletonScope;
+use Container\Infrastructure\Scope\TransientScope;
 
 /**
  * Class ContainerBuilder
@@ -21,7 +21,7 @@ use App\Shared\Container\Infrastructure\Scope\TransientScope;
  *
  * Designed to support modular configuration and runtime flexibility.
  *
- * @package App\Shared\Container\Infrastructure
+ * @package Container\Infrastructure
  */
 class ContainerBuilder
 {

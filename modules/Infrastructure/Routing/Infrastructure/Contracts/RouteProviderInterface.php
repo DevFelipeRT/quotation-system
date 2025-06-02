@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Routing\Infrastructure\Contracts;
+namespace Routing\Infrastructure\Contracts;
 
 /**
  * Interface RouteProviderInterface

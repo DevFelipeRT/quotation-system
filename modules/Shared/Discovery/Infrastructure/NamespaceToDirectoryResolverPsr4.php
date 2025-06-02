@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Shared\Discovery\Infrastructure;
+namespace Discovery\Infrastructure;
 
-use App\Shared\Discovery\Domain\Contracts\NamespaceToDirectoryResolver;
-use App\Shared\Discovery\Domain\ValueObjects\NamespaceName;
-use App\Shared\Discovery\Domain\ValueObjects\DirectoryPath;
+use Discovery\Domain\Contracts\NamespaceToDirectoryResolver;
+use Discovery\Domain\ValueObjects\NamespaceName;
+use Discovery\Domain\ValueObjects\DirectoryPath;
 use InvalidArgumentException;
 
 /**

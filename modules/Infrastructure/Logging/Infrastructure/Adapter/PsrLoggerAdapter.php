@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Logging\Infrastructure\Adapter;
+namespace Logging\Infrastructure\Adapter;
 
-use App\Infrastructure\Logging\Domain\LogEntry;
-use App\Infrastructure\Logging\Domain\LogLevelEnum;
-use App\Infrastructure\Logging\Infrastructure\Contracts\LoggerInterface;
-use App\Infrastructure\Logging\Infrastructure\Contracts\PsrLoggerInterface;
+use Logging\Domain\LogEntry;
+use Logging\Domain\LogLevelEnum;
+use Logging\Infrastructure\Contracts\LoggerInterface;
+use Logging\Infrastructure\Contracts\PsrLoggerInterface;
 use Stringable;
 use DateTimeImmutable;
 use InvalidArgumentException;

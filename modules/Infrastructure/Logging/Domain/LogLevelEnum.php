@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Logging\Domain;
+namespace Logging\Domain;
 
-use App\Infrastructure\Logging\Exceptions\InvalidLogLevelException;
+use Logging\Exceptions\InvalidLogLevelException;
 
 /**
  * Enumerates standard logging severity levels, aligned with PSR-3.

@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace App\Shared\Discovery\Application\Service;
+namespace Discovery\Application\Service;
 
-use App\Shared\Discovery\Application\Contracts\DiscoveryScannerInterface;
-use App\Shared\Discovery\Domain\ValueObjects\InterfaceName;
-use App\Shared\Discovery\Domain\ValueObjects\NamespaceName;
-use App\Shared\Discovery\Domain\ValueObjects\DirectoryPath;
-use App\Shared\Discovery\Domain\ValueObjects\FullyQualifiedClassName;
-use App\Shared\Discovery\Domain\Collection\FqcnCollection;
-use App\Shared\Discovery\Domain\Contracts\NamespaceToDirectoryResolver;
-use App\Shared\Discovery\Domain\Contracts\FileToFqcnResolver;
-use App\Shared\Discovery\Domain\Contracts\PhpFileFinder;
+use Discovery\Application\Contracts\DiscoveryScannerInterface;
+use Discovery\Domain\ValueObjects\InterfaceName;
+use Discovery\Domain\ValueObjects\NamespaceName;
+use Discovery\Domain\ValueObjects\DirectoryPath;
+use Discovery\Domain\ValueObjects\FullyQualifiedClassName;
+use Discovery\Domain\Collection\FqcnCollection;
+use Discovery\Domain\Contracts\NamespaceToDirectoryResolver;
+use Discovery\Domain\Contracts\FileToFqcnResolver;
+use Discovery\Domain\Contracts\PhpFileFinder;
 use ReflectionClass;
 use Throwable;
 

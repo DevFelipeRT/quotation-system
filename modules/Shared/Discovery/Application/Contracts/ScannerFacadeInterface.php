@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Shared\Discovery\Application\Contracts;
+namespace Discovery\Application\Contracts;
 
-use App\Shared\Discovery\Domain\ValueObjects\InterfaceName;
-use App\Shared\Discovery\Domain\ValueObjects\NamespaceName;
-use App\Shared\Discovery\Domain\Collection\FqcnCollection;
-use App\Shared\Discovery\Domain\ValueObjects\FullyQualifiedClassName;
+use Discovery\Domain\ValueObjects\InterfaceName;
+use Discovery\Domain\ValueObjects\NamespaceName;
+use Discovery\Domain\Collection\FqcnCollection;
+use Discovery\Domain\ValueObjects\FullyQualifiedClassName;
 
 interface ScannerFacadeInterface extends DiscoveryScannerInterface
 {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Shared\Container\Domain\Contracts;
+namespace Container\Domain\Contracts;
 
 /**
  * Interface ServiceProviderInterface

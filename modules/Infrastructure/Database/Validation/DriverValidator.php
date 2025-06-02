@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Database\Validation;
+namespace Database\Validation;
 
-use App\Infrastructure\Database\Exceptions\MissingDriverConfigurationException;
-use App\Infrastructure\Database\Exceptions\UnsupportedDriverException;
+use Database\Exceptions\MissingDriverConfigurationException;
+use Database\Exceptions\UnsupportedDriverException;
 use Config\Database\SupportedDrivers;
 
 /**

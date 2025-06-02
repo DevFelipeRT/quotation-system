@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Session\Domain\ValueObjects;
+namespace Session\Domain\ValueObjects;
 
-use App\Infrastructure\Session\Domain\Contracts\SessionDataInterface;
+use Session\Domain\Contracts\SessionDataInterface;
 
 /**
  * Abstract base class for controller-specific session data.

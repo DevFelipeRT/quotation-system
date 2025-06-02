@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Session\Domain\Factories;
+namespace Session\Domain\Factories;
 
-use App\Infrastructure\Session\Domain\ValueObjects\UserIdentity;
-use App\Infrastructure\Session\Exceptions\InvalidSessionIdentityException;
+use Session\Domain\ValueObjects\UserIdentity;
+use Session\Exceptions\InvalidSessionIdentityException;
 
 /**
  * UserIdentityFactory

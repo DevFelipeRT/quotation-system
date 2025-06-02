@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Routing\Infrastructure\Exceptions;
+namespace Routing\Infrastructure\Exceptions;
 
 /**
  * Thrown when a route definition is invalid or inconsistent (e.g., bad path, invalid controller, etc).

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Database\Domain\Connection;
+namespace Database\Domain\Connection;
 
 use PDO;
 
@@ -12,7 +12,7 @@ use PDO;
  * Implementations must return a valid PDO instance,
  * encapsulating connection logic and error handling.
  *
- * @package App\Infrastructure\Database\Connection
+ * @package Database\Connection
  */
 interface DatabaseConnectionInterface
 {

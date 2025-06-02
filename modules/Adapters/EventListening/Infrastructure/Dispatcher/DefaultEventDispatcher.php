@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Adapters\EventListening\Infrastructure\Dispatcher;
+namespace EventListening\Infrastructure\Dispatcher;
 
 use App\Shared\Event\Contracts\EventDispatcherInterface;
 use App\Shared\Event\Contracts\EventListenerLocatorInterface;
-use App\Adapters\EventListening\Domain\Contracts\EventListenerInterface;
+use EventListening\Domain\Contracts\EventListenerInterface;
 use InvalidArgumentException;
 
 /**

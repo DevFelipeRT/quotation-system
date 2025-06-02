@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Infrastructure\Rendering\Domain\Contracts;
+namespace Rendering\Domain\Contracts;
 
 /**
  * ViewInterface

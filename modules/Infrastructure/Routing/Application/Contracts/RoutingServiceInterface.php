@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Routing\Application\Contracts;
+namespace Routing\Application\Contracts;
 
-use App\Infrastructure\Routing\Presentation\Http\Contracts\ServerRequestInterface;
+use Routing\Presentation\Http\Contracts\ServerRequestInterface;
 
 /**
  * Interface RoutingServiceInterface

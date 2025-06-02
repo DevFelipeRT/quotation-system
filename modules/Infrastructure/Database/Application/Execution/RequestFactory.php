@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Database\Application\Execution;
+namespace Database\Application\Execution;
 
-use App\Infrastructure\Database\Domain\Connection\DatabaseConnectionInterface;
-use App\Infrastructure\Database\Domain\Execution\DatabaseRequestInterface;
-use App\Infrastructure\Database\Domain\Execution\Resolvers\RequestBuilderResolverInterface;
+use Database\Domain\Connection\DatabaseConnectionInterface;
+use Database\Domain\Execution\DatabaseRequestInterface;
+use Database\Domain\Execution\Resolvers\RequestBuilderResolverInterface;
 use App\Shared\Event\Contracts\EventDispatcherInterface;
 
 /**

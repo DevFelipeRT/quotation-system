@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Shared\Discovery\Application\Service;
+namespace Discovery\Application\Service;
 
-use App\Shared\Discovery\Application\Contracts\DiscoveryScannerInterface;
-use App\Shared\Discovery\Application\Contracts\ScannerFacadeInterface;
-use App\Shared\Discovery\Domain\Collection\FqcnCollection;
-use App\Shared\Discovery\Application\Service\DiscoveryScanner;
-use App\Shared\Discovery\Domain\ValueObjects\FullyQualifiedClassName;
-use App\Shared\Discovery\Domain\ValueObjects\InterfaceName;
-use App\Shared\Discovery\Domain\ValueObjects\NamespaceName;
+use Discovery\Application\Contracts\DiscoveryScannerInterface;
+use Discovery\Application\Contracts\ScannerFacadeInterface;
+use Discovery\Domain\Collection\FqcnCollection;
+use Discovery\Application\Service\DiscoveryScanner;
+use Discovery\Domain\ValueObjects\FullyQualifiedClassName;
+use Discovery\Domain\ValueObjects\InterfaceName;
+use Discovery\Domain\ValueObjects\NamespaceName;
 
 final class DiscoveryScannerFacade implements 
     ScannerFacadeInterface,

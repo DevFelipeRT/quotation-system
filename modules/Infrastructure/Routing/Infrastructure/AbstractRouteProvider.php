@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Routing\Infrastructure;
+namespace Routing\Infrastructure;
 
-use App\Infrastructure\Routing\Infrastructure\Contracts\RouteProviderInterface;
-use App\Infrastructure\Routing\Presentation\Http\Contracts\HttpRouteInterface;
-use App\Infrastructure\Routing\Presentation\Http\HttpRoute;
-use App\Infrastructure\Routing\Domain\ValueObjects\HttpMethod;
-use App\Infrastructure\Routing\Domain\ValueObjects\RoutePath;
-use App\Infrastructure\Routing\Domain\ValueObjects\ControllerAction;
+use Routing\Infrastructure\Contracts\RouteProviderInterface;
+use Routing\Presentation\Http\Contracts\HttpRouteInterface;
+use Routing\Presentation\Http\HttpRoute;
+use Routing\Domain\ValueObjects\HttpMethod;
+use Routing\Domain\ValueObjects\RoutePath;
+use Routing\Domain\ValueObjects\ControllerAction;
 use InvalidArgumentException;
 use ReflectionClass;
 use ReflectionException;

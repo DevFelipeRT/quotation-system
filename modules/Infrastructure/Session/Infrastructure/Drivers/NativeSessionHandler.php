@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Session\Infrastructure\Drivers;
+namespace Session\Infrastructure\Drivers;
 
-use App\Infrastructure\Session\Domain\Contracts\SessionHandlerInterface;
-use App\Infrastructure\Session\Domain\Contracts\SessionDataInterface;
-use App\Infrastructure\Session\Domain\Factories\SessionDataFactory;
-use App\Infrastructure\Session\Exceptions\SessionStartException;
-use App\Infrastructure\Session\Exceptions\SessionDestroyException;
-use App\Infrastructure\Session\Exceptions\InvalidSessionDataException;
+use Session\Domain\Contracts\SessionHandlerInterface;
+use Session\Domain\Contracts\SessionDataInterface;
+use Session\Domain\Factories\SessionDataFactory;
+use Session\Exceptions\SessionStartException;
+use Session\Exceptions\SessionDestroyException;
+use Session\Exceptions\InvalidSessionDataException;
 
 /**
  * Native PHP session implementation of SessionHandlerInterface.

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Database\Application\Connection;
+namespace Database\Application\Connection;
 
-use App\Infrastructure\Database\Domain\Connection\DatabaseConnectionInterface;
-use App\Infrastructure\Database\Domain\Connection\Resolvers\DriverResolverInterface;
+use Database\Domain\Connection\DatabaseConnectionInterface;
+use Database\Domain\Connection\Resolvers\DriverResolverInterface;
 use App\Shared\Event\Contracts\EventDispatcherInterface;
 use Config\Database\DatabaseConfig;
 use InvalidArgumentException;

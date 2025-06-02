@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Session\Infrastructure\Support;
+namespace Session\Infrastructure\Support;
 
-use App\Infrastructure\Session\Exceptions\UnsupportedSessionDriverException;
+use Session\Exceptions\UnsupportedSessionDriverException;
 use Config\Session\SupportedSessionDrivers;
 
 /**

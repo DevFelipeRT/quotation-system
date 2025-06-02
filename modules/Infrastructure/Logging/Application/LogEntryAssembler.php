@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Logging\Application;
+namespace Logging\Application;
 
-use App\Infrastructure\Logging\Domain\LogEntry;
-use App\Infrastructure\Logging\Domain\LogLevelEnum;
-use App\Infrastructure\Logging\Exceptions\InvalidLogLevelException;
-use App\Infrastructure\Logging\Security\LogSanitizer;
+use Logging\Domain\LogEntry;
+use Logging\Domain\LogLevelEnum;
+use Logging\Exceptions\InvalidLogLevelException;
+use Logging\Security\LogSanitizer;
 
 /**
  * Converts loggable inputs into structured LogEntry objects.

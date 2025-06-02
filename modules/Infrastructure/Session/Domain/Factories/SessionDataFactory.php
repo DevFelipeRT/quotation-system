@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Session\Domain\Factories;
+namespace Session\Domain\Factories;
 
-use App\Infrastructure\Session\Domain\Contracts\SessionDataInterface;
-use App\Infrastructure\Session\Domain\ValueObjects\SessionContext;
-use App\Infrastructure\Session\Domain\ValueObjects\AuthenticatedSessionData;
-use App\Infrastructure\Session\Domain\ValueObjects\GuestSessionData;
-use App\Infrastructure\Session\Domain\ValueObjects\AbstractControllerSessionData;
-use App\Infrastructure\Session\Exceptions\InvalidSessionDataException;
+use Session\Domain\Contracts\SessionDataInterface;
+use Session\Domain\ValueObjects\SessionContext;
+use Session\Domain\ValueObjects\AuthenticatedSessionData;
+use Session\Domain\ValueObjects\GuestSessionData;
+use Session\Domain\ValueObjects\AbstractControllerSessionData;
+use Session\Exceptions\InvalidSessionDataException;
 
 /**
  * SessionDataFactory

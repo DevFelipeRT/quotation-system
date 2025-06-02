@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Database\Exceptions;
+namespace Database\Exceptions;
 
 use App\Shared\Exceptions\InfrastructureException;
 use Throwable;

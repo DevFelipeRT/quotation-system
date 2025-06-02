@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Routing\Presentation\Http;
+namespace Routing\Presentation\Http;
 
-use App\Infrastructure\Routing\Domain\ValueObjects\ControllerAction;
-use App\Infrastructure\Routing\Domain\ValueObjects\HttpMethod;
-use App\Infrastructure\Routing\Domain\ValueObjects\RoutePath;
-use App\Infrastructure\Routing\Presentation\Http\Contracts\HttpRouteInterface;
+use Routing\Domain\ValueObjects\ControllerAction;
+use Routing\Domain\ValueObjects\HttpMethod;
+use Routing\Domain\ValueObjects\RoutePath;
+use Routing\Presentation\Http\Contracts\HttpRouteInterface;
 use InvalidArgumentException;
 
 /**

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Routing\Infrastructure\Exceptions;
+namespace Routing\Infrastructure\Exceptions;
 
 /**
  * Thrown when the routing infrastructure is unable to resolve a request to any registered route.

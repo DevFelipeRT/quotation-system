@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Session\Domain\ValueObjects;
+namespace Session\Domain\ValueObjects;
 
-use App\Infrastructure\Session\Exceptions\InvalidSessionContextException;
+use Session\Exceptions\InvalidSessionContextException;
 
 /**
  * Represents contextual session metadata, such as locale and authentication state.

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Shared\Discovery\Domain\ValueObjects;
+namespace Discovery\Domain\ValueObjects;
 
 final class NamespaceName
 {

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Infrastructure\Logging\Domain;
+namespace Logging\Domain;
 
 use DateTimeImmutable;
 use InvalidArgumentException;

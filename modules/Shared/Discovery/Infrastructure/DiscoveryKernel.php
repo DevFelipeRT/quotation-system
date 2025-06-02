@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Shared\Discovery\Infrastructure;
+namespace Discovery\Infrastructure;
 
-use App\Shared\Discovery\Application\Contracts\DiscoveryScannerInterface;
-use App\Shared\Discovery\Application\Contracts\ScannerFacadeInterface;
-use App\Shared\Discovery\Application\Service\DiscoveryScannerFacade;
-use App\Shared\Discovery\Application\Service\DiscoveryScanner;
-use App\Shared\Discovery\Infrastructure\NamespaceToDirectoryResolverPsr4;
-use App\Shared\Discovery\Infrastructure\FileToFqcnResolverPsr4;
-use App\Shared\Discovery\Infrastructure\PhpFileFinderRecursive;
+use Discovery\Application\Contracts\DiscoveryScannerInterface;
+use Discovery\Application\Contracts\ScannerFacadeInterface;
+use Discovery\Application\Service\DiscoveryScannerFacade;
+use Discovery\Application\Service\DiscoveryScanner;
+use Discovery\Infrastructure\NamespaceToDirectoryResolverPsr4;
+use Discovery\Infrastructure\FileToFqcnResolverPsr4;
+use Discovery\Infrastructure\PhpFileFinderRecursive;
 
 /**
  * DiscoveryKernel

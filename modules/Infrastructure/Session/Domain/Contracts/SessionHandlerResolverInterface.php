@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Session\Domain\Contracts;
+namespace Session\Domain\Contracts;
 
 /**
  * Defines the contract for resolving the class name of a session handler implementation

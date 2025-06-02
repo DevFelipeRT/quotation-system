@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Shared\Container\Domain\Contracts;
+namespace Container\Domain\Contracts;
 
-use App\Shared\Container\Domain\Exceptions\NotFoundException;
-use App\Shared\Container\Domain\Exceptions\ContainerException;
+use Container\Domain\Exceptions\NotFoundException;
+use Container\Domain\Exceptions\ContainerException;
 
 /**
  * Interface ContainerInterface

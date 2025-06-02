@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Session\Application;
+namespace Session\Application;
 
-use App\Infrastructure\Session\Domain\Contracts\SessionHandlerInterface;
-use App\Infrastructure\Session\Domain\Contracts\SessionHandlerResolverInterface;
+use Session\Domain\Contracts\SessionHandlerInterface;
+use Session\Domain\Contracts\SessionHandlerResolverInterface;
 
 /**
  * Factory responsible for instantiating the session handler implementation

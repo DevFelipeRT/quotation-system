@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Database\Infrastructure\Execution\RequestBuilders;
+namespace Database\Infrastructure\Execution\RequestBuilders;
 
-use App\Infrastructure\Database\Domain\Execution\DatabaseRequestInterface;
-use App\Infrastructure\Database\Domain\Execution\RequestBuilders\RequestBuilderInterface;
-use App\Infrastructure\Database\Infrastructure\Execution\PdoDatabaseRequest;
+use Database\Domain\Execution\DatabaseRequestInterface;
+use Database\Domain\Execution\RequestBuilders\RequestBuilderInterface;
+use Database\Infrastructure\Execution\PdoDatabaseRequest;
 use App\Shared\Event\Contracts\EventDispatcherInterface;
 use PDO;
 

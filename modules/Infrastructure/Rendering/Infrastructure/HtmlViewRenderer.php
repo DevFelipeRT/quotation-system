@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Rendering\Infrastructure;
+namespace Rendering\Infrastructure;
 
-use App\Infrastructure\Rendering\Application\HtmlView;
-use App\Infrastructure\Rendering\Domain\Contracts\ViewInterface;
+use Rendering\Application\HtmlView;
+use Rendering\Domain\Contracts\ViewInterface;
 use App\Shared\UrlResolver\AppUrlResolver;
 use InvalidArgumentException;
 use RuntimeException;

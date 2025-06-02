@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Session\Domain\Events;
+namespace Session\Domain\Events;
 
-use App\Infrastructure\Session\Domain\Contracts\SessionDataInterface;
+use Session\Domain\Contracts\SessionDataInterface;
 
 /**
  * Domain event dispatched when the session data is updated or replaced.

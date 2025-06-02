@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Routing\Application\Service;
+namespace Routing\Application\Service;
 
-use App\Infrastructure\Routing\Application\Contracts\RoutingServiceInterface;
-use App\Infrastructure\Routing\Infrastructure\Contracts\RouteRepositoryInterface;
-use App\Infrastructure\Routing\Presentation\Http\Contracts\HttpRouteInterface;
-use App\Infrastructure\Routing\Presentation\Http\Contracts\ServerRequestInterface;
+use Routing\Application\Contracts\RoutingServiceInterface;
+use Routing\Infrastructure\Contracts\RouteRepositoryInterface;
+use Routing\Presentation\Http\Contracts\HttpRouteInterface;
+use Routing\Presentation\Http\Contracts\ServerRequestInterface;
 
 /**
  * RoutingFacade

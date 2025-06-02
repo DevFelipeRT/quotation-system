@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Routing\Infrastructure\Exceptions;
+namespace Routing\Infrastructure\Exceptions;
 
 /**
  * Thrown when attempting to register a duplicate route (by name or path+method).

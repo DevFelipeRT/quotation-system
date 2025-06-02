@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Routing\Domain\Events\Contracts;
+namespace Routing\Domain\Events\Contracts;
 
 /**
  * RoutingEventInterface

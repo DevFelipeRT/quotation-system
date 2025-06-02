@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Shared\Container\Domain\Exceptions;
+namespace Container\Domain\Exceptions;
 
 /**
  * Class NotFoundException

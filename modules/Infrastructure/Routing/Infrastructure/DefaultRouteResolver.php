@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Routing\Infrastructure;
+namespace Routing\Infrastructure;
 
-use App\Infrastructure\Routing\Infrastructure\Contracts\RouteRepositoryInterface;
-use App\Infrastructure\Routing\Infrastructure\Contracts\RouteResolverInterface;
-use App\Infrastructure\Routing\Presentation\Http\Contracts\HttpRouteInterface;
-use App\Infrastructure\Routing\Presentation\Http\Contracts\ServerRequestInterface;
-use App\Infrastructure\Routing\Infrastructure\Exceptions\MethodNotAllowedException;
-use App\Infrastructure\Routing\Infrastructure\Exceptions\RouteNotFoundException;
+use Routing\Infrastructure\Contracts\RouteRepositoryInterface;
+use Routing\Infrastructure\Contracts\RouteResolverInterface;
+use Routing\Presentation\Http\Contracts\HttpRouteInterface;
+use Routing\Presentation\Http\Contracts\ServerRequestInterface;
+use Routing\Infrastructure\Exceptions\MethodNotAllowedException;
+use Routing\Infrastructure\Exceptions\RouteNotFoundException;
 
 /**
  * Default implementation of RouteResolverInterface.

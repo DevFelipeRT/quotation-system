@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Routing\Infrastructure\Exceptions;
+namespace Routing\Infrastructure\Exceptions;
 
 /**
  * Thrown when a route was found for the request path, but the HTTP method is not allowed.

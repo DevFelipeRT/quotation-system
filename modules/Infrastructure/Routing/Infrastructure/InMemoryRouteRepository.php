@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Routing\Infrastructure;
+namespace Routing\Infrastructure;
 
-use App\Infrastructure\Routing\Infrastructure\Contracts\RouteRepositoryInterface;
-use App\Infrastructure\Routing\Presentation\Http\Contracts\HttpRouteInterface;
+use Routing\Infrastructure\Contracts\RouteRepositoryInterface;
+use Routing\Presentation\Http\Contracts\HttpRouteInterface;
 use InvalidArgumentException;
 
 /**

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Session\Infrastructure\Resolvers;
+namespace Session\Infrastructure\Resolvers;
 
-use App\Infrastructure\Session\Domain\Contracts\SessionHandlerInterface;
-use App\Infrastructure\Session\Domain\Contracts\SessionHandlerResolverInterface;
-use App\Infrastructure\Session\Exceptions\UnsupportedSessionDriverException;
-use App\Infrastructure\Session\Infrastructure\Support\SessionHandlerDriverValidator;
-use App\Infrastructure\Session\Infrastructure\Support\SessionHandlerClassMap;
+use Session\Domain\Contracts\SessionHandlerInterface;
+use Session\Domain\Contracts\SessionHandlerResolverInterface;
+use Session\Exceptions\UnsupportedSessionDriverException;
+use Session\Infrastructure\Support\SessionHandlerDriverValidator;
+use Session\Infrastructure\Support\SessionHandlerClassMap;
 use Config\Session\SessionConfig;
 
 /**

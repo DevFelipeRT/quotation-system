@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Routing\Infrastructure;
+namespace Routing\Infrastructure;
 ;
 
-use App\Infrastructure\Routing\Infrastructure\Contracts\ControllerFactoryInterface;
-use App\Shared\Container\Domain\Contracts\ContainerInterface;
-use App\Infrastructure\Routing\Infrastructure\Exceptions\RouteDispatchException;
-use App\Infrastructure\Routing\Infrastructure\Exceptions\InvalidRouteDefinitionException;
+use Routing\Infrastructure\Contracts\ControllerFactoryInterface;
+use Container\Domain\Contracts\ContainerInterface;
+use Routing\Infrastructure\Exceptions\RouteDispatchException;
+use Routing\Infrastructure\Exceptions\InvalidRouteDefinitionException;
 use ReflectionClass;
 use ReflectionException;
 

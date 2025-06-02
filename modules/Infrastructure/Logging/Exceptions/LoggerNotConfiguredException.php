@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Logging\Exceptions;
+namespace Logging\Exceptions;
 
 /**
  * Thrown when no concrete LoggerInterface implementation has been configured.

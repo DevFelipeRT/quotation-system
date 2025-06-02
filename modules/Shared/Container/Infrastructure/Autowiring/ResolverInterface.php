@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Shared\Container\Infrastructure\Autowiring;
+namespace Container\Infrastructure\Autowiring;
 
-use App\Shared\Container\Domain\Contracts\ContainerInterface;
+use Container\Domain\Contracts\ContainerInterface;
 
 /**
  * Interface ResolverInterface

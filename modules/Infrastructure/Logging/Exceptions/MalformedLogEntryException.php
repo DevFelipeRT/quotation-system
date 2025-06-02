@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Logging\Exceptions;
+namespace Logging\Exceptions;
 
 /**
  * Thrown when a LogEntry instance contains invalid or missing data.

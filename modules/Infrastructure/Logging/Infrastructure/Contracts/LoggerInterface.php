@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Infrastructure\Logging\Infrastructure\Contracts;
+namespace Logging\Infrastructure\Contracts;
 
-use App\Infrastructure\Logging\Domain\LogEntry;
+use Logging\Domain\LogEntry;
 
 /**
  * Defines a contract for structured logging mechanisms.

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Shared\Discovery\Domain\Collection;
+namespace Discovery\Domain\Collection;
 
-use App\Shared\Discovery\Domain\ValueObjects\FullyQualifiedClassName;
+use Discovery\Domain\ValueObjects\FullyQualifiedClassName;
 use IteratorAggregate;
 use ArrayIterator;
 use Traversable;

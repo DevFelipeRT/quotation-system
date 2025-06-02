@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Adapters\EventListening\Application\Resolver;
+namespace EventListening\Application\Resolver;
 
 /**
  * Represents an immutable, validated mapping of event classes to listener class names.

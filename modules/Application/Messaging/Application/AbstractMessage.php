@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Application\Messaging\Application;
+namespace Messaging\Application;
 
-use App\Application\Messaging\Domain\MessageInterface;
+use Messaging\Domain\MessageInterface;
 use DateTimeImmutable;
 
 /**

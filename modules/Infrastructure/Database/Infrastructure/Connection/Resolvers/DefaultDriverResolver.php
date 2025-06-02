@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Database\Infrastructure\Connection\Resolvers;
+namespace Database\Infrastructure\Connection\Resolvers;
 
-use App\Infrastructure\Database\Domain\Connection\DatabaseConnectionInterface;
-use App\Infrastructure\Database\Domain\Connection\Resolvers\DriverResolverInterface;
-use App\Infrastructure\Database\Exceptions\UnsupportedDriverException;
-use App\Infrastructure\Database\Infrastructure\Connection\DriverClassMap;
-use App\Infrastructure\Database\Validation\DriverValidator;
+use Database\Domain\Connection\DatabaseConnectionInterface;
+use Database\Domain\Connection\Resolvers\DriverResolverInterface;
+use Database\Exceptions\UnsupportedDriverException;
+use Database\Infrastructure\Connection\DriverClassMap;
+use Database\Validation\DriverValidator;
 
 
 /**

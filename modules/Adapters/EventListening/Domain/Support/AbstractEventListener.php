@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Adapters\EventListening\Domain\Support;
+namespace EventListening\Domain\Support;
 
-use App\Adapters\EventListening\Domain\Contracts\EventListenerInterface;
+use EventListening\Domain\Contracts\EventListenerInterface;
 
 /**
  * Base class for strongly-typed event listeners with type safety and failure isolation.

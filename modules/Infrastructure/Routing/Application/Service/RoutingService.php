@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Routing\Application\Service;
+namespace Routing\Application\Service;
 
-use App\Infrastructure\Routing\Application\Contracts\RoutingServiceInterface;
-use App\Infrastructure\Routing\Infrastructure\Contracts\RouteDispatcherInterface;
-use App\Infrastructure\Routing\Infrastructure\Contracts\RouteResolverInterface;
-use App\Infrastructure\Routing\Infrastructure\Exceptions\RouteNotFoundException;
-use App\Infrastructure\Routing\Infrastructure\Exceptions\MethodNotAllowedException;
-use App\Infrastructure\Routing\Infrastructure\Exceptions\RouteDispatchException;
-use App\Infrastructure\Routing\Presentation\Http\Contracts\ServerRequestInterface;
-use App\Infrastructure\Routing\Domain\Events\Contracts\RoutingEventInterface;
-use App\Infrastructure\Routing\Domain\Events\RouteNotFoundEvent;
-use App\Infrastructure\Routing\Domain\Events\RouteMatchedEvent;
-use App\Infrastructure\Routing\Domain\Events\RouteResolvedEvent;
-use App\Infrastructure\Routing\Domain\Events\BeforeRouteDispatchEvent;
-use App\Infrastructure\Routing\Domain\Events\AfterRouteDispatchEvent;
-use App\Infrastructure\Routing\Domain\Events\RouteDispatchFailedEvent;
+use Routing\Application\Contracts\RoutingServiceInterface;
+use Routing\Infrastructure\Contracts\RouteDispatcherInterface;
+use Routing\Infrastructure\Contracts\RouteResolverInterface;
+use Routing\Infrastructure\Exceptions\RouteNotFoundException;
+use Routing\Infrastructure\Exceptions\MethodNotAllowedException;
+use Routing\Infrastructure\Exceptions\RouteDispatchException;
+use Routing\Presentation\Http\Contracts\ServerRequestInterface;
+use Routing\Domain\Events\Contracts\RoutingEventInterface;
+use Routing\Domain\Events\RouteNotFoundEvent;
+use Routing\Domain\Events\RouteMatchedEvent;
+use Routing\Domain\Events\RouteResolvedEvent;
+use Routing\Domain\Events\BeforeRouteDispatchEvent;
+use Routing\Domain\Events\AfterRouteDispatchEvent;
+use Routing\Domain\Events\RouteDispatchFailedEvent;
 
 use Throwable;
 

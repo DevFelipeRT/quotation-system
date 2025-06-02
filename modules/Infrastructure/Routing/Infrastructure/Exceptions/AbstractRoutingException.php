@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Routing\Infrastructure\Exceptions;
+namespace Routing\Infrastructure\Exceptions;
 
 /**
  * Base exception for all routing-related errors.

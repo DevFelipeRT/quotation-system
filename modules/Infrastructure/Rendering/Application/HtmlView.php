@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Infrastructure\Rendering\Application;
+namespace Rendering\Application;
 
-use App\Infrastructure\Rendering\Domain\Contracts\ViewInterface;
+use Rendering\Domain\Contracts\ViewInterface;
 
 /**
  * HtmlView

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Session\Infrastructure\Support;
+namespace Session\Infrastructure\Support;
 
-use App\Infrastructure\Session\Domain\Contracts\SessionHandlerInterface;
-use App\Infrastructure\Session\Infrastructure\Drivers\NativeSessionHandler;
+use Session\Domain\Contracts\SessionHandlerInterface;
+use Session\Infrastructure\Drivers\NativeSessionHandler;
 
 /**
  * SessionHandlerClassMap

@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Routing\Infrastructure;
+namespace Routing\Infrastructure;
 
-use App\Infrastructure\Routing\Application\Contracts\RoutingServiceInterface;
-use App\Infrastructure\Routing\Application\Service\RoutingService;
-use App\Infrastructure\Routing\Infrastructure\Contracts\ControllerFactoryInterface;
-use App\Infrastructure\Routing\Infrastructure\Contracts\RouteDispatcherInterface;
-use App\Infrastructure\Routing\Infrastructure\Contracts\RouteProviderInterface;
-use App\Infrastructure\Routing\Infrastructure\Contracts\RouteRepositoryInterface;
-use App\Infrastructure\Routing\Infrastructure\Contracts\RouteResolverInterface;
-use App\Infrastructure\Routing\Infrastructure\ControllerFactory;
-use App\Infrastructure\Routing\Infrastructure\DefaultRouteDispatcher;
-use App\Infrastructure\Routing\Infrastructure\DefaultRouteResolver;
-use App\Infrastructure\Routing\Infrastructure\InMemoryRouteRepository;
-use App\Infrastructure\Routing\Infrastructure\RouteRegistrar;
-use App\Shared\Container\Domain\Contracts\ContainerInterface;
-use App\Shared\Discovery\Application\Contracts\ScannerFacadeInterface;
+use Routing\Application\Contracts\RoutingServiceInterface;
+use Routing\Application\Service\RoutingService;
+use Routing\Infrastructure\Contracts\ControllerFactoryInterface;
+use Routing\Infrastructure\Contracts\RouteDispatcherInterface;
+use Routing\Infrastructure\Contracts\RouteProviderInterface;
+use Routing\Infrastructure\Contracts\RouteRepositoryInterface;
+use Routing\Infrastructure\Contracts\RouteResolverInterface;
+use Routing\Infrastructure\ControllerFactory;
+use Routing\Infrastructure\DefaultRouteDispatcher;
+use Routing\Infrastructure\DefaultRouteResolver;
+use Routing\Infrastructure\InMemoryRouteRepository;
+use Routing\Infrastructure\RouteRegistrar;
+use Container\Domain\Contracts\ContainerInterface;
+use Discovery\Application\Contracts\ScannerFacadeInterface;
 
 /**
  * RoutingKernel

@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace App\Shared\Container\Infrastructure;
+namespace Container\Infrastructure;
 
-use App\Shared\Container\Domain\Contracts\ContainerInterface;
-use App\Shared\Container\Domain\Contracts\ServiceProviderInterface;
-use App\Shared\Container\Domain\Contracts\ContainerScopeInterface;
-use App\Shared\Container\Domain\Exceptions\NotFoundException;
-use App\Shared\Container\Domain\Exceptions\ContainerException;
-use App\Shared\Container\Domain\Exceptions\CircularDependencyException;
-use App\Shared\Container\Infrastructure\Bindings\Binding;
-use App\Shared\Container\Infrastructure\Bindings\BindingType;
-use App\Shared\Container\Infrastructure\Autowiring\ResolverInterface;
-use App\Shared\Container\Infrastructure\Autowiring\ReflectionResolver;
-use App\Shared\Container\Infrastructure\Autowiring\FactoryResolver;
-use App\Shared\Container\Infrastructure\Scope\SingletonScope;
-use App\Shared\Container\Infrastructure\Scope\TransientScope;
+use Container\Domain\Contracts\ContainerInterface;
+use Container\Domain\Contracts\ServiceProviderInterface;
+use Container\Domain\Contracts\ContainerScopeInterface;
+use Container\Domain\Exceptions\NotFoundException;
+use Container\Domain\Exceptions\ContainerException;
+use Container\Domain\Exceptions\CircularDependencyException;
+use Container\Infrastructure\Bindings\Binding;
+use Container\Infrastructure\Bindings\BindingType;
+use Container\Infrastructure\Autowiring\ResolverInterface;
+use Container\Infrastructure\Autowiring\ReflectionResolver;
+use Container\Infrastructure\Autowiring\FactoryResolver;
+use Container\Infrastructure\Scope\SingletonScope;
+use Container\Infrastructure\Scope\TransientScope;
 use Closure;
 
 /**
@@ -28,7 +28,7 @@ use Closure;
  * The container manages the full service lifecycle, detects circular dependencies,
  * and allows runtime extension of its internal scopes and resolvers.
  *
- * @package App\Shared\Container\Infrastructure
+ * @package Container\Infrastructure
  */
 class Container implements ContainerInterface
 {

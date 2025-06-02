@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Database\Infrastructure\Connection\Drivers;
+namespace Database\Infrastructure\Connection\Drivers;
 
-use App\Infrastructure\Database\Infrastructure\Connection\AbstractPdoConnection;
+use Database\Infrastructure\Connection\AbstractPdoConnection;
 use App\Shared\Event\Contracts\EventDispatcherInterface;
 use Config\Database\DatabaseConfig;
 

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Database\Domain\Execution\Resolvers;
+namespace Database\Domain\Execution\Resolvers;
 
-use App\Infrastructure\Database\Domain\Connection\DatabaseConnectionInterface;
-use App\Infrastructure\Database\Domain\Execution\RequestBuilders\RequestBuilderInterface;
+use Database\Domain\Connection\DatabaseConnectionInterface;
+use Database\Domain\Execution\RequestBuilders\RequestBuilderInterface;
 
 /**
  * Contract for resolving a request builder based on the connection type.

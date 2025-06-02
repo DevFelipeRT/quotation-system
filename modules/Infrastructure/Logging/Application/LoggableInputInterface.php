@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Logging\Application;
+namespace Logging\Application;
 
 use DateTimeImmutable;
 

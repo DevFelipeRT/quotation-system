@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Routing\Domain\Events;
+namespace Routing\Domain\Events;
 
-use App\Infrastructure\Routing\Domain\Events\Contracts\RoutingEventInterface;
-use App\Infrastructure\Routing\Presentation\Http\Contracts\ServerRequestInterface;
+use Routing\Domain\Events\Contracts\RoutingEventInterface;
+use Routing\Presentation\Http\Contracts\ServerRequestInterface;
 
 /**
  * RouteNotFoundEvent

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Database\Domain\Connection\Events;
+namespace Database\Domain\Connection\Events;
 
 /**
  * Signals that a database connection was successfully established.

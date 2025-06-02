@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Logging\Application;
+namespace Logging\Application;
 
-use App\Infrastructure\Logging\Domain\LogEntry;
+use Logging\Domain\LogEntry;
 
 /**
  * Defines the contract for assembling LogEntry objects from loggable inputs.

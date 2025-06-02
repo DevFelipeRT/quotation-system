@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Session\Exceptions;
+namespace Session\Exceptions;
 
 use DomainException;
 

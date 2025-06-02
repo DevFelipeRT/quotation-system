@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Shared\Container\Infrastructure\Autowiring;
+namespace Container\Infrastructure\Autowiring;
 
-use App\Shared\Container\Domain\Contracts\ContainerInterface;
-use App\Shared\Container\Domain\Exceptions\NotFoundException;
-use App\Shared\Container\Domain\Exceptions\CircularDependencyException;
+use Container\Domain\Contracts\ContainerInterface;
+use Container\Domain\Exceptions\NotFoundException;
+use Container\Domain\Exceptions\CircularDependencyException;
 use ReflectionClass;
 use ReflectionParameter;
 
@@ -21,7 +21,7 @@ use ReflectionParameter;
  * If no binding exists and the dependency is a valid class (FQCN), recursive autowiring is attempted.
  * If neither approach succeeds, a NotFoundException is thrown.
  *
- * @package App\Shared\Container\Infrastructure\Autowiring
+ * @package Container\Infrastructure\Autowiring
  */
 class ReflectionResolver implements ResolverInterface
 {

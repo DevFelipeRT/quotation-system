@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Logging\Security;
+namespace Logging\Security;
 
 /**
  * Responsible for masking sensitive information in log contexts

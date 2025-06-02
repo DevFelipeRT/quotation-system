@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Database\Infrastructure\Execution;
+namespace Database\Infrastructure\Execution;
 
-use App\Infrastructure\Database\Domain\Execution\DatabaseRequestInterface;
-use App\Infrastructure\Database\Domain\Execution\Events\QueryExecutedEvent;
-use App\Infrastructure\Database\Domain\Execution\Events\QueryFailedEvent;
-use App\Infrastructure\Database\Exceptions\QueryExecutionException;
+use Database\Domain\Execution\DatabaseRequestInterface;
+use Database\Domain\Execution\Events\QueryExecutedEvent;
+use Database\Domain\Execution\Events\QueryFailedEvent;
+use Database\Exceptions\QueryExecutionException;
 use App\Shared\Event\Contracts\EventDispatcherInterface;
 use PDO;
 use PDOException;
@@ -23,7 +23,7 @@ use PDOStatement;
  * - QueryExecutedEvent: dispatched on successful execution.
  * - QueryFailedEvent: dispatched on failure with context.
  *
- * @package App\Infrastructure\Database\Infrastructure\Execution
+ * @package Database\Infrastructure\Execution
  */
 final class PdoDatabaseRequest implements DatabaseRequestInterface
 {

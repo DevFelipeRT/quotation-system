@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Infrastructure\Session\Domain\Contracts;
+namespace Session\Domain\Contracts;
 
 /**
  * Contract for session handlers that manage the lifecycle and contents of a session.
