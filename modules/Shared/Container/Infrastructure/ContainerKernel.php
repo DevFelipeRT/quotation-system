@@ -43,29 +43,13 @@ final class ContainerKernel
     private static bool $isBuilt = false;
 
     /**
-     * Retrieves the builder instance, used to register providers or bindings
-     * before final build.
+     * Returns the already built container, or builds it on demand.
      *
-     * @return ContainerBuilder
+     * @return ContainerInterface
      */
-    public static function builder(): ContainerBuilder
+    public static function container(): ContainerInterface
     {
-        if (self::$builder === null) {
-            self::$builder = new ContainerBuilder();
-        }
-
-        return self::$builder;
-    }
-
-    /**
-     * Registers a service provider to be included during container build.
-     *
-     * @param ServiceProviderInterface $provider
-     * @return void
-     */
-    public static function registerProvider(ServiceProviderInterface $provider): void
-    {
-        self::builder()->addProvider($provider);
+        return self::build();
     }
 
     /**
@@ -93,22 +77,28 @@ final class ContainerKernel
     }
 
     /**
-     * Returns the already built container, or builds it on demand.
+     * Retrieves the builder instance, used to register providers or bindings
+     * before final build.
      *
-     * @return ContainerInterface
+     * @return ContainerBuilder
      */
-    public static function container(): ContainerInterface
+    public static function builder(): ContainerBuilder
     {
-        return self::build();
+        if (self::$builder === null) {
+            self::$builder = new ContainerBuilder();
+        }
+
+        return self::$builder;
     }
 
     /**
-     * Indicates whether the container has already been finalized.
+     * Registers a service provider to be included during container build.
      *
-     * @return bool
+     * @param ServiceProviderInterface $provider
+     * @return void
      */
-    public static function isReady(): bool
+    public static function registerProvider(ServiceProviderInterface $provider): void
     {
-        return self::$isBuilt;
+        self::builder()->addProvider($provider);
     }
 }
