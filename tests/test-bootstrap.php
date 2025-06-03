@@ -17,8 +17,6 @@ try {
      * for use in real integration tests of system modules.
      */
     $provider = new ConfigProvider();
-
-    echo "Bootstrap executed successfully.\n";
     return $provider;
 } catch (Throwable $e) {
     echo "An error occurred during bootstrap: " . $e->getMessage() . "\n";
