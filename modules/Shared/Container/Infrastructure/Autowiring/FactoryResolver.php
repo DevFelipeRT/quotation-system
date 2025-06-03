@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Container\Autowiring;
+namespace Container\Infrastructure\Autowiring;
 
-use Container\Contracts\ResolverInterface;
+use Container\Infrastructure\Contracts\ResolverInterface;
 use PublicContracts\Container\ContainerInterface;
 
 /**

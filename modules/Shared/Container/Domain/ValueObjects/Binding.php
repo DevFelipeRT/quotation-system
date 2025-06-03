@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Container\Bindings;
+namespace Container\Domain\ValueObjects;
 
 use Closure;
 
@@ -16,17 +16,17 @@ class Binding
     /**
      * @var string
      */
-    protected string $id;
+    private string $id;
 
     /**
      * @var Closure
      */
-    protected Closure $factory;
+    private Closure $factory;
 
     /**
      * @var BindingType
      */
-    protected BindingType $type;
+    private BindingType $type;
 
     /**
      * Binding constructor.

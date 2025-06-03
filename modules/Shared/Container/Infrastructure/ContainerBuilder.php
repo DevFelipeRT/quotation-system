@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Container;
+namespace Container\Infrastructure;
 
-use Container\Bindings\BindingType;
-use Container\Scope\SingletonScope;
-use Container\Scope\TransientScope;
+use Container\Domain\ValueObjects\BindingType;
+use Container\Infrastructure\Scope\SingletonScope;
+use Container\Infrastructure\Scope\TransientScope;
 use PublicContracts\Container\ContainerInterface;
 use PublicContracts\Container\ServiceProviderInterface;
 

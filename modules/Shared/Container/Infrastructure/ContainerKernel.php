@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Container;
+namespace Container\Infrastructure;
 
 use PublicContracts\Container\ContainerInterface;
 use PublicContracts\Container\ServiceProviderInterface;

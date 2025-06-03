@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Container\Scope;
+namespace Container\Infrastructure\Scope;
 
-use Container\Contracts\ContainerScopeInterface;
+use Container\Infrastructure\Contracts\ContainerScopeInterface;
 
 /**
  * Class TransientScope

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Container\Autowiring;
+namespace Container\Infrastructure\Autowiring;
 
-use Container\Contracts\ResolverInterface;
-use Container\Exceptions\NotFoundException;
-use Container\Exceptions\CircularDependencyException;
+use Container\Infrastructure\Contracts\ResolverInterface;
+use Container\Infrastructure\Exceptions\NotFoundException;
+use Container\Infrastructure\Exceptions\CircularDependencyException;
 use PublicContracts\Container\ContainerInterface;
 use ReflectionClass;
 use ReflectionParameter;

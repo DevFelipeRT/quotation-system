@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Container\Bindings;
+namespace Container\Domain\ValueObjects;
 
 /**
  * Enum BindingType

@@ -2,22 +2,23 @@
 
 declare(strict_types=1);
 
-namespace Container;
+namespace Container\Infrastructure;
 
-use Container\Contracts\ContainerScopeInterface;
-use Container\Contracts\ResolverInterface;
-use Container\Bindings\Binding;
-use Container\Bindings\BindingType;
-use Container\Autowiring\FactoryResolver;
-use Container\Autowiring\ReflectionResolver;
-use Container\Scope\SingletonScope;
-use Container\Scope\TransientScope;
-use Container\Exceptions\NotFoundException;
-use Container\Exceptions\ContainerException;
-use Container\Exceptions\CircularDependencyException;
+use Container\Infrastructure\Contracts\ContainerScopeInterface;
+use Container\Infrastructure\Contracts\ResolverInterface;
+use Container\Infrastructure\Autowiring\FactoryResolver;
+use Container\Infrastructure\Autowiring\ReflectionResolver;
+use Container\Infrastructure\Scope\SingletonScope;
+use Container\Infrastructure\Scope\TransientScope;
+use Container\Infrastructure\Exceptions\NotFoundException;
+use Container\Infrastructure\Exceptions\ContainerException;
+use Container\Infrastructure\Exceptions\CircularDependencyException;
+use Container\Domain\ValueObjects\Binding;
+use Container\Domain\ValueObjects\BindingType;
 use PublicContracts\Container\ServiceProviderInterface;
 use PublicContracts\Container\ContainerInterface;
 use Closure;
+
 
 /**
  * Dependency Injection Container
