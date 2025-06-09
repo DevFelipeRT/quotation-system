@@ -51,7 +51,7 @@ The module is organized into clearly defined layers and components, in alignment
 * `RequestExecutedEvent`
 * `RequestFailedEvent`
 
-All events provide contextual details (driver, schema, DSN, credentials used, SQL, parameters, errors), supporting full observability and diagnostic capabilities.
+All events provide contextual details (driver, SQL, parameters, errors), supporting full observability and diagnostic capabilities.
 
 **d) Support (`Domain/Support/`)**
 
@@ -95,7 +95,7 @@ Stack traces and contextual data (DSN, SQL, parameters, error code) are preserve
 
 ---
 
-## Core Execution Flow
+## Execution Flow
 
 1. **Initialization**
 
@@ -105,20 +105,19 @@ Stack traces and contextual data (DSN, SQL, parameters, error code) are preserve
 
 2. **Connection**
 
-   * A call to `PersistenceKernel` requests a connection (optionally passing schema).
+   * A call to `PersistenceKernel` requests a connection.
    * `PdoConnectionService` selects the correct driver and builds the DSN.
    * Upon connection attempt, the relevant event (`ConnectionSucceededEvent` or `ConnectionFailedEvent`) is emitted.
 
 3. **Execution**
 
-   * Application calls `execute` or `executeRaw` on the kernel.
-   * `PdoExecutionService` receives the query and bindings.
+   * Application calls `execution` on the kernel to retrieve a `PdoExecutionService`.
    * All executions are performed via prepared statements (PDO).
    * Success or failure raises `RequestExecutedEvent` or `RequestFailedEvent`, both carrying detailed context.
 
 4. **Transactions**
 
-   * Transactional demarcation (`beginTransaction`, `commit`, `rollback`) is provided both in the connection interface and kernel facade.
+   * Transactional demarcation (`beginTransaction`, `commit`, `rollback`) is provided in the execution interface.
 
 5. **Error Handling**
 
@@ -143,19 +142,16 @@ Stack traces and contextual data (DSN, SQL, parameters, error code) are preserve
 
 Events are fired on both connection lifecycle and each query execution. Each carries:
 
-* Driver and DSN
+* Driver
 * Connection parameters (with secret masking)
-* Schema (if applicable)
 * SQL and all bindings (for executed queries)
 * Detailed error message/stack (for failures)
 * Timestamp and unique context id (when applicable)
 
 **Event Listener Registration**
 
-Listeners may be registered using the event dispatcher system (integration with `Shared\Event\Contracts\EventDispatcherInterface`).
+Listeners may be registered using the event dispatcher system.
 Events are designed for downstream extensibility: metrics, tracing, logging, security auditing, etc.
-
-Example test listeners and utilities are provided for integration testing, ensuring observability is always testable.
 
 ---
 
@@ -295,14 +291,13 @@ try {
 * Test-friendly: contracts and event system allow extensive unit and integration tests
 * Architecture encourages separation of concerns and future expansion
 
-**Suggested Improvements:**
+**Future Improvements:**
 
 * Pooling/connection multiplexing for high-concurrency scenarios
 * Enhanced timeout controls and observability for slow queries
 * Direct integration points for secret managers (AWS Secrets Manager, HashiCorp Vault, etc.)
 * More granular event types (e.g., pre-execution, post-commit, connection retry)
-* Potential refatoração para facilitar suporte a bancos não relacionais, se necessário futuramente
-* Documentação de exemplos reais de listeners e integração com sistemas de monitoramento
+* Non-relational databases compatibility.
 
 ---
 
