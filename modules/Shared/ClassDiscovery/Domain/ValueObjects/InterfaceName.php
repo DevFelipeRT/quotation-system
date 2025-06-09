@@ -26,14 +26,6 @@ final class InterfaceName
     }
 
     /**
-     * Comparison for value objects (semantic equality).
-     */
-    public function equals(InterfaceName $other): bool
-    {
-        return $this->value === $other->value();
-    }
-
-    /**
      * Returns the validated name of the interface.
      */
     private function validate(string $interfaceName): string

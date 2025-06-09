@@ -14,14 +14,7 @@ final class FullyQualifiedClassName
      */
     public function __construct(string $fqcn)
     {
-        $trimmed = trim($fqcn);
-        if ($trimmed === '') {
-            throw new \InvalidArgumentException('Fully qualified class name cannot be empty.');
-        }
-        if (!class_exists($trimmed) && !interface_exists($trimmed)) {
-            throw new \InvalidArgumentException("FQCN '{$fqcn}' does not reference a valid class or interface.");
-        }
-        $this->value = $trimmed;
+        $this->value = $this->validateFqnc($fqcn);
     }
 
     /**
@@ -32,11 +25,15 @@ final class FullyQualifiedClassName
         return $this->value;
     }
 
-    /**
-     * Semantic equality for value objects.
-     */
-    public function equals(FullyQualifiedClassName $other): bool
+    private function validateFqnc(string $fqcn): string
     {
-        return $this->value === $other->value();
+        $trimmed = trim($fqcn);
+        if ($trimmed === '') {
+            throw new \InvalidArgumentException('Fully qualified class name cannot be empty.');
+        }
+        if (!class_exists($trimmed) && !interface_exists($trimmed)) {
+            throw new \InvalidArgumentException("FQCN '{$fqcn}' does not reference a valid class or interface.");
+        }
+        return $trimmed;
     }
 }

@@ -14,14 +14,7 @@ final class DirectoryPath
      */
     public function __construct(string $directoryPath)
     {
-        $trimmed = trim($directoryPath);
-        if ($trimmed === '') {
-            throw new \InvalidArgumentException('Directory path cannot be empty.');
-        }
-        if (!is_dir($trimmed)) {
-            throw new \InvalidArgumentException("Directory does not exist: '{$directoryPath}'.");
-        }
-        $this->value = $trimmed;
+        $this->value = $this->validateDirectoryPath($directoryPath);
     }
 
     /**
@@ -32,11 +25,15 @@ final class DirectoryPath
         return $this->value;
     }
 
-    /**
-     * Semantic equality for value objects.
-     */
-    public function equals(DirectoryPath $other): bool
+    private function validateDirectoryPath(string $directoryPath): string
     {
-        return $this->value === $other->value();
+        $trimmed = trim($directoryPath);
+        if ($trimmed === '') {
+            throw new \InvalidArgumentException('Directory path cannot be empty.');
+        }
+        if (!is_dir($trimmed)) {
+            throw new \InvalidArgumentException("Directory does not exist: '{$directoryPath}'.");
+        }
+        return $trimmed;
     }
 }

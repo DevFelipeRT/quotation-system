@@ -6,6 +6,8 @@ namespace ClassDiscovery\Infrastructure;
 
 use ClassDiscovery\Application\Contracts\PhpFileFinder;
 use ClassDiscovery\Domain\ValueObjects\DirectoryPath;
+use RecursiveDirectoryIterator;
+use RecursiveIteratorIterator;
 
 final class PhpFileFinderRecursive implements PhpFileFinder
 {
@@ -15,13 +17,23 @@ final class PhpFileFinderRecursive implements PhpFileFinder
      */
     public function findAll(DirectoryPath $directory): array
     {
-        $phpFiles = [];
         $path = $directory->value();
+        $iterator = $this->iterator($path);
+        $phpFiles = $this->iteratePhpFiles($iterator);
 
-        $iterator = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($path)
+        return $phpFiles;
+    }
+
+    private function iterator(string $path): RecursiveIteratorIterator
+    {
+        return new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($path)
         );
+    }
 
+    private function iteratePhpFiles(RecursiveIteratorIterator $iterator): array
+    {
+        $phpFiles = [];
         foreach ($iterator as $file) {
             if ($file->isFile() && $file->getExtension() === 'php') {
                 $phpFiles[] = $file->getRealPath();

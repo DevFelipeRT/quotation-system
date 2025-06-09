@@ -14,12 +14,7 @@ final class NamespaceName
      */
     public function __construct(string $namespace)
     {
-        $trimmed = trim($namespace);
-        if ($trimmed === '') {
-            throw new \InvalidArgumentException('Namespace cannot be empty.');
-        }
-        // Opcional: Adicione aqui validação de formato PSR-4, se desejar ser mais estrito.
-        $this->value = $trimmed;
+        $this->value = $this->validateNamespace($namespace);
     }
 
     /**
@@ -30,11 +25,13 @@ final class NamespaceName
         return $this->value;
     }
 
-    /**
-     * Semantic equality for value objects.
-     */
-    public function equals(NamespaceName $other): bool
+    private function validateNamespace(string $namespace): string
     {
-        return $this->value === $other->value();
+        $trimmed = trim($namespace);
+        if ($trimmed === '') {
+            throw new \InvalidArgumentException('Namespace cannot be empty.');
+        }
+        
+        return $trimmed;
     }
 }

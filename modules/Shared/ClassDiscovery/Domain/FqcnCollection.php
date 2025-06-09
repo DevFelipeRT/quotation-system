@@ -5,11 +5,8 @@ declare(strict_types=1);
 namespace ClassDiscovery\Domain;
 
 use ClassDiscovery\Domain\ValueObjects\FullyQualifiedClassName;
-use IteratorAggregate;
-use ArrayIterator;
-use Traversable;
 
-final class FqcnCollection implements IteratorAggregate
+final class FqcnCollection
 {
     /** @var FullyQualifiedClassName[] */
     private array $items;
@@ -20,25 +17,7 @@ final class FqcnCollection implements IteratorAggregate
      */
     public function __construct(array $items = [])
     {
-        foreach ($items as $item) {
-            if (!$item instanceof FullyQualifiedClassName) {
-                throw new \InvalidArgumentException('All items must be instances of FullyQualifiedClassName.');
-            }
-        }
-        $this->items = array_values($items);
-    }
-
-    /**
-     * @return Traversable|FullyQualifiedClassName[]
-     */
-    public function getIterator(): Traversable
-    {
-        return new ArrayIterator($this->items);
-    }
-
-    public function isEmpty(): bool
-    {
-        return empty($this->items);
+        $this->items = $this->validateItems($items);
     }
 
     /**
@@ -53,18 +32,20 @@ final class FqcnCollection implements IteratorAggregate
     }
 
     /**
-     * @return int
-     */
-    public function count(): int
-    {
-        return count($this->items);
-    }
-
-    /**
      * @return FullyQualifiedClassName[]
      */
     public function toArray(): array
     {
         return $this->items;
+    }
+
+    private function validateItems(array $items): array
+    {
+        foreach ($items as $item) {
+            if (!$item instanceof FullyQualifiedClassName) {
+                throw new \InvalidArgumentException('All items must be instances of FullyQualifiedClassName.');
+            }
+        }
+        return array_values($items);
     }
 }
