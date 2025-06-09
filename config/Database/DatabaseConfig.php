@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Config\Database;
 
-use App\Infrastructure\Database\Validation\DriverValidator;
+
 use Config\Env\EnvLoader;
 
 /**
@@ -14,23 +14,25 @@ use Config\Env\EnvLoader;
 final class DatabaseConfig
 {
     private EnvLoader $env;
+    private static $driversList = [
+        'mysql',
+        'pgsql',
+        'sqlite',
+    ];
 
-    /**
-     * @param EnvLoader $env Loader for environment variables.
-     */
     public function __construct(EnvLoader $env)
     {
         $this->env = $env;
     }
+    
+    public static function getDriversList(): array
+    {
+        return self::$driversList;
+    }
 
-    /**
-     * Retrieves and validates the database driver.
-     *
-     * @return string
-     */
     public function getDriver(): string
     {
-        return DriverValidator::resolve($this->env->getRequired('DB_DRIVER'));
+        return $this->env->getRequired('DB_DRIVER');
 
     }
 
@@ -57,6 +59,11 @@ final class DatabaseConfig
     public function getPort(): int
     {
         return (int) $this->env->getRequired('DB_PORT');
+    }
+
+    public function getFile(): string
+    {
+        return $this->env->getRequired('DB_FILE');
     }
 
     /**
