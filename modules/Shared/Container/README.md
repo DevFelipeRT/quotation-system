@@ -47,7 +47,6 @@ Container/
 │   ├── Container.php                       # Main dependency injection container implementation
 │   ├── ContainerBuilder.php                # Fluent builder for configuring and instantiating the container
 │   └── ContainerKernel.php                 # Singleton kernel for orchestrating global container state
-└── README.md
 
 PublicContracts/
 └── Container/
