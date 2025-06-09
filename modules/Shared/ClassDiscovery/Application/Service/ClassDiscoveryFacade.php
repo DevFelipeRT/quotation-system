@@ -4,18 +4,14 @@ declare(strict_types=1);
 
 namespace ClassDiscovery\Application\Service;
 
-use ClassDiscovery\Application\Contracts\ClassDiscoveryServiceInterface;
-use ClassDiscovery\Domain\FqcnCollection;
 use ClassDiscovery\Domain\ValueObjects\FullyQualifiedClassName;
 use ClassDiscovery\Domain\ValueObjects\InterfaceName;
 use ClassDiscovery\Domain\ValueObjects\NamespaceName;
+use ClassDiscovery\Domain\FqcnCollection;
 
 use PublicContracts\ClassDiscovery\ClassDiscoveryFacadeInterface;
 
-
-final class ClassDiscoveryFacade implements 
-    ClassDiscoveryFacadeInterface,
-    ClassDiscoveryServiceInterface
+final class ClassDiscoveryFacade implements ClassDiscoveryFacadeInterface
 {
     private ClassDiscoveryService $scanner;
 
@@ -37,7 +33,7 @@ final class ClassDiscoveryFacade implements
         $namespaceVO = is_null($namespace) ? null : new NamespaceName($namespace);
 
         try {
-            $collection = $this->discoverImplementing($interfaceVO, $namespaceVO);
+            $collection = $this->scanner->discoverImplementing($interfaceVO, $namespaceVO);
         } catch (\InvalidArgumentException $e) {
             throw $e;
         }
@@ -58,7 +54,7 @@ final class ClassDiscoveryFacade implements
         $namespaceVO = is_null($namespace) ? null : new NamespaceName($namespace);
 
         try {
-            $collection = $this->discoverExtending($fqcnVO, $namespaceVO);
+            $collection = $this->scanner->discoverExtending($fqcnVO, $namespaceVO);
         } catch (\InvalidArgumentException $e) {
             throw $e;
         }
@@ -67,41 +63,23 @@ final class ClassDiscoveryFacade implements
     }
 
     /**
-     * Discovers all FQCNs implementing a given interface.
-     *
-     * @param InterfaceName $interfaceName The fully qualified name of the interface.
-     * @param NamespaceName|null $namespace The namespace to restrict the search to, or null for the default PSR-4 prefix.
-     * @return FqcnCollection
+     * Discover all concrete classes in the specified namespace.
+     * 
+     * @param string|null $namespace The namespace to execute the search, or null for the default PSR-4 prefix.
+     * @return string[]
      */
-    public function discoverImplementing(
-        InterfaceName $interfaceName, 
-        ?NamespaceName $namespace = null
-    ): FqcnCollection
-    {
-        try {
-            return $this->scanner->discoverImplementing($interfaceName, $namespace);
-        } catch (\InvalidArgumentException $e) {
-            throw $e;
-        }
-    }
+    public function inNamespace(
+        ?string $namespace = null
+    ): array {
+        $namespaceVO = is_null($namespace) ? null : new NamespaceName($namespace);
 
-    /**
-     * Discovers all FQCNs extending a given class.
-     *
-     * @param FullyQualifiedClassName $className The fully qualified name of the class.
-     * @param NamespaceName|null $namespace The namespace to restrict the search to, or null for the default PSR-4 prefix.
-     * @return FqcnCollection
-     */
-    public function discoverExtending(
-        FullyQualifiedClassName $className, 
-        ?NamespaceName $namespace = null
-    ): FqcnCollection
-    {
         try {
-            return $this->scanner->discoverExtending($className, $namespace);
+            $collection = $this->scanner->discoverInNamespace($namespaceVO);
         } catch (\InvalidArgumentException $e) {
             throw $e;
         }
+
+        return $this->toArrayOfValues($collection);
     }
 
     private function toArrayOfValues(FqcnCollection $collection): array

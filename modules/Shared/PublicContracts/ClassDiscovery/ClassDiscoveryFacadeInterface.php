@@ -23,4 +23,12 @@ interface ClassDiscoveryFacadeInterface
      * @return string[]
      */
     public function extending(string $className, ?string $namespace = null): array;
+
+    /**
+     * Discover all concrete classes in the specified namespace.
+     * 
+     * @param string|null $namespace The namespace to execute the search, or null for the default PSR-4 prefix.
+     * @return string[]
+     */
+    public function inNamespace(?string $namespace = null): array;
 }
