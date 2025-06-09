@@ -21,4 +21,14 @@ interface DatabaseConnectionInterface
      * @return PDO
      */
     public function connect(): PDO;
+
+     /**
+     * Returns the name of the current driver.
+     */
+    public function getDriver(): string;
+
+    /**
+     * Indicates whether a PDO instance has already been initialized.
+     */
+    public function isConnected(): bool;
 }

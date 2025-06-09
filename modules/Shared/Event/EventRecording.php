@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Shared\Event;
+namespace Event;
 
 /**
  * Trait for recording domain or infrastructure events

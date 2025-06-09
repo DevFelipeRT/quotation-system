@@ -7,7 +7,7 @@ namespace Persistence\Infrastructure;
 use Persistence\Domain\Contract\DatabaseExecutionInterface;
 use Persistence\Domain\Event\RequestExecutedEvent;
 use Persistence\Domain\Event\RequestFailedEvent;
-use Shared\Event\EventRecording;
+use Event\EventRecording;
 use PDO;
 use PDOException;
 use PDOStatement;
