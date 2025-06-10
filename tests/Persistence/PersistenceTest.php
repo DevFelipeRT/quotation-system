@@ -7,7 +7,10 @@ namespace Tests\Persistence;
 require __DIR__ . '/../test-bootstrap.php';
 
 use Config\Database\DatabaseConfig;
+use Exception;
+use PDO;
 use Persistence\Domain\Contract\DatabaseConnectionInterface;
+use Persistence\Domain\Contract\DatabaseCredentialsInterface;
 use Persistence\Domain\Contract\DatabaseExecutionInterface;
 use Persistence\Domain\ValueObject\MySqlCredentials;
 use Persistence\Domain\ValueObject\SqliteCredentials;
@@ -20,8 +23,10 @@ use Tests\IntegrationTestHelper;
 final class PersistenceTest extends IntegrationTestHelper
 {
     private ?DatabaseConfig $config = null;
+    private ?DatabaseCredentialsInterface $credentials = null;
     private ?DatabaseConnectionInterface $connection = null;
     private ?DatabaseExecutionInterface $execution = null;
+    private ?PDO $pdo = null;
 
     public function __construct()
     {
@@ -83,10 +88,9 @@ final class PersistenceTest extends IntegrationTestHelper
                     throw new \RuntimeException("Unsupported driver: $driver");
             }
 
-            $this->connection = new PdoConnectionService($credentials);
-            $this->execution = new PdoExecutionService($this->connection->connect());
+            $this->credentials = $credentials;
 
-            $this->printStatus("Credential object created and injected successfully.", 'OK');
+            $this->printStatus("Credential object created successfully.", 'OK');
             $this->saveResult('Credential creation', true);
         } catch (\Throwable $e) {
             $this->printStatus("Failed to create credential object.", 'ERROR');
@@ -100,7 +104,8 @@ final class PersistenceTest extends IntegrationTestHelper
         $this->printStatus("STEP 2: Testing PDO connection establishment.", 'STEP');
 
         try {
-            $pdo = $this->connection?->connect();
+            $this->connection = new PdoConnectionService($this->credentials);
+            $this->pdo = $this->connection?->connect();
             $this->printStatus("Connection established. Driver: " . $this->connection?->getDriver(), 'OK');
             $this->saveResult('Connection establishment', true);
         } catch (\Throwable $e) {
@@ -115,6 +120,7 @@ final class PersistenceTest extends IntegrationTestHelper
         $this->printStatus("STEP 3: Executing test query.", 'STEP');
 
         try {
+            $this->execution = new PdoExecutionService($this->pdo);
             $result = $this->execution?->select("SELECT 1");
             $this->printStatus("Query executed. Result: " . json_encode($result), 'OK');
             $this->saveResult('Query execution', true);

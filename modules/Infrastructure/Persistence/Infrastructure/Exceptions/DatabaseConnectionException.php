@@ -31,6 +31,7 @@ final class DatabaseConnectionException extends RuntimeException
         array $context = [],
         ?Throwable $previous = null
     ) {
-        parent::__construct($message, $code, $context, $previous);
+        parent::__construct($message, $code, $previous);
+        echo array_values($context);
     }
 }
