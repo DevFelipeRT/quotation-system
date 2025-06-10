@@ -109,6 +109,7 @@ class IntegrationTestHelper
     public function handleException(\Throwable $e): void
     {
         $this->printStatus("Exception occurred: " . get_class($e), 'ERROR_DETAIL');
+        $this->printContext($e);
         echo "    [Message] {$e->getMessage()}\n";
         echo "    [File] {$e->getFile()}:{$e->getLine()}\n";
         echo "    [Trace] " . $e->getTraceAsString() . "\n";
@@ -125,5 +126,16 @@ class IntegrationTestHelper
         echo "\nAll tests finished.\n";
         $this->printAll($this->testResult);
         echo "</pre>";
+    }
+
+    private function printContext(\Throwable $e): void
+    {
+        if (property_exists($e, 'context') && !empty($e->context)) {
+            echo "    [Context] ";
+            foreach ($e->context as $key => $value) {
+                $parts[] = "{$key}: {$value}";
+            }
+            echo implode(', ', $parts) . "\n";
+        }
     }
 }

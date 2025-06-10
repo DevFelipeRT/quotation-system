@@ -80,7 +80,7 @@ final class PdoConnectionService implements DatabaseConnectionInterface
             throw new DatabaseConnectionException(
                 message: 'Failed to connect to database.',
                 code: 0,
-                context: ['driver' => $driver],
+                context: ['Driver' => "{$driver}"],
                 previous: $e
             );
         }

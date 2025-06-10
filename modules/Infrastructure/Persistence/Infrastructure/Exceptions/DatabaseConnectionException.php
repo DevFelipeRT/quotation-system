@@ -17,6 +17,8 @@ use Throwable;
  */
 final class DatabaseConnectionException extends RuntimeException
 {
+    public array $context = ['Persistence' => 'Connection'];
+
     /**
      * Initializes the exception for a database connection failure.
      *
@@ -28,10 +30,10 @@ final class DatabaseConnectionException extends RuntimeException
     public function __construct(
         string $message = 'Unable to connect to the database.',
         int $code = 0,
-        array $context = [],
+        ?array $context = [],
         ?Throwable $previous = null
     ) {
+        $this->context = array_merge($this->context, $context);
         parent::__construct($message, $code, $previous);
-        echo array_values($context);
     }
 }
