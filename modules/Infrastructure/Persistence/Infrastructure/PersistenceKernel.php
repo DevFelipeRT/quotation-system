@@ -19,24 +19,38 @@ final class PersistenceKernel
 {
     private readonly DatabaseCredentialsInterface $credentials;
     private readonly DriverValidator $validator;
-    private readonly DatabaseConnectionInterface $connection;
-    private readonly DatabaseExecutionInterface $execution;
+    private readonly DatabaseConnectionInterface $connectionService;
+    private readonly DatabaseExecutionInterface $executionService;
+    private readonly QueryBuilder $builder;
+    private readonly PDO $connection;
 
     public function __construct(DatabaseConfig $config)
     {
         $this->credentials = $this->initializeCredentials($config);
-        $this->connection  = $this->initializeConnection($this->credentials);
-        $this->execution   = $this->initializeExecution($this->connection->connect());
+        $this->connectionService  = $this->initializeConnection($this->credentials);
+        $this->connection = $this->connectionService()->connect();
+        $this->executionService   = $this->initializeExecution($this->connection);
+        $this->builder = new QueryBuilder;
+    }
+    
+    public function builder(): QueryBuilder
+    {
+        return $this->builder;
     }
 
-    public function connection(): DatabaseConnectionInterface
+    public function connection(): PDO
     {
         return $this->connection;
     }
 
-    public function execution(): DatabaseExecutionInterface
+    public function connectionService(): DatabaseConnectionInterface
     {
-        return $this->execution;
+        return $this->connectionService;
+    }
+
+    public function executionService(): DatabaseExecutionInterface
+    {
+        return $this->executionService;
     }
 
     private function initializeCredentials(DatabaseConfig $config): DatabaseCredentialsInterface

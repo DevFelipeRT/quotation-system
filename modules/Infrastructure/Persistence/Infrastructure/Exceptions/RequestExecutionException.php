@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Persistence\Infrastructure\Exceptions;
 
-use RuntimeException;
+use Persistence\Infrastructure\Exceptions\Contract\PersistenceException;
 use Throwable;
 
 /**
@@ -13,7 +13,7 @@ use Throwable;
  * Includes contextual metadata (e.g., request string, bindings) to aid debugging
  * and supports exception chaining.
  */
-final class RequestExecutionException extends RuntimeException
+final class RequestExecutionException extends PersistenceException
 {
     /**
      * @param string         $message   A descriptive error message.
@@ -27,6 +27,7 @@ final class RequestExecutionException extends RuntimeException
         array $context = [],
         ?Throwable $previous = null
     ) {
+        $context = array_merge(['Persistence' => 'Execution'], $context);
         parent::__construct($message, $code, $context, $previous);
     }
 }

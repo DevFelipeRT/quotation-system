@@ -1,152 +1,115 @@
 <?php
 
-namespace App\Persistence; // Example namespace
+declare(strict_types=1);
+
+namespace Persistence\Application\Facade;
 
 use PDO;
-use PDOException;
-use PDOStatement;
+use Persistence\Infrastructure\Exceptions\DatabaseConnectionException;
+use Persistence\Infrastructure\Exceptions\RequestExecutionException;
 
 /**
- * Interface PdoPersistenceInterface
- * Defines a contract for PDO-based persistence operations,
- * intended for use with the Facade pattern.
+ * PersistenceFacadeInterface serves as the unified contract
+ * to encapsulate and abstract database connection and execution services.
+ *
+ * Provides simplified access to database operations, ensuring clients
+ * interact with a cohesive, streamlined API.
  */
-interface PdoPersistenceInterface
+interface PersistenceFacadeInterface
 {
     /**
-     * Inserts a new row into a table.
+     * Establishes a database connection and returns a PDO instance.
      *
-     * @param string $table The name of the table.
-     * @param array $data An associative array of columns and values to be inserted.
-     * @return string|false The ID of the last inserted row on success, or false on failure.
-     * @throws PDOException On query execution error.
+     * @return PDO
+     *
+     * @throws DatabaseConnectionException if connection fails.
      */
-    public function insert(string $table, array $data): string|false;
+    public function connect(): PDO;
 
     /**
-     * Selects a single row from a table or query.
+     * Executes a SELECT query and returns all results as an array.
      *
-     * @param string $sql The SQL query to be executed.
-     * @param array $params Parameters for the prepared statement.
-     * @param int $fetchMode The PDO fetch mode (e.g., PDO::FETCH_ASSOC, PDO::FETCH_OBJ).
-     * @param mixed $fetchArgument Additional argument for the fetch mode (e.g., class name for PDO::FETCH_CLASS).
-     * @param array $ctorArgs Constructor arguments for PDO::FETCH_CLASS.
-     * @return mixed The resulting row in the specified format, or false if no row is found.
-     * @throws PDOException On query execution error.
+     * @param string $sql SQL query with placeholders.
+     * @param array<string, mixed> $params Query parameters.
+     *
+     * @return array Result set.
+     *
+     * @throws RequestExecutionException if query execution fails.
      */
-    public function selectOne(string $sql, array $params = [], int $fetchMode = PDO::FETCH_ASSOC, mixed $fetchArgument = null, array $ctorArgs = []): mixed;
+    public function select(string $sql, array $params = []): array;
 
     /**
-     * Selects multiple rows from a table or query.
+     * Executes an INSERT, UPDATE, or DELETE query.
      *
-     * @param string $sql The SQL query to be executed.
-     * @param array $params Parameters for the prepared statement.
-     * @param int $fetchMode The PDO fetch mode.
-     * @param mixed $fetchArgument Additional argument for the fetch mode.
-     * @param array $ctorArgs Constructor arguments for PDO::FETCH_CLASS.
-     * @return array An array of rows in the specified format. Returns an empty array if no rows are found.
-     * @throws PDOException On query execution error.
-     */
-    public function selectAll(string $sql, array $params = [], int $fetchMode = PDO::FETCH_ASSOC, mixed $fetchArgument = null, array $ctorArgs = []): array;
-
-    /**
-     * Updates rows in a table.
+     * @param string $sql SQL command with placeholders.
+     * @param array<string, mixed> $params Query parameters.
      *
-     * @param string $table The name of the table.
-     * @param array $data An associative array of columns and values to be updated.
-     * @param array $conditions An associative array of conditions for the WHERE clause.
-     * @return int The number of affected rows.
-     * @throws PDOException On query execution error.
-     */
-    public function update(string $table, array $data, array $conditions): int;
-
-    /**
-     * Deletes rows from a table.
+     * @return int Number of rows affected.
      *
-     * @param string $table The name of the table.
-     * @param array $conditions An associative array of conditions for the WHERE clause.
-     * @return int The number of affected rows.
-     * @throws PDOException On query execution error.
-     */
-    public function delete(string $table, array $conditions): int;
-
-    /**
-     * Executes an SQL query that does not return a result set (e.g., INSERT, UPDATE, DELETE).
-     *
-     * @param string $sql The SQL query to be executed.
-     * @param array $params Parameters for the prepared statement.
-     * @return int The number of affected rows.
-     * @throws PDOException On query execution error.
+     * @throws RequestExecutionException if query execution fails.
      */
     public function execute(string $sql, array $params = []): int;
 
     /**
-     * Prepares and executes an SQL query, returning the PDOStatement object.
-     * Useful for SELECT queries where the caller may want to iterate over the results
-     * or use specific PDOStatement functionalities.
+     * Checks whether any record exists for a given query.
      *
-     * @param string $sql The SQL query to be executed.
-     * @param array $params Parameters for the prepared statement.
-     * @return PDOStatement The resulting PDOStatement object after execution.
-     * @throws PDOException On statement preparation or execution error.
+     * @param string $sql SQL query with placeholders.
+     * @param array<string, mixed> $params Query parameters.
+     *
+     * @return bool True if at least one record exists, otherwise false.
+     *
+     * @throws RequestExecutionException if query execution fails.
      */
-    public function query(string $sql, array $params = []): PDOStatement;
+    public function exists(string $sql, array $params = []): bool;
 
     /**
-     * Fetches a single scalar value from the first column of the first row of a query.
+     * Initiates a database transaction.
      *
-     * @param string $sql The SQL query to be executed.
-     * @param array $params Parameters for the prepared statement.
-     * @param int $columnIndex The 0-based index of the column to fetch.
-     * @return mixed The scalar value, or false if no row/column is found.
-     * @throws PDOException On query execution error.
+     * @throws RequestExecutionException if the transaction fails to start.
      */
-    public function fetchScalar(string $sql, array $params = [], int $columnIndex = 0): mixed;
+    public function beginTransaction(): void;
 
     /**
-     * Begins a transaction.
+     * Commits the current database transaction.
      *
-     * @return bool True on success, false on failure.
-     * @throws PDOException If there is already an active transaction or the driver does not support transactions.
+     * @throws RequestExecutionException if commit fails.
      */
-    public function beginTransaction(): bool;
+    public function commit(): void;
 
     /**
-     * Commits the current transaction.
+     * Rolls back the current database transaction.
      *
-     * @return bool True on success, false on failure.
-     * @throws PDOException If there is no active transaction.
+     * @throws RequestExecutionException if rollback fails.
      */
-    public function commit(): bool;
+    public function rollback(): void;
 
     /**
-     * Rolls back the current transaction.
+     * Retrieves the ID of the last inserted record.
      *
-     * @return bool True on success, false on failure.
-     * @throws PDOException If there is no active transaction.
+     * @return int Last inserted ID.
+     *
+     * @throws RequestExecutionException if operation fails.
      */
-    public function rollBack(): bool;
+    public function lastInsertId(): int;
 
     /**
-     * Checks if a transaction is currently active.
+     * Retrieves the number of rows affected by the last query.
      *
-     * @return bool True if a transaction is active, false otherwise.
+     * @return int Number of rows affected.
      */
-    public function inTransaction(): bool;
+    public function affectedRows(): int;
 
     /**
-     * Returns the ID of the last inserted row or sequence value.
+     * Indicates whether there is an active PDO connection.
      *
-     * @param string|null $name Name of the sequence object from which the ID should be returned (driver-dependent).
-     * @return string|false The ID of the last inserted row as a string, or false on failure.
+     * @return bool True if connected, false otherwise.
      */
-    public function getLastInsertId(?string $name = null): string|false;
+    public function isConnected(): bool;
 
     /**
-     * Returns the underlying PDO instance.
-     * Useful for advanced or driver-specific operations not covered by the interface.
+     * Retrieves the database driver name (e.g., 'mysql', 'pgsql', 'sqlite').
      *
-     * @return PDO The PDO instance.
+     * @return string Database driver name.
      */
-    public function getPDO(): PDO;
+    public function getDriver(): string;
 }

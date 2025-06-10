@@ -4,117 +4,156 @@ declare(strict_types=1);
 
 namespace Persistence\Infrastructure;
 
-use Persistence\Domain\Contract\DatabaseExecutionInterface;
-use Persistence\Domain\Event\RequestExecutedEvent;
-use Persistence\Domain\Event\RequestFailedEvent;
-use Event\EventRecording;
 use PDO;
 use PDOException;
-use PDOStatement;
+use Persistence\Domain\Contract\DatabaseExecutionInterface;
+use Persistence\Domain\Contract\QueryInterface;
 use Persistence\Infrastructure\Exceptions\RequestExecutionException;
 
 /**
- * PDO-backed implementation of DatabaseExecutionInterface.
+ * PdoExecutionService provides a secure, unified interface for executing
+ * parametrized SQL queries, as represented by the QueryInterface Value Object.
  *
- * Encapsulates all SQL execution logic and records domain events
- * for success or failure without dispatching them immediately.
+ * This service supports all major SQL operations (SELECT, INSERT, UPDATE, DELETE),
+ * manages parameter binding, and centralizes error handling and (optional) event recording.
  *
- * Events recorded (use releaseEvents()):
- * - RequestExecutedEvent
- * - RequestFailedEvent
+ * Usage:
+ *   $query = (new QueryInterfaceBuilder)->table('users')->where('status', '=', 'active')->build();
+ *   $result = $pdoExecutionService->execute($query); // For SELECT, returns array
  *
- * @final
+ * @author
  */
 final class PdoExecutionService implements DatabaseExecutionInterface
 {
-    use EventRecording;
+    /**
+     * @var PDO
+     */
+    private PDO $pdo;
 
-    private ?PDOStatement $lastStatement = null;
+    /**
+     * Optionally holds the last executed PDOStatement.
+     *
+     * @var \PDOStatement|null
+     */
+    private ?\PDOStatement $lastStatement = null;
 
-    public function __construct(
-        private readonly PDO $pdo
-    ) {}
-
-    public function select(string $sql, array $params = []): array
+    /**
+     * Constructor.
+     *
+     * @param PDO $pdo PDO connection instance, fully configured.
+     */
+    public function __construct(PDO $pdo)
     {
-        return $this->executeRequest($sql, $params, fn(PDOStatement $stmt) => $stmt->fetchAll());
+        $this->pdo = $pdo;
     }
 
-    public function execute(string $sql, array $params = []): int
+    /**
+     * Executes a QueryInterface Value Object and returns the result.
+     *
+     * For SELECT: Returns all rows as an array.
+     * For INSERT: Returns the last inserted ID (int).
+     * For UPDATE/DELETE: Returns the affected rows (int).
+     *
+     * @param QueryInterface $query
+     * @return mixed
+     * @throws RequestExecutionException
+     */
+    public function execute(QueryInterface $query): mixed
     {
-        return $this->executeRequest($sql, $params, fn(PDOStatement $stmt) => $stmt->rowCount());
+        $sql = $query->getSql();
+        $bindings = $query->getBindings();
+
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            foreach ($bindings as $param => $value) {
+                $stmt->bindValue($param, $value);
+            }
+            $stmt->execute();
+            $this->lastStatement = $stmt;
+
+            // Dispatch by operation type
+            $operation = $this->detectOperation($sql);
+
+            return match ($operation) {
+                'select' => $stmt->fetchAll(PDO::FETCH_ASSOC),
+                'insert' => $this->pdo->lastInsertId(),
+                'update', 'delete' => $stmt->rowCount(),
+                default => true, // For operations that only need to indicate success
+            };
+        } catch (PDOException $e) {
+            throw new RequestExecutionException(
+                'Failed to execute database query.',
+                0,
+                ['sql' => $sql, 'params' => $bindings],
+                $e
+            );
+        }
     }
 
-    public function exists(string $sql, array $params = []): bool
+    /**
+     * Returns the last inserted auto-increment ID.
+     *
+     * @return int|string
+     */
+    public function lastInsertId(): int|string
     {
-        return !empty($this->select($sql, $params));
+        return $this->pdo->lastInsertId();
     }
 
-    public function beginTransaction(): void
-    {
-        $this->pdo->beginTransaction();
-    }
-
-    public function commit(): void
-    {
-        $this->pdo->commit();
-    }
-
-    public function rollback(): void
-    {
-        $this->pdo->rollBack();
-    }
-
-    public function lastInsertId(): int
-    {
-        return (int) $this->pdo->lastInsertId();
-    }
-
+    /**
+     * Returns the number of rows affected by the last operation.
+     *
+     * @return int
+     */
     public function affectedRows(): int
     {
         return $this->lastStatement?->rowCount() ?? 0;
     }
 
+    // ---------------------- Transaction Control ------------------------
+
     /**
-     * Prepares and executes the sql request, recording events based on outcome.
-     *
-     * @template T
-     * @param string $sql
-     * @param array $params
-     * @param callable(PDOStatement): T $onSuccess
-     * @return T
-     * @throws RequestExecutionException
+     * Begins a transaction.
      */
-    private function executeRequest(string $sql, array $params, callable $onSuccess)
+    public function beginTransaction(): void
     {
-        try {
-            $stmt = $this->pdo->prepare($sql);
-            $stmt->execute($params);
+        $this->pdo->beginTransaction();
+    }
 
-            $this->lastStatement = $stmt;
+    /**
+     * Commits the current transaction.
+     */
+    public function commit(): void
+    {
+        $this->pdo->commit();
+    }
 
-            $this->recordEvent(new RequestExecutedEvent(
-                request: $sql,
-                parameters: $params,
-                affectedRows: $this->affectedRows(),
-                timestamp: new \DateTimeImmutable()
-            ));
+    /**
+     * Rolls back the current transaction.
+     */
+    public function rollback(): void
+    {
+        $this->pdo->rollBack();
+    }
 
-            return $onSuccess($stmt);
-        } catch (PDOException $e) {
-            $this->recordEvent(new RequestFailedEvent(
-                request: $sql,
-                parameters: $params,
-                exception: $e,
-                timestamp: new \DateTimeImmutable()
-            ));
+    // ---------------------- Internal Utility ------------------------
 
-            throw new RequestExecutionException(
-                'Failed to execute database query.',
-                0,
-                ['sql' => $sql, 'params' => $params],
-                $e
-            );
-        }
+    /**
+     * Detects the operation type from the SQL statement.
+     * Used to determine what should be returned by execute().
+     *
+     * @param string $sql
+     * @return string 'select' | 'insert' | 'update' | 'delete'
+     */
+    private function detectOperation(string $sql): string
+    {
+        $type = strtolower(strtok(ltrim($sql), " \t\n\r")); // First word
+        return match ($type) {
+            'select' => 'select',
+            'insert' => 'insert',
+            'update' => 'update',
+            'delete' => 'delete',
+            default   => $type,
+        };
     }
 }

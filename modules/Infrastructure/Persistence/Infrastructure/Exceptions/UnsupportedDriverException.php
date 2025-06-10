@@ -16,18 +16,19 @@ use Throwable;
 final class UnsupportedDriverException extends RuntimeException
 {
     /**
-     * Initializes the exception for an unsupported or unknown database driver.
-     *
-     * @param string              $driver    The unsupported driver identifier.
-     * @param Throwable|null      $previous  The underlying cause of the failure, if any.
+     * @param string         $driver    The unsupported driver identifier.
+     * @param int            $code      Optional machine-readable error code.
+     * @param array          $context   Contextual metadata (e.g., SQL, parameters).
+     * @param Throwable|null $previous  Optional previous exception for chaining.
      */
-    public function __construct(string $driver, ?Throwable $previous = null)
-    {
-        parent::__construct(
-            message: "Unsupported database driver: {$driver}",
-            code: 0,
-            context: ['driver' => $driver],
-            previous: $previous
-        );
+    public function __construct(
+        string $driver,
+        int $code = 0,
+        array $context = [],
+        ?Throwable $previous = null
+    ) {
+        $message = "Unsupported database driver: {$driver}";
+        $context = array_merge(['Persistence' => 'Connection'], $context);
+        parent::__construct($message, $code, $context, $previous);
     }
 }

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Persistence\Infrastructure\Exceptions;
 
-use RuntimeException;
+use Persistence\Infrastructure\Exceptions\Contract\PersistenceException;
 use Throwable;
 
 /**
@@ -15,7 +15,7 @@ use Throwable;
  *
  * This exception includes optional contextual metadata and supports exception chaining.
  */
-final class DatabaseConnectionException extends RuntimeException
+final class DatabaseConnectionException extends PersistenceException
 {
     public array $context = ['Persistence' => 'Connection'];
 
@@ -33,7 +33,7 @@ final class DatabaseConnectionException extends RuntimeException
         ?array $context = [],
         ?Throwable $previous = null
     ) {
-        $this->context = array_merge($this->context, $context);
-        parent::__construct($message, $code, $previous);
+        $context = array_merge(['Persistence' => 'Connection'], $context);
+        parent::__construct($message, $code, $context, $previous);
     }
 }

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Persistence\Infrastructure\Exceptions;
 
-use RuntimeException;
+use Persistence\Infrastructure\Exceptions\Contract\PersistenceException;
 use Throwable;
 
 /**
@@ -13,7 +13,7 @@ use Throwable;
  * This error typically indicates a misconfigured environment during bootstrap,
  * where the required database driver value was not supplied or is inaccessible.
  */
-final class MissingDriverConfigurationException extends RuntimeException
+final class MissingDriverConfigurationException extends PersistenceException
 {
     /**
      * Initializes the exception for missing database driver configuration.
@@ -29,6 +29,7 @@ final class MissingDriverConfigurationException extends RuntimeException
         array $context = [],
         ?Throwable $previous = null
     ) {
+        $context = array_merge(['Persistence' => 'Connection'], $context);
         parent::__construct($message, $code, $context, $previous);
     }
 }
