@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Persistence\Infrastructure;
 
 use Config\Database\DatabaseConfig;
-use PDO;
 use Persistence\Domain\Contract\DatabaseConnectionInterface;
 use Persistence\Domain\Contract\DatabaseCredentialsInterface;
 use Persistence\Domain\Contract\DatabaseExecutionInterface;
@@ -13,7 +12,9 @@ use Persistence\Domain\ValueObject\DatabaseSecret;
 use Persistence\Domain\ValueObject\MySqlCredentials;
 use Persistence\Domain\ValueObject\PostgreSqlCredentials;
 use Persistence\Domain\ValueObject\SqliteCredentials;
+use Persistence\PersistenceFacadeInterface;
 use Persistence\Support\DriverValidator;
+use PDO;
 
 final class PersistenceKernel
 {
@@ -21,15 +22,17 @@ final class PersistenceKernel
     private readonly DriverValidator $validator;
     private readonly DatabaseConnectionInterface $connectionService;
     private readonly DatabaseExecutionInterface $executionService;
+    private readonly PersistenceFacadeInterface $facade;
     private readonly QueryBuilder $builder;
     private readonly PDO $connection;
 
     public function __construct(DatabaseConfig $config)
     {
         $this->credentials = $this->initializeCredentials($config);
-        $this->connectionService  = $this->initializeConnection($this->credentials);
+        $this->connectionService  = new PdoConnectionService($this->credentials);
         $this->connection = $this->connectionService()->connect();
-        $this->executionService   = $this->initializeExecution($this->connection);
+        $this->executionService   = new PdoExecutionService($this->connection);
+        $this->facade = new PersistenceFacade($this->executionService);
         $this->builder = new QueryBuilder;
     }
     
@@ -51,6 +54,11 @@ final class PersistenceKernel
     public function executionService(): DatabaseExecutionInterface
     {
         return $this->executionService;
+    }
+
+    public function facade(): PersistenceFacadeInterface
+    {
+        return $this->facade;
     }
 
     private function initializeCredentials(DatabaseConfig $config): DatabaseCredentialsInterface
@@ -84,15 +92,5 @@ final class PersistenceKernel
                 options: $config->getOptions()
             ),
         };
-    }
-
-    private function initializeConnection(DatabaseCredentialsInterface $credentials): DatabaseConnectionInterface
-    {
-        return new PdoConnectionService($credentials);
-    }
-
-    private function initializeExecution(PDO $pdo): DatabaseExecutionInterface
-    {
-        return new PdoExecutionService($pdo);
     }
 }

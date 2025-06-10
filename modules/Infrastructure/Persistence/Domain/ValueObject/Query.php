@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Persistence\Domain\ValueObject;
 
+use Persistence\Domain\Contract\QueryInterface;
+
 /**
  * Secure, immutable Value Object representing a parametrized SQL query.
  *
@@ -15,7 +17,7 @@ namespace Persistence\Domain\ValueObject;
  *
  * @package Persistence\Domain\ValueObject
  */
-final class Query
+final class Query implements QueryInterface
 {
     private string $sql;
 

@@ -7,8 +7,6 @@ namespace Tests\Persistence;
 require __DIR__ . '/../test-bootstrap.php';
 
 use Config\Database\DatabaseConfig;
-use Exception;
-use PDO;
 use Persistence\Domain\Contract\DatabaseConnectionInterface;
 use Persistence\Domain\Contract\DatabaseCredentialsInterface;
 use Persistence\Domain\Contract\DatabaseExecutionInterface;
@@ -19,6 +17,9 @@ use Persistence\Domain\ValueObject\DatabaseSecret;
 use Persistence\Infrastructure\PdoConnectionService;
 use Persistence\Infrastructure\PdoExecutionService;
 use Tests\IntegrationTestHelper;
+use PDO;
+use Persistence\Domain\Contract\QueryInterface;
+use Persistence\Infrastructure\QueryBuilder;
 
 final class PersistenceTest extends IntegrationTestHelper
 {
@@ -26,6 +27,7 @@ final class PersistenceTest extends IntegrationTestHelper
     private ?DatabaseCredentialsInterface $credentials = null;
     private ?DatabaseConnectionInterface $connection = null;
     private ?DatabaseExecutionInterface $execution = null;
+    private ?QueryInterface $query = null;
     private ?PDO $pdo = null;
 
     public function __construct()
@@ -41,6 +43,7 @@ final class PersistenceTest extends IntegrationTestHelper
         $this->printStatus("Starting Persistence Module tests.", 'RUN');
         $this->testCredentialCreation();
         $this->testConnectionEstablishment();
+        $this->testQueryBuilding();
         $this->testQueryExecution();
         $this->printStatus("All Persistence Module tests completed.", 'END');
         $this->finalResult();
@@ -115,13 +118,32 @@ final class PersistenceTest extends IntegrationTestHelper
         }
     }
 
+    private function testQueryBuilding(): void
+    {
+        $this->printStatus("STEP 3: Testing Query building.", 'STEP');
+        try {
+            $builder = new QueryBuilder();
+            $this->query = $builder
+                ->selectRaw('1 as test_value')
+                ->table('DUAL')
+                ->build();
+            ;
+            $this->printStatus("Query built. Result: " . json_encode($this->query), 'OK');
+            $this->saveResult('Query building.', true);
+        } catch (\Throwable $e) {
+            $this->printStatus("Query building failed.", 'ERROR');
+            $this->saveResult('Query building', false);
+            $this->handleException($e);
+        }
+    }
+
     private function testQueryExecution(): void
     {
-        $this->printStatus("STEP 3: Executing test query.", 'STEP');
+        $this->printStatus("STEP 4: Executing test query.", 'STEP');
 
         try {
             $this->execution = new PdoExecutionService($this->pdo);
-            $result = $this->execution?->select("SELECT 1");
+            $result = $this->execution?->execute($this->query);
             $this->printStatus("Query executed. Result: " . json_encode($result), 'OK');
             $this->saveResult('Query execution', true);
         } catch (\Throwable $e) {
