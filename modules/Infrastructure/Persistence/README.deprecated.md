@@ -131,6 +131,54 @@ Stack traces and contextual data (DSN, SQL, parameters, error code) are preserve
 
 ---
 
+## Usage Examples
+
+### Connecting and Executing a Query
+
+```php
+use Persistence\Infrastructure\PersistenceKernel;
+
+$kernel = new PersistenceKernel($config);
+$executionService = $kernel->execution();
+
+$result = $kernel->execute(
+    'SELECT * FROM users WHERE email = :email',
+    [':email' => 'foo@bar.com']
+);
+// $result is array|object depending on driver/fetch style
+```
+
+### Listening to Events
+
+```php
+use Persistence\Domain\Event\RequestExecutedEvent;
+
+class LogQueryListener
+{
+    public function __invoke(RequestExecutedEvent $event)
+    {
+        // Log or process $event->getSql(), $event->getBindings(), etc.
+    }
+}
+
+// Register with your event dispatcher system
+```
+
+### Transaction Management
+
+```php
+$connection->beginTransaction();
+try {
+    $kernel->execute('UPDATE ...');
+    $connection->commit();
+} catch (\Exception $e) {
+    $connection->rollback();
+    // Handle error
+}
+```
+
+---
+
 ## Events Architecture
 
 **Emitted Events**
@@ -203,53 +251,7 @@ Events are designed for downstream extensibility: metrics, tracing, logging, sec
 * Expand Value Objects and kernel logic to handle dynamic schema routing.
 * Support read/write split, replica selection, or per-tenant credentials.
 
----
 
-## Usage Examples
-
-### Connecting and Executing a Query
-
-```php
-use Persistence\Infrastructure\PersistenceKernel;
-
-$kernel = new PersistenceKernel($config);
-$connection = $kernel->getConnection(); // Returns DatabaseConnectionInterface
-
-$result = $kernel->execute(
-    'SELECT * FROM users WHERE email = :email',
-    [':email' => 'foo@bar.com']
-);
-// $result is array|object depending on driver/fetch style
-```
-
-### Listening to Events
-
-```php
-use Persistence\Domain\Event\RequestExecutedEvent;
-
-class LogQueryListener
-{
-    public function __invoke(RequestExecutedEvent $event)
-    {
-        // Log or process $event->getSql(), $event->getBindings(), etc.
-    }
-}
-
-// Register with your event dispatcher system
-```
-
-### Transaction Management
-
-```php
-$connection->beginTransaction();
-try {
-    $kernel->execute('UPDATE ...');
-    $connection->commit();
-} catch (\Exception $e) {
-    $connection->rollback();
-    // Handle error
-}
-```
 
 ---
 
