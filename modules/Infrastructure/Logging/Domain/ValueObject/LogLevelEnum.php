@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Logging\Domain;
+namespace Logging\Domain\ValueObject;
 
 use Logging\Exceptions\InvalidLogLevelException;
 
