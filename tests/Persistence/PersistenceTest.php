@@ -59,6 +59,7 @@ final class PersistenceTest extends IntegrationTestHelper
         $this->testQueryBuilder('5', $indentation + 1);
         $this->testQueryBuilding('6', $indentation + 1);
         $this->testQueryExecution('7', $indentation + 1);
+        $this->testPersistenceEvents('8', $indentation + 1);
         $this->printStatus('All components method tests completed.', 'END', null, $indentation);
     }
 
@@ -262,6 +263,7 @@ final class PersistenceTest extends IntegrationTestHelper
 
         try {
             $events = $this->connection->peekEvents();
+            var_dump($events);
 
             $this->printStatus('Kernel test executed.','OK', null, $indentation);
             $this->saveResult('Kernel test', true);
