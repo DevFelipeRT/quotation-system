@@ -89,25 +89,65 @@ class IntegrationTestHelper
     }
 
     /**
-     * Outputs alls exceptions that occurred during test execution.
+     * Outputs all exceptions that occurred during test execution.
      *
      * @return void
-     */	
+     */
     public function printErrors(): void
     {
         echo PHP_EOL . "--- ERRORS ---" . PHP_EOL;
         if (empty($this->testErrors)) {
-            $this->printStatus('No exception thrown.', 'INFO');
+            $this->printStatus('No exceptions thrown.', 'INFO');
+            return;
         }
         foreach ($this->testErrors as $e) {
             $this->printStatus("Exception occurred: " . get_class($e), 'ERROR_DETAIL');
             $this->printContext($e);
-            echo "    [Message] {$e->getMessage()}\n";
-            echo "    [File] {$e->getFile()}:{$e->getLine()}\n";
-            echo "    [Trace] " . $e->getTraceAsString() . "\n";
+
+            echo "    [Message] {$e->getMessage()}" . PHP_EOL;
+            echo "    [File] {$e->getFile()}:{$e->getLine()}" . PHP_EOL;
+            echo "    [Trace]" . PHP_EOL;
+
+            $trace = $e->getTrace();
+            foreach ($trace as $i => $frame) {
+                $file = isset($frame['file']) ? $frame['file'] : '[internal function]';
+                $line = isset($frame['line']) ? $frame['line'] : '-';
+                $function = $frame['function'] ?? '';
+                $class = $frame['class'] ?? '';
+                $type = $frame['type'] ?? '';
+                $args = array_map(function ($arg) {
+                    if (is_object($arg)) {
+                        return get_class($arg);
+                    } elseif (is_array($arg)) {
+                        return 'Array';
+                    } elseif (is_string($arg)) {
+                        return '"' . $arg . '"';
+                    } elseif (is_null($arg)) {
+                        return 'NULL';
+                    } elseif (is_bool($arg)) {
+                        return $arg ? 'true' : 'false';
+                    } else {
+                        return (string) $arg;
+                    }
+                }, $frame['args'] ?? []);
+                $argsString = implode(', ', $args);
+
+                printf(
+                    "        #%02d %s(%s): %s%s%s(%s)" . PHP_EOL,
+                    $i,
+                    $file,
+                    $line,
+                    $class,
+                    $type,
+                    $function,
+                    $argsString
+                );
+            }
+            printf("        #%02d {main}" . PHP_EOL, count($trace));
             $this->saveResult("Exception: " . get_class($e), false);
         }
     }
+
 
     /**
      * Outputs the final results of all tests after completion.

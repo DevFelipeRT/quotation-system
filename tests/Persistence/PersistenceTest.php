@@ -29,6 +29,7 @@ final class PersistenceTest extends IntegrationTestHelper
     private ?DatabaseConnectionInterface $connection = null;
     private ?DatabaseExecutionInterface $execution = null;
     private ?QueryBuilder $builder = null;
+    private ?PersistenceKernel $kernel = null;
     private ?QueryInterface $query = null;
     private ?PDO $pdo = null;
 
@@ -68,6 +69,7 @@ final class PersistenceTest extends IntegrationTestHelper
         $this->testConnectionEstablishment('2', $indentation + 1);
         $this->testQueryBuilding('3', $indentation + 1);
         $this->testQueryExecution('4', $indentation + 1);
+        $this->testKernelFacade('5', $indentation + 1);
         $this->printStatus('All kernel method tests completed.', 'END', null, $indentation);
     }
 
@@ -193,7 +195,7 @@ final class PersistenceTest extends IntegrationTestHelper
                 ->table('DUAL')
                 ->build();
             ;
-            $this->printStatus("Query built. Result: " . json_encode($this->query), 'OK', null, $indentation);
+            $this->printStatus("Query built. Result: " . json_encode($this->query->getSql()), 'OK', null, $indentation);
             $this->saveResult('Query building.', true);
         } catch (\Throwable $e) {
             $this->printStatus("Query building failed.", 'ERROR', null, $indentation);
@@ -223,10 +225,44 @@ final class PersistenceTest extends IntegrationTestHelper
         $this->printStatus('Executing kernel test.', 'STEP', $stepNumber, $indentation);
 
         try {
-            $kernel = new PersistenceKernel($this->config);
-            $this->connection = $kernel->connectionService();
-            $this->execution = $kernel->executionService();
-            $this->builder = $kernel->builder();
+            $this->kernel = new PersistenceKernel($this->config);
+            $this->connection = $this->kernel->connectionService();
+            $this->execution = $this->kernel->executionService();
+            $this->builder = $this->kernel->builder();
+            $this->printStatus('Kernel test executed.','OK', null, $indentation);
+            $this->saveResult('Kernel test', true);
+        } catch (\Throwable $e) {
+            $this->printStatus("Kernel test failed to execute.", 'ERROR', null, $indentation);
+            $this->saveResult('Kernel test', false);
+            $this->handleException($e);
+        }
+    }
+
+    private function testKernelFacade(string $stepNumber, int $indentation): void
+    {
+        $this->printStatus('Executing kernel facade test.', 'STEP', $stepNumber, $indentation);
+
+        try {
+            $facade = $this->kernel->facade();
+            $this->builder = $facade->queryBuilder();
+            $this->testQueryBuilding("$stepNumber.1", $indentation + 1);
+            $this->testQueryExecution("$stepNumber.2", $indentation + 1);
+            $this->printStatus('Kernel facade test executed.','OK', null, $indentation);
+            $this->saveResult('Kernel facade test', true);
+        } catch (\Throwable $e) {
+            $this->printStatus("Kernel facade test failed to execute.", 'ERROR', null, $indentation);
+            $this->saveResult('Kernel facade test', false);
+            $this->handleException($e);
+        }
+    }
+
+    private function testPersistenceEvents(string $stepNumber, int $indentation): void
+    {
+        $this->printStatus('Executing Persistence module events test.', 'STEP', $stepNumber, $indentation);
+
+        try {
+            $events = $this->connection->peekEvents();
+
             $this->printStatus('Kernel test executed.','OK', null, $indentation);
             $this->saveResult('Kernel test', true);
         } catch (\Throwable $e) {
