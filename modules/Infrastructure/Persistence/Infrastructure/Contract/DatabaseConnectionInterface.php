@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Persistence\Domain\Contract;
+namespace Persistence\Infrastructure\Contract;
 
 use PDO;
 use PublicContracts\EventRecording\EventRecordingInterface;

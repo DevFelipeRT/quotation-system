@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Persistence\Domain\Contract;
+namespace Persistence\Infrastructure\Contract;
+
+use Persistence\Domain\Contract\QueryInterface;
 
 /**
  * DatabaseExecutionInterface defines the contract for services responsible

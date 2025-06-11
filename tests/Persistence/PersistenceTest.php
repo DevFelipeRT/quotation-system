@@ -6,21 +6,21 @@ namespace Tests\Persistence;
 
 require __DIR__ . '/../test-bootstrap.php';
 
+use Tests\IntegrationTestHelper;
 use Config\Database\DatabaseConfig;
-use Persistence\Domain\Contract\DatabaseConnectionInterface;
+use Persistence\Infrastructure\Contract\DatabaseConnectionInterface;
+use Persistence\Infrastructure\Contract\DatabaseExecutionInterface;
+use Persistence\Domain\Contract\QueryInterface;
 use Persistence\Domain\Contract\DatabaseCredentialsInterface;
-use Persistence\Domain\Contract\DatabaseExecutionInterface;
 use Persistence\Domain\ValueObject\MySqlCredentials;
 use Persistence\Domain\ValueObject\SqliteCredentials;
 use Persistence\Domain\ValueObject\PostgreSqlCredentials;
 use Persistence\Domain\ValueObject\DatabaseSecret;
-use Persistence\Infrastructure\PdoConnectionService;
-use Persistence\Infrastructure\PdoExecutionService;
-use Tests\IntegrationTestHelper;
-use PDO;
-use Persistence\Domain\Contract\QueryInterface;
 use Persistence\Infrastructure\PersistenceKernel;
 use Persistence\Infrastructure\QueryBuilder;
+use Persistence\Infrastructure\PdoConnectionService;
+use Persistence\Infrastructure\PdoExecutionService;
+use PDO;
 
 final class PersistenceTest extends IntegrationTestHelper
 {

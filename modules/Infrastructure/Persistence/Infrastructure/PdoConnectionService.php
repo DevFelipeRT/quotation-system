@@ -6,7 +6,7 @@ namespace Persistence\Infrastructure;
 
 use PDO;
 use Throwable;
-use Persistence\Domain\Contract\DatabaseConnectionInterface;
+use Persistence\Infrastructure\Contract\DatabaseConnectionInterface;
 use Persistence\Domain\Contract\DatabaseCredentialsInterface;
 use Persistence\Domain\Event\ConnectionSucceededEvent;
 use Persistence\Domain\Event\ConnectionFailedEvent;

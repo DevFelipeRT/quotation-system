@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace PublicContracts\Persistence;
 
-use Persistence\Domain\Contract\QueryBuilderInterface;
+use Persistence\Infrastructure\Contract\QueryBuilderInterface;
 use Persistence\Domain\Contract\QueryInterface;
 
 /**

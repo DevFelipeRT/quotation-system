@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Persistence\Infrastructure;
 
+use Persistence\Infrastructure\Contract\QueryBuilderInterface;
+use Persistence\Domain\ValueObject\Query;
 use InvalidArgumentException;
 use LogicException;
-use Persistence\Domain\Contract\QueryBuilderInterface;
-use Persistence\Domain\ValueObject\Query;
 
 /**
  * QueryBuilder provides a secure, fluent interface for constructing all major SQL queries.

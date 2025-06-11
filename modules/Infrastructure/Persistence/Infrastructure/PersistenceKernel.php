@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Persistence\Infrastructure;
 
 use Config\Database\DatabaseConfig;
-use Persistence\Domain\Contract\DatabaseConnectionInterface;
+use Persistence\Infrastructure\Contract\DatabaseConnectionInterface;
+use Persistence\Infrastructure\Contract\DatabaseExecutionInterface;
+use Persistence\Infrastructure\Contract\QueryBuilderInterface;
 use Persistence\Domain\Contract\DatabaseCredentialsInterface;
-use Persistence\Domain\Contract\DatabaseExecutionInterface;
-use Persistence\Domain\Contract\QueryBuilderInterface;
 use Persistence\Domain\ValueObject\DatabaseSecret;
 use Persistence\Domain\ValueObject\MySqlCredentials;
 use Persistence\Domain\ValueObject\PostgreSqlCredentials;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Persistence\Domain\Contract;
+namespace Persistence\Infrastructure\Contract;
 
 use Persistence\Domain\ValueObject\Query;
 use InvalidArgumentException;

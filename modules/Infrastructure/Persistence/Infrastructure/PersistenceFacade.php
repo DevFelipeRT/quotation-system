@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace Persistence\Infrastructure;
 
-use Persistence\Domain\Contract\DatabaseExecutionInterface;
-use Persistence\Domain\Contract\QueryBuilderInterface;
+use Persistence\Infrastructure\Contract\DatabaseExecutionInterface;
+use Persistence\Infrastructure\Contract\QueryBuilderInterface;
 use Persistence\Domain\Contract\QueryInterface;
-use Persistence\Infrastructure\QueryBuilder;
 use PublicContracts\Persistence\PersistenceFacadeInterface;
 
 /**
@@ -31,7 +30,7 @@ final class PersistenceFacade implements PersistenceFacadeInterface
     /**
      * {@inheritdoc}
      */
-    public function queryBuilder(): QueryBuilder
+    public function queryBuilder(): QueryBuilderInterface
     {
         return $this->builder;
     }

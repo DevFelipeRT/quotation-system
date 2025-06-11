@@ -6,7 +6,7 @@ namespace Persistence\Infrastructure;
 
 use PDO;
 use PDOException;
-use Persistence\Domain\Contract\DatabaseExecutionInterface;
+use Persistence\Infrastructure\Contract\DatabaseExecutionInterface;
 use Persistence\Domain\Contract\QueryInterface;
 use Persistence\Infrastructure\Exceptions\RequestExecutionException;
 
