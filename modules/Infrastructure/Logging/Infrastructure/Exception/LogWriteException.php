@@ -1,6 +1,10 @@
 <?php
 
-namespace Logging\Exceptions;
+declare(strict_types=1);
+
+namespace Logging\Exception;
+
+use Logging\Exception\Contract\LoggingException;
 
 /**
  * Raised when a log file cannot be written to.

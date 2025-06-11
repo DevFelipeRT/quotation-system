@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Logging\Application;
+namespace PublicContracts\Logging;
 
 use DateTimeImmutable;
 

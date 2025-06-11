@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Logging\Security;
+namespace Logging\Infrastructure;
 
 /**
  * Responsible for masking sensitive information in log contexts

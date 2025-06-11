@@ -1,16 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Logging\Infrastructure;
 
-use Logging\Domain\LogEntry;
-use Logging\Exceptions\LogWriteException;
-use Logging\Infrastructure\Contracts\LoggerInterface;
 use DateTimeInterface;
+use Logging\Application\Contract\LoggerInterface;
+use Logging\Domain\Contract\LogEntryInterface;
+use Logging\Exception\LogWriteException;
 
 /**
  * FileLogger writes structured log entries to flat files in the local filesystem.
  *
- * This implementation assumes the LogEntry has already been validated and sanitized.
+ * This implementation assumes the LogEntryInterface has already been validated and sanitized.
  * Each log entry is persisted to a file based on its logical channel or log level.
  *
  * Typical usage includes simple production environments, container logs,
@@ -37,11 +39,11 @@ final class FileLogger implements LoggerInterface
     /**
      * Logs a structured entry to the appropriate file.
      *
-     * @param LogEntry $entry Fully constructed and sanitized log entry.
+     * @param LogEntryInterface $entry Fully constructed and sanitized log entry.
      *
      * @throws LogWriteException If writing to disk fails.
      */
-    public function log(LogEntry $entry): void
+    public function log(LogEntryInterface $entry): void
     {
         $filepath = $this->resolveFilePath($entry);
         $line = $this->formatLogLine($entry);
@@ -51,10 +53,10 @@ final class FileLogger implements LoggerInterface
     /**
      * Determines the target file based on channel or log level.
      *
-     * @param LogEntry $entry
+     * @param LogEntryInterface $entry
      * @return string Full path to the log file.
      */
-    private function resolveFilePath(LogEntry $entry): string
+    private function resolveFilePath(LogEntryInterface $entry): string
     {
         $channel = $entry->getChannel() ?? $entry->getLevel()->value;
         $filename = "{$channel}.log";
@@ -65,10 +67,10 @@ final class FileLogger implements LoggerInterface
     /**
      * Converts the log entry into a human-readable log line.
      *
-     * @param LogEntry $entry
+     * @param LogEntryInterface $entry
      * @return string
      */
-    private function formatLogLine(LogEntry $entry): string
+    private function formatLogLine(LogEntryInterface $entry): string
     {
         $timestamp = $entry->getTimestamp()->format(DateTimeInterface::ATOM);
         $context = $entry->getContext();

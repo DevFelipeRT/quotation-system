@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Logging\Infrastructure\Contracts;
+namespace Logging\Application\Contract;
 
 use Stringable;
 

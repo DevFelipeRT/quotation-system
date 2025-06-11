@@ -1,6 +1,6 @@
 <?php
 
-namespace Logging\Exceptions;
+namespace Logging\Exception\Contract;
 
 use RuntimeException;
 

@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Logging\Exceptions;
+namespace Logging\Exception;
+
+use Logging\Exception\Contract\LoggingException;
 
 /**
  * Thrown when no concrete LoggerInterface implementation has been configured.

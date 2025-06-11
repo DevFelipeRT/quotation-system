@@ -2,15 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Logging\Infrastructure\Adapter;
+namespace Logging\Infrastructure;
 
-use Logging\Domain\LogEntry;
-use Logging\Domain\LogLevelEnum;
-use Logging\Infrastructure\Contracts\LoggerInterface;
-use Logging\Infrastructure\Contracts\PsrLoggerInterface;
+
 use Stringable;
 use DateTimeImmutable;
 use InvalidArgumentException;
+use Logging\Application\Contract\LoggerInterface;
+use Logging\Application\Contract\PsrLoggerInterface;
+use Logging\Domain\Contract\LogEntryInterface;
+use Logging\Domain\ValueObject\LogEntry;
+use Logging\Domain\ValueObject\LogLevelEnum;
 
 /**
  * Adapter for structured logging that implements a PSR-3 compatible interface.
@@ -117,9 +119,9 @@ final class PsrLoggerAdapter implements PsrLoggerInterface
      * @param LogLevelEnum $level
      * @param string $message
      * @param array<string, mixed> $context
-     * @return LogEntry
+     * @return LogEntryInterface
      */
-    private function createLogEntry(LogLevelEnum $level, string $message, array $context): LogEntry
+    private function createLogEntry(LogLevelEnum $level, string $message, array $context): LogEntryInterface
     {
         return new LogEntry(
             level: $level,

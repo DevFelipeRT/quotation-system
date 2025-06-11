@@ -6,6 +6,7 @@ namespace Logging\Domain\ValueObject;
 
 use DateTimeImmutable;
 use InvalidArgumentException;
+use Logging\Domain\Contract\LogEntryInterface;
 
 /**
  * Represents a structured, immutable log entry.
@@ -20,7 +21,7 @@ use InvalidArgumentException;
  * Usage Note: Never log full request bodies, passwords, tokens or PII directly. 
  * The context array is always filtered for sensitive keys.
  */
-final class LogEntry
+final class LogEntry implements LogEntryInterface
 {
     /** @var array<string> */
     private const SENSITIVE_KEYS = [

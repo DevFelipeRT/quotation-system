@@ -1,8 +1,10 @@
 <?php
 
-namespace Logging\Infrastructure\Contracts;
+declare(strict_types=1);
 
-use Logging\Domain\LogEntry;
+namespace Logging\Application\Contract;
+
+use Logging\Domain\Contract\LogEntryInterface;
 
 /**
  * Defines a contract for structured logging mechanisms.
@@ -14,7 +16,7 @@ interface LoggerInterface
     /**
      * Logs a structured log entry.
      *
-     * @param LogEntry $entry The log entry to be recorded.
+     * @param LogEntryInterface $entry The log entry to be recorded.
      */
-    public function log(LogEntry $entry): void;
+    public function log(LogEntryInterface $entry): void;
 }

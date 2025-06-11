@@ -2,9 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Logging\Application;
+namespace Logging\Application\Contract;
 
-use Logging\Domain\LogEntry;
+use Logging\Domain\Contract\LogEntryInterface;
+use PublicContracts\Logging\LoggableInputInterface;
 
 /**
  * Defines the contract for assembling LogEntry objects from loggable inputs.
@@ -18,7 +19,7 @@ interface LogEntryAssemblerInterface
      * Assembles a LogEntry instance from a given loggable input.
      *
      * @param LoggableInputInterface $input
-     * @return LogEntry
+     * @return LogEntryInterface
      */
-    public function assembleFromInput(LoggableInputInterface $input): LogEntry;
+    public function assembleFromInput(LoggableInputInterface $input): LogEntryInterface;
 }

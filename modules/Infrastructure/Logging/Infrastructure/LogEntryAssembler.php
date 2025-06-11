@@ -2,12 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Logging\Application;
+namespace Logging\Infrastructure;
 
-use Logging\Domain\LogEntry;
-use Logging\Domain\LogLevelEnum;
-use Logging\Exceptions\InvalidLogLevelException;
-use Logging\Security\LogSanitizer;
+use Logging\Application\Contract\LogEntryAssemblerInterface;
+use Logging\Domain\Contract\LogEntryInterface;
+use Logging\Domain\ValueObject\LogEntry;
+use Logging\Domain\ValueObject\LogLevelEnum;
+use Logging\Exception\InvalidLogLevelException;
+use PublicContracts\Logging\LoggableInputInterface;
 
 /**
  * Converts loggable inputs into structured LogEntry objects.
@@ -20,7 +22,7 @@ final class LogEntryAssembler implements LogEntryAssemblerInterface
         private readonly LogSanitizer $sanitizer
     ) {}
 
-    public function assembleFromInput(LoggableInputInterface $input): LogEntry
+    public function assembleFromInput(LoggableInputInterface $input): LogEntryInterface
     {
         $level = $this->resolveLevelFromCode($input->getCode());
         $sanitizedContext = $this->sanitizer->sanitize($input->getContext());
