@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Persistence\Infrastructure;
 
 use Persistence\Domain\Contract\DatabaseExecutionInterface;
+use Persistence\Domain\Contract\QueryBuilderInterface;
 use Persistence\Domain\Contract\QueryInterface;
 use Persistence\Infrastructure\QueryBuilder;
 use PublicContracts\Persistence\PersistenceFacadeInterface;
@@ -17,10 +18,14 @@ use PublicContracts\Persistence\PersistenceFacadeInterface;
 final class PersistenceFacade implements PersistenceFacadeInterface
 {
     private DatabaseExecutionInterface $executor;
+    private QueryBuilderInterface $builder;
 
-    public function __construct(DatabaseExecutionInterface $executor)
-    {
+    public function __construct(
+        DatabaseExecutionInterface $executor,
+        QueryBuilderInterface $builder
+    ) {
         $this->executor = $executor;
+        $this->builder = $builder;
     }
 
     /**
@@ -28,7 +33,7 @@ final class PersistenceFacade implements PersistenceFacadeInterface
      */
     public function queryBuilder(): QueryBuilder
     {
-        return new QueryBuilder();
+        return $this->builder;
     }
 
     /**

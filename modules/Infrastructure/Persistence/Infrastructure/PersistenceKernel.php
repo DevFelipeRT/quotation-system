@@ -8,6 +8,7 @@ use Config\Database\DatabaseConfig;
 use Persistence\Domain\Contract\DatabaseConnectionInterface;
 use Persistence\Domain\Contract\DatabaseCredentialsInterface;
 use Persistence\Domain\Contract\DatabaseExecutionInterface;
+use Persistence\Domain\Contract\QueryBuilderInterface;
 use Persistence\Domain\ValueObject\DatabaseSecret;
 use Persistence\Domain\ValueObject\MySqlCredentials;
 use Persistence\Domain\ValueObject\PostgreSqlCredentials;
@@ -23,7 +24,7 @@ final class PersistenceKernel
     private readonly DatabaseConnectionInterface $connectionService;
     private readonly DatabaseExecutionInterface $executionService;
     private readonly PersistenceFacadeInterface $facade;
-    private readonly QueryBuilder $builder;
+    private readonly QueryBuilderInterface $builder;
     private readonly PDO $connection;
 
     public function __construct(DatabaseConfig $config)
@@ -32,11 +33,11 @@ final class PersistenceKernel
         $this->connectionService  = new PdoConnectionService($this->credentials);
         $this->connection = $this->connectionService()->connect();
         $this->executionService   = new PdoExecutionService($this->connection);
-        $this->facade = new PersistenceFacade($this->executionService);
         $this->builder = new QueryBuilder;
+        $this->facade = new PersistenceFacade($this->executionService, $this->builder);
     }
     
-    public function builder(): QueryBuilder
+    public function builder(): QueryBuilderInterface
     {
         return $this->builder;
     }

@@ -11,7 +11,7 @@ use Persistence\Domain\Contract\DatabaseCredentialsInterface;
 use Persistence\Domain\Event\ConnectionSucceededEvent;
 use Persistence\Domain\Event\ConnectionFailedEvent;
 use Persistence\Infrastructure\Exceptions\DatabaseConnectionException;
-use Event\EventRecording;
+use EventRecording\EventRecording;
 
 /**
  * Secure and final implementation of a PDO-based database connection.

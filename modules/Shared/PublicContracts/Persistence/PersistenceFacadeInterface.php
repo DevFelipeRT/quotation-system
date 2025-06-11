@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace PublicContracts\Persistence;
 
+use Persistence\Domain\Contract\QueryBuilderInterface;
 use Persistence\Domain\Contract\QueryInterface;
-use Persistence\Infrastructure\QueryBuilder;
 
 /**
  * PersistenceFacadeInterface defines a high-level contract for all persistence operations,
@@ -23,11 +23,11 @@ use Persistence\Infrastructure\QueryBuilder;
 interface PersistenceFacadeInterface
 {
     /**
-     * Returns a new QueryBuilder instance for query construction.
+     * Returns a new QueryBuilderInterface instance for query construction.
      *
-     * @return QueryBuilder
+     * @return QueryBuilderInterface
      */
-    public function queryBuilder(): QueryBuilder;
+    public function queryBuilder(): QueryBuilderInterface;
 
     /**
      * Executes the given query and returns the result.

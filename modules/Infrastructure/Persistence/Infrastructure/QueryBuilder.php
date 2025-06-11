@@ -6,6 +6,7 @@ namespace Persistence\Infrastructure;
 
 use InvalidArgumentException;
 use LogicException;
+use Persistence\Domain\Contract\QueryBuilderInterface;
 use Persistence\Domain\ValueObject\Query;
 
 /**
@@ -32,7 +33,7 @@ use Persistence\Domain\ValueObject\Query;
  *
  * @author
  */
-final class QueryBuilder
+final class QueryBuilder implements QueryBuilderInterface
 {
     private string $table = '';
     private array $columns = ['*'];
