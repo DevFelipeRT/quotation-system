@@ -12,8 +12,8 @@ use Persistence\Domain\ValueObject\DatabaseSecret;
 use Persistence\Domain\ValueObject\MySqlCredentials;
 use Persistence\Domain\ValueObject\PostgreSqlCredentials;
 use Persistence\Domain\ValueObject\SqliteCredentials;
-use Persistence\PersistenceFacadeInterface;
-use Persistence\Support\DriverValidator;
+use Persistence\Infrastructure\Support\DriverValidator;
+use PublicContracts\Persistence\PersistenceFacadeInterface;
 use PDO;
 
 final class PersistenceKernel

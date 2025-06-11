@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Persistence\Support;
+namespace Persistence\Infrastructure\Support;
 
 use Persistence\Infrastructure\Exceptions\MissingDriverConfigurationException;
 use Persistence\Infrastructure\Exceptions\UnsupportedDriverException;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Persistence;
+namespace PublicContracts\Persistence;
 
 use Persistence\Domain\Contract\QueryInterface;
 use Persistence\Infrastructure\QueryBuilder;

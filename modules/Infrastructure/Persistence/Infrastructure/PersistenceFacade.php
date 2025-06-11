@@ -7,8 +7,7 @@ namespace Persistence\Infrastructure;
 use Persistence\Domain\Contract\DatabaseExecutionInterface;
 use Persistence\Domain\Contract\QueryInterface;
 use Persistence\Infrastructure\QueryBuilder;
-use Persistence\PersistenceFacadeInterface;
-
+use PublicContracts\Persistence\PersistenceFacadeInterface;
 
 /**
  * PersistenceFacade unifies query building and execution, abstracting the infrastructure details.
