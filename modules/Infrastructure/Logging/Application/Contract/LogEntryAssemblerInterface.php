@@ -17,8 +17,8 @@ interface LogEntryAssemblerInterface
     /**
      * Assembles a LogEntry instance from a given loggable input.
      *
-     * @param LoggableInputInterface $message
+     * @param LoggableInputInterface $input
      * @return LogEntry
      */
-    public function assembleFromMessage(LoggableInputInterface $message): LogEntry;
+    public function assembleFromInput(LoggableInputInterface $input): LogEntry;
 }

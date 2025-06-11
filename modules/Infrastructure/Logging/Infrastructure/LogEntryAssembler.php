@@ -20,17 +20,17 @@ final class LogEntryAssembler implements LogEntryAssemblerInterface
         private readonly LogSanitizer $sanitizer
     ) {}
 
-    public function assembleFromMessage(LoggableInputInterface $message): LogEntry
+    public function assembleFromInput(LoggableInputInterface $input): LogEntry
     {
-        $level = $this->resolveLevelFromCode($message->getCode());
-        $sanitizedContext = $this->sanitizer->sanitize($message->getContext());
+        $level = $this->resolveLevelFromCode($input->getCode());
+        $sanitizedContext = $this->sanitizer->sanitize($input->getContext());
 
         return new LogEntry(
             level: $level,
-            message: $message->getMessage(),
+            message: $input->getMessage(),
             context: $sanitizedContext,
-            channel: $message->getChannel(),
-            timestamp: $message->getTimestamp()
+            channel: $input->getChannel(),
+            timestamp: $input->getTimestamp()
         );
     }
 
