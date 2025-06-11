@@ -4,92 +4,113 @@ declare(strict_types=1);
 
 namespace Rendering\Infrastructure;
 
-use Rendering\Application\HtmlView;
-use Rendering\Domain\Contracts\ViewInterface;
-use App\Shared\UrlResolver\AppUrlResolver;
-use InvalidArgumentException;
+use Rendering\Application\Contract\ViewRendererInterface;
+use Rendering\Domain\Contract\ViewInterface;
 use RuntimeException;
 
 /**
  * HtmlViewRenderer
  *
- * Renders HtmlView objects using PHP templates.
- * Injects shared presentation context variables into the template scope,
- * including base URL and other layout-level metadata.
+ * Responsible for rendering HTML views and partials from file-based templates.
+ * Supports extracting data and including both full views and partial fragments.
  */
 final class HtmlViewRenderer implements ViewRendererInterface
 {
     /**
-     * Base path for template files (absolute).
-     *
      * @var string
      */
-    private string $templatePath;
+    private string $partialsDirectory;
 
     /**
-     * Resolver for generating the absolute base URL.
-     *
-     * @var AppUrlResolver
+     * @var string
      */
-    private AppUrlResolver $urlResolver;
+    private string $viewsDirectory;
 
     /**
-     * Constructs a renderer using a base templates directory and a URL resolver.
+     * Initializes the renderer with directories for views and partials.
      *
-     * @param string $templatePath Absolute directory path to templates.
-     * @param AppUrlResolver $urlResolver Responsible for computing base URL.
+     * @param string $partialsDirectory
+     * @param string $viewsDirectory
      */
-    public function __construct(string $templatePath, AppUrlResolver $urlResolver)
+    public function __construct(string $partialsDirectory, string $viewsDirectory)
     {
-        $this->templatePath = rtrim($templatePath, '/');
-        $this->urlResolver = $urlResolver;
+        $this->partialsDirectory = rtrim($partialsDirectory, '/');
+        $this->viewsDirectory = rtrim($viewsDirectory, '/');
     }
 
     /**
-     * Renders a view into an HTML string using buffered PHP templates.
+     * Renders a full view using the provided ViewInterface.
      *
-     * @param ViewInterface $view A view implementing HtmlView.
-     * @return string Rendered output
-     *
-     * @throws InvalidArgumentException If the view is not an HtmlView.
-     * @throws RuntimeException If the template file is not found.
+     * @param ViewInterface $view
+     * @return string
      */
     public function render(ViewInterface $view): string
     {
-        if (!$view instanceof HtmlView) {
-            throw new InvalidArgumentException('HtmlViewRenderer supports only HtmlView instances.');
-        }
+        $viewFilePath = $this->buildFilePath($view->fileName());
+        $data = $view->data()->toArray();
 
-        $templateFile = "{$this->templatePath}/{$view->template()}";
-
-        if (!is_file($templateFile)) {
-            throw new RuntimeException("Template file not found: {$templateFile}");
-        }
-
-        // Inject shared context like baseUrl before rendering
-        $data = array_merge(
-            ['baseUrl' => $this->urlResolver->baseUrl()],
-            $view->data()
-        );
-
-        return $this->renderTemplate($templateFile, $data);
+        return $this->renderView($viewFilePath, $data);
     }
 
     /**
-     * Executes the template in an isolated scope with safely extracted data.
+     * Renders a partial template fragment by file name.
      *
-     * @param string $templateFile Absolute path to template file.
-     * @param array<string, mixed> $data Associative array of template variables.
-     * @return string Rendered HTML content.
+     * @param string $filename Relative filename within the partials directory.
+     * @param array<string, mixed> $data Optional data to extract for the partial.
+     * @return string
      */
-    private function renderTemplate(string $templateFile, array $data): string
+    public function renderPartial(string $filename, array $data = []): string
+    {
+        $partialFilePath = $this->buildPartialFilePath($filename);
+
+        return $this->renderView($partialFilePath, $data);
+    }
+
+    /**
+     * Resolves the absolute path to a full view template.
+     *
+     * @param string $fileName
+     * @return string
+     */
+    private function buildFilePath(string $fileName): string
+    {
+        $filePath = "{$this->viewsDirectory}/{$fileName}";
+        if (!is_file($filePath)) {
+            throw new RuntimeException("View file not found: {$filePath}");
+        }
+        return $filePath;
+    }
+
+    /**
+     * Resolves the absolute path to a partial template.
+     *
+     * @param string $fileName
+     * @return string
+     */
+    private function buildPartialFilePath(string $fileName): string
+    {
+        $filePath = "{$this->partialsDirectory}/{$fileName}";
+        if (!is_file($filePath)) {
+            throw new RuntimeException("Partial file not found: {$filePath}");
+        }
+        return $filePath;
+    }
+
+    /**
+     * Performs template rendering with extracted data.
+     *
+     * @param string $filePath
+     * @param array<string, mixed> $data
+     * @return string
+     */
+    private function renderView(string $filePath, array $data): string
     {
         ob_start();
 
         (static function (string $__file__, array $__data__): void {
             extract($__data__, EXTR_SKIP);
             include $__file__;
-        })($templateFile, $data);
+        })($filePath, $data);
 
         return ob_get_clean();
     }
