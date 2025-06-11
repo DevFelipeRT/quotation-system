@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Event;
+namespace EventRecording;
 
 /**
  * Trait for recording domain or infrastructure events
@@ -15,6 +15,8 @@ namespace Event;
  * Typical usage:
  * - Inside entities, aggregates, services or connections
  * - Enables eventual consistency and traceable event flow
+ * 
+ * This trait should follow the public contract EventRecordingInterface
  *
  * @internal This trait should be used only in components that are lifecycle-managed externally.
  */
