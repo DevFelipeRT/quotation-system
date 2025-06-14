@@ -82,7 +82,7 @@ final class PsrLoggerAdapter implements PsrLoggerInterface
         $this->log('debug', $message, $context);
     }
 
-    public function custom(string|Stringable $message, array $context = [], string $level): void
+    public function custom(string|Stringable $message, string $level, array $context = []): void
     {
         $this->log($level, $message, $context);
     }
