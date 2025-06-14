@@ -7,8 +7,8 @@ use Config\Database\DatabaseConfig;
 use Config\Database\DatabaseSchemaConfig;
 use Config\Env\EnvLoader;
 use Config\Kernel\KernelConfig;
+use Config\Modules\Logging\LoggingConfig;
 use Config\Paths\PathsConfig;
-use Config\Paths\LogPathsConfig;
 use Config\Session\SessionConfig;
 use InvalidArgumentException;
 
@@ -27,7 +27,7 @@ final class ConfigProvider
     private AppConfig             $appConfig;
     private DatabaseConfig        $databaseConfig;
     private DatabaseSchemaConfig  $schemaConfig;
-    private LogPathsConfig        $logPathsConfig;
+    private LoggingConfig         $loggingConfig;
     private SessionConfig         $sessionConfig;
     private KernelConfig          $kernelConfig;
 
@@ -45,7 +45,7 @@ final class ConfigProvider
         $this->appConfig       = new AppConfig($this->envLoader);
         $this->databaseConfig  = new DatabaseConfig($this->envLoader);
         $this->schemaConfig    = new DatabaseSchemaConfig();
-        $this->logPathsConfig  = new LogPathsConfig($this->pathsConfig);
+        $this->loggingConfig   = new LoggingConfig($this->pathsConfig);
         $this->sessionConfig   = new SessionConfig();
         $this->kernelConfig    = new KernelConfig();
     }
@@ -80,10 +80,10 @@ final class ConfigProvider
         return $this->schemaConfig;
     }
 
-    /** @return LogPathsConfig */
-    public function getLogPathsConfig(): LogPathsConfig
+    /** @return LoggingConfig */
+    public function loggingConfig(): LoggingConfig
     {
-        return $this->logPathsConfig;
+        return $this->loggingConfig;
     }
 
     /** @return SessionConfig */
