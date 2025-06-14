@@ -4,15 +4,12 @@ declare(strict_types=1);
 
 namespace Logging\Infrastructure;
 
-
 use Stringable;
 use DateTimeImmutable;
-use InvalidArgumentException;
 use Logging\Application\Contract\LoggerInterface;
 use Logging\Application\Contract\PsrLoggerInterface;
-use Logging\Domain\Contract\LogEntryInterface;
-use Logging\Domain\ValueObject\LogEntry;
-use Logging\Domain\ValueObject\LogLevelEnum;
+use Logging\Application\Contract\LogEntryAssemblerInterface;
+use Logging\Domain\ValueObject\LoggableInput;
 
 /**
  * Adapter for structured logging that implements a PSR-3 compatible interface.
@@ -24,25 +21,23 @@ use Logging\Domain\ValueObject\LogLevelEnum;
 final class PsrLoggerAdapter implements PsrLoggerInterface
 {
     public function __construct(
-        private readonly LoggerInterface $structuredLogger
+        private readonly LoggerInterface $structuredLogger,
+        private readonly LogEntryAssemblerInterface $assembler
     ) {}
 
-    /**
-     * Logs a message with the given PSR-3 level.
-     *
-     * @param string $level The PSR-3 log level (e.g., 'error', 'info')
-     * @param string|Stringable $message The message to log
-     * @param array<string, mixed> $context Optional context for interpolation and metadata
-     *
-     * @throws InvalidArgumentException If the message is not a string or Stringable
-     */
     public function log(string $level, string|Stringable $message, array $context = []): void
     {
-        $this->validateMessage($message);
+        $finalMessage = $this->interpolate($message, $context);
 
-        $enumLevel = $this->resolveLogLevel($level);
+        $input = new LoggableInput(
+            code: $level,
+            message: (string)$finalMessage,
+            context: $context,
+            channel: null,
+            timestamp: new DateTimeImmutable()
+        );
 
-        $entry = $this->createLogEntry($enumLevel, (string) $message, $context);
+        $entry = $this->assembler->assembleFromInput($input);
 
         $this->structuredLogger->log($entry);
     }
@@ -87,47 +82,37 @@ final class PsrLoggerAdapter implements PsrLoggerInterface
         $this->log('debug', $message, $context);
     }
 
-    /**
-     * Validates the type of the log message.
-     *
-     * @param string|Stringable $message
-     * @throws InvalidArgumentException If the message is not a valid type
-     */
-    private function validateMessage(string|Stringable $message): void
+    public function custom(string|Stringable $message, array $context = [], string $level): void
     {
-        if (!is_string($message) && !$message instanceof Stringable) {
-            throw new InvalidArgumentException('Log message must be a string or implement Stringable.');
+        $this->log($level, $message, $context);
+    }
+
+    /**
+     * Interpolates context values into the message placeholders according to PSR-3.
+     *
+     * For each key in context, replaces occurrences of `{key}` in the message with its string value.
+     * Only scalar values, null, or objects with __toString() are interpolated.
+     * Non-interpolated context values permanecem no contexto para logging.
+     *
+     * @param string $message The message with PSR-3 placeholders (e.g., "User {user} created")
+     * @param array<string, mixed> $context The context data to replace
+     * @return string The message with placeholders replaced
+     */
+    private function interpolate(string $message, array $context): string
+    {
+        if (strpos($message, '{') === false) {
+            return $message;
         }
+
+        $replace = [];
+        foreach ($context as $key => $value) {
+            // Only interpolate scalar values, null, or objects with __toString()
+            if (is_null($value) || is_scalar($value) || (is_object($value) && method_exists($value, '__toString'))) {
+                $replace['{' . $key . '}'] = (string)$value;
+            }
+        }
+        // Efficient strtr for replacement, as specified by PSR-3
+        return strtr($message, $replace);
     }
 
-    /**
-     * Converts a PSR-3 log level string to a LogLevelEnum.
-     *
-     * @param string $level
-     * @return LogLevelEnum
-     *
-     * @throws InvalidArgumentException If the level is unsupported
-     */
-    private function resolveLogLevel(string $level): LogLevelEnum
-    {
-        return LogLevelEnum::fromPsrLevel($level);
-    }
-
-    /**
-     * Creates a structured LogEntry.
-     *
-     * @param LogLevelEnum $level
-     * @param string $message
-     * @param array<string, mixed> $context
-     * @return LogEntryInterface
-     */
-    private function createLogEntry(LogLevelEnum $level, string $message, array $context): LogEntryInterface
-    {
-        return new LogEntry(
-            level: $level,
-            message: $message,
-            context: $context,
-            timestamp: new DateTimeImmutable()
-        );
-    }
 }
