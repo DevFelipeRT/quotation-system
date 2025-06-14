@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Logging\Exception;
+namespace Logging\Infrastructure\Exception;
 
-use Logging\Exception\Contract\LoggingException;
+use RuntimeException;
 
 /**
  * Raised when a log file cannot be written to.
  */
-class LogWriteException extends LoggingException
+class LogWriteException extends RuntimeException
 {
     /**
      * Creates a standardized exception for file write failure.
