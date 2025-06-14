@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Logging\Application\Contract;
 
-use Logging\Domain\Contract\LogEntryInterface;
+use Logging\Domain\ValueObject\Contract\LogEntryInterface;
 
 /**
  * Defines a contract for structured logging mechanisms.

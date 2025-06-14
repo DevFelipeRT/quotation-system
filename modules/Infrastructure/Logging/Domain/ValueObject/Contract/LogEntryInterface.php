@@ -1,9 +1,12 @@
 <?php
 
-namespace Logging\Domain\Contract;
+namespace Logging\Domain\ValueObject\Contract;
 
 use DateTimeImmutable;
-use Logging\Domain\ValueObject\LogLevelEnum;
+use Logging\Domain\ValueObject\LogLevel;
+use Logging\Domain\ValueObject\LogMessage;
+use Logging\Domain\ValueObject\LogContext;
+use Logging\Domain\ValueObject\LogChannel;
 
 /**
  * Contract for immutable, structured log entries.
@@ -18,9 +21,9 @@ interface LogEntryInterface
     /**
      * Returns the log level (severity) of the entry.
      *
-     * @return LogLevelEnum
+     * @return LogLevel
      */
-    public function getLevel(): LogLevelEnum;
+    public function getLevel(): LogLevel;
 
     /**
      * Returns the main log message.
@@ -28,26 +31,26 @@ interface LogEntryInterface
      * Implementations MUST ensure the message is safe for logging
      * and does not contain sensitive or untrusted data.
      *
-     * @return string
+     * @return LogMessage
      */
-    public function getMessage(): string;
+    public function getMessage(): LogMessage;
 
     /**
-     * Returns the context array for the log entry.
+     * Returns the context for the log entry.
      *
      * The context SHOULD NOT expose passwords, tokens, PII, or other
      * sensitive data. Implementations must sanitize context if needed.
      *
-     * @return array<string, mixed>
+     * @return LogContext
      */
-    public function getContext(): array;
+    public function getContext(): LogContext;
 
     /**
      * Returns the optional channel or category for the log.
      *
-     * @return string|null
+     * @return LogChannel|null
      */
-    public function getChannel(): ?string;
+    public function getChannel(): ?LogChannel;
 
     /**
      * Returns the timestamp when the log entry was created.
