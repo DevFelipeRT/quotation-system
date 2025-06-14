@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Logging\Infrastructure;
 
+use Config\Modules\Logging\LoggingConfig;
+use Config\Modules\Logging\LogSecurityConfig;
 use Logging\Domain\Security\LogSanitizer;
 use Logging\Domain\Security\Contract\LogSanitizerInterface;
 use Logging\Infrastructure\LogFileWriter;
@@ -31,6 +33,10 @@ use PublicContracts\Logging\LoggingFacadeInterface;
  */
 final class LoggingKernel
 {
+    /** @param string $baseLogPath Directory where logs will be stored. */
+    private readonly string $baseLogPath;
+
+    private readonly LogSecurityConfig $securityConfig;
     private readonly LogSanitizerInterface $sanitizer;
     private readonly LogEntryAssemblerInterface $assembler;
     private readonly LoggerInterface $logger;
@@ -41,16 +47,16 @@ final class LoggingKernel
     private readonly LogLineFormatter $formatter;
 
     /**
-     * @param string $baseLogPath Directory where logs will be stored.
-     * @param array|null $sanitizerConfig Optional: array with sanitizer custom keys/patterns/token.
+     * 
+     * @param LoggingConfig $config
      */
-    public function __construct(
-        string $baseLogPath,
-        ?array $sanitizerConfig = null
-    ) {
-        $this->sanitizer = $this->createSanitizer($sanitizerConfig);
+    public function __construct(LoggingConfig $config) {
+        $this->baseLogPath = $config->baseLogPath();
+        $this->securityConfig = $config->logSecurityConfig();
+
+        $this->sanitizer = $this->createSanitizer($this->securityConfig);
         $this->assembler = new LogEntryAssembler($this->sanitizer);
-        $this->pathResolver = new LogFilePathResolver($baseLogPath);
+        $this->pathResolver = new LogFilePathResolver($this->baseLogPath);
         $this->writer = new LogFileWriter();
         $this->formatter = new LogLineFormatter();
         $this->logger  = $this->createLogger();
@@ -112,17 +118,18 @@ final class LoggingKernel
     }
 
     /**
-     * Creates the sanitizer with optional config.
+     * Creates the sanitizer with custom security configuration.
      *
-     * @param array|null $config
+     * @param LogSecurityConfig $config
      * @return LogSanitizerInterface
      */
-    private function createSanitizer(?array $config): LogSanitizerInterface
+    private function createSanitizer(LogSecurityConfig $config): LogSanitizerInterface
     {
-        $customKeys = $config['sensitive_keys'] ?? null;
-        $customPatterns = $config['sensitive_patterns'] ?? null;
-        $maxDepth = $config['max_depth'] ?? null;
-        $maskToken = $config['mask_token'] ?? null;
+        $customKeys     = $config->sensitiveKeys();
+        $customPatterns = $config->sensitivePatterns();
+        $maxDepth       = $config->maxDepth();
+        $maskToken      = $config->maskToken();
+
         return new LogSanitizer($customKeys, $customPatterns, $maxDepth, $maskToken);
     }
 
