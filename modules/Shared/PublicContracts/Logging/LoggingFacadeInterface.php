@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Logging\Application\Contract;
+namespace PublicContracts\Logging;
 
 use PublicContracts\Logging\LoggableInputInterface;
 use Stringable;

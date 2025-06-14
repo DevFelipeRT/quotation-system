@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Logging\Application;
 
-use Logging\Application\Contract\LoggingFacadeInterface;
 use Logging\Application\Contract\LoggerInterface;
 use Logging\Application\Contract\PsrLoggerInterface;
 use Logging\Application\Contract\LogEntryAssemblerInterface;
 use PublicContracts\Logging\LoggableInputInterface;
+use PublicContracts\Logging\LoggingFacadeInterface;
 use Stringable;
 
 /**
