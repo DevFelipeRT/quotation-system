@@ -53,40 +53,62 @@ final class LoggingKernel
         $this->pathResolver = new LogFilePathResolver($baseLogPath);
         $this->writer = new LogFileWriter();
         $this->formatter = new LogLineFormatter();
-        $this->logger = new Logger(
-            $this->pathResolver,
-            $this->formatter,
-            $this->writer
-        );
-        $this->adapter = new PsrLoggerAdapter(
-            $this->logger,
-            $this->assembler
-        );
-        $this->facade = new LoggingFacade(
-            $this->logger,
-            $this->assembler,
-            $this->adapter
-        );
+        $this->logger  = $this->createLogger();
+        $this->adapter = $this->createAdapter();
+        $this->facade  = $this->createFacade();
     }
 
-    public function getAssembler(): LogEntryAssemblerInterface
+    /**
+     * Returns the main Logging Facade which orchestrates the entire logging lifecycle,
+     * encapsulating the adapter, assembler, and logger services.
+     *
+     * This is the recommended entry point for production applications. The facade
+     * provides a unified, high-level API that ensures every log passes through
+     * structured assembly, validation, adaptation, and persistence.
+     *
+     * Use this for all general-purpose logging needs when you require consistency,
+     * security, and feature completeness.
+     */
+    public function logger(): LoggingFacadeInterface
     {
-        return $this->assembler;
+        return $this->facade;
     }
 
-    public function getLogger(): LoggerInterface
-    {
-        return $this->logger;
-    }
-
-    public function getAdapter(): PsrLoggerAdapter
+    /**
+     * Returns a PSR-3 compatible logger adapter.
+     *
+     * Ready for immediate use with any framework or library that requires a PSR-3
+     * logger (e.g., Monolog, Laravel, Symfony). All calls are routed through the
+     * domain-validated logging pipeline for consistency and security.
+     */
+    public function psrLogger(): PsrLoggerInterface
     {
         return $this->adapter;
     }
 
-    public function getFacade(): LoggingFacadeInterface
+    /**
+     * Returns the LogEntryAssembler responsible for building validated, sanitized
+     * domain LogEntry objects from generic loggable input.
+     *
+     * Ready for direct use whenever you need to create domain LogEntry instances
+     * from external commands or user input.
+     */
+    public function entryAssembler(): LogEntryAssemblerInterface
     {
-        return $this->facade;
+        return $this->assembler;
+    }
+
+    /**
+     * Returns the low-level file logger for writing fully structured log entries
+     * directly to disk with no further transformation or adaptation.
+     *
+     * Use this when you require full control over log persistence, such as for
+     * custom integrations, advanced scenarios, or testing. The logger expects
+     * a fully validated LogEntry instantiated by a LogEntryAssembler.
+     */
+    public function rawLogger(): LoggerInterface
+    {
+        return $this->logger;
     }
 
     /**
@@ -102,5 +124,40 @@ final class LoggingKernel
         $maxDepth = $config['max_depth'] ?? null;
         $maskToken = $config['mask_token'] ?? null;
         return new LogSanitizer($customKeys, $customPatterns, $maxDepth, $maskToken);
+    }
+
+    /**
+     * Instantiates the logger component (FileLogger).
+     */
+    private function createLogger(): LoggerInterface
+    {
+        return new Logger(
+            $this->pathResolver,
+            $this->formatter,
+            $this->writer
+        );
+    }
+
+    /**
+     * Instantiates the PSR-3 logger adapter.
+     */
+    private function createAdapter(): PsrLoggerInterface
+    {
+        return new PsrLoggerAdapter(
+            $this->logger,
+            $this->assembler
+        );
+    }
+
+    /**
+     * Instantiates the logging facade that orchestrates all logging services.
+     */
+    private function createFacade(): LoggingFacadeInterface
+    {
+        return new LoggingFacade(
+            $this->logger,
+            $this->assembler,
+            $this->adapter
+        );
     }
 }
