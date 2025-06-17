@@ -9,82 +9,142 @@ use Logging\Domain\Exception\InvalidLoggableInputException;
 use PublicContracts\Logging\LoggableInputInterface;
 
 /**
- * Value Object representing a loggable input for assembling a LogEntry.
- * All input data is validated and the object is strictly immutable.
+ * Represents an immutable value object for log entry input.
+ *
+ * This object encapsulates all log entry attributes, guaranteeing strict validation
+ * and immutability. Once instantiated, the properties cannot be altered.
+ *
+ * Responsibilities:
+ * - Encapsulates a loggable input with message, level, context, channel, and timestamp.
+ * - Enforces strict validation for all properties.
+ * - Provides a consistent interface for transferring log data within the system.
+ *
+ * Immutability:
+ * All properties are declared as readonly and initialized exclusively via the constructor.
+ *
+ * Exceptions:
+ * Throws InvalidLoggableInputException for any property that fails validation.
+ *
+ * @see LoggableInputInterface
  */
 final class LoggableInput implements LoggableInputInterface
 {
-    private readonly ?string $code;
+    /**
+     * The log message. Must be a non-empty string.
+     *
+     * @var string
+     */
     private readonly string $message;
+
+    /**
+     * The log level (e.g., 'info', 'warning', 'error'). May be null.
+     *
+     * @var string|null
+     */
+    private readonly ?string $level;
+
+    /**
+     * The associative context array for the log entry.
+     *
+     * @var array<string, string>
+     */
     private readonly array $context;
+
+    /**
+     * The channel or category for the log entry. May be null.
+     *
+     * @var string|null
+     */
     private readonly ?string $channel;
+
+    /**
+     * The timestamp for the log entry.
+     *
+     * @var DateTimeImmutable
+     */
     private readonly DateTimeImmutable $timestamp;
 
     /**
-     * @param string|null $code Log level code (e.g., 'info', 'error')
-     * @param string $message The log message (must be non-empty)
-     * @param array<string, string> $context Associative context (string keys and string values only)
-     * @param string|null $channel Optional log channel/category
-     * @param DateTimeImmutable|null $timestamp Log timestamp, defaults to now
+     * Constructs a LoggableInput instance, enforcing strict validation.
      *
-     * @throws InvalidLoggableInputException If any value is invalid.
+     * @param string                     $message   Log message (non-empty string).
+     * @param string|null                $level     Log level (e.g., 'info', 'error'). May be null.
+     * @param array<string, string>|null $context   Context array. If provided, keys and values must be non-empty strings.
+     * @param string|null                $channel   Log channel/category. May be null.
+     * @param DateTimeImmutable|null     $timestamp Log entry timestamp. If null, must be provided by the caller.
+     *
+     * @throws InvalidLoggableInputException If any argument fails validation.
      */
     public function __construct(
-        ?string $code,
         string $message,
-        array $context = [],
+        ?string $level = null,
+        ?array $context = null,
         ?string $channel = null,
         ?DateTimeImmutable $timestamp = null
     ) {
-        $this->code = $this->validateCode($code);
         $this->message = $this->validateMessage($message);
-        $this->context = $this->validateContext($context);
+        $this->level = $this->validateLevel($level);
+        $this->context = $this->validateContext($context ?? []);
         $this->channel = $this->validateChannel($channel);
         $this->timestamp = $timestamp ?? new DateTimeImmutable();
     }
 
-    public function getCode(): ?string
-    {
-        return $this->code;
-    }
-
+    /**
+     * Returns the log message.
+     *
+     * @return string
+     */
     public function getMessage(): string
     {
         return $this->message;
     }
 
+    /**
+     * Returns the log level code.
+     *
+     * @return string|null
+     */
+    public function getLevel(): ?string
+    {
+        return $this->level;
+    }
+
+    /**
+     * Returns the context array for the log entry.
+     *
+     * @return array<string, string>
+     */
     public function getContext(): array
     {
         return $this->context;
     }
 
+    /**
+     * Returns the channel or category for the log entry.
+     *
+     * @return string|null
+     */
     public function getChannel(): ?string
     {
         return $this->channel;
     }
 
+    /**
+     * Returns the timestamp for the log entry.
+     *
+     * @return DateTimeImmutable
+     */
     public function getTimestamp(): DateTimeImmutable
     {
         return $this->timestamp;
     }
 
     /**
-     * Validates the log level code.
-     */
-    private function validateCode(?string $code): ?string
-    {
-        if ($code === null) {
-            return null;
-        }
-        $trimmed = trim($code);
-        if ($trimmed === '') {
-            throw InvalidLoggableInputException::emptyCode();
-        }
-        return $trimmed;
-    }
-
-    /**
-     * Validates the log message.
+     * Validates the log message (non-empty string).
+     *
+     * @param string $message
+     * @return string
+     * @throws InvalidLoggableInputException If the message is empty.
      */
     private function validateMessage(string $message): string
     {
@@ -96,7 +156,31 @@ final class LoggableInput implements LoggableInputInterface
     }
 
     /**
-     * Validates the log context: keys and values must be strings, keys non-empty.
+     * Validates the log level (non-empty string or null).
+     *
+     * @param string|null $level
+     * @return string|null
+     * @throws InvalidLoggableInputException If the level is an empty string.
+     */
+    private function validateLevel(?string $level): ?string
+    {
+        if ($level === null) {
+            return null;
+        }
+        $trimmed = trim($level);
+        if ($trimmed === '') {
+            throw InvalidLoggableInputException::emptyLevel();
+        }
+        return $trimmed;
+    }
+
+    /**
+     * Validates the log context array.
+     * Keys and values must be non-empty strings.
+     *
+     * @param array $context
+     * @return array<string, string>
+     * @throws InvalidLoggableInputException If any key or value is invalid.
      */
     private function validateContext(array $context): array
     {
@@ -104,7 +188,7 @@ final class LoggableInput implements LoggableInputInterface
             if (!is_string($key) || trim($key) === '') {
                 throw InvalidLoggableInputException::invalidContextKey($key);
             }
-            if (!is_string($value)) {
+            if (!is_string($value) || trim($value) === '') {
                 throw InvalidLoggableInputException::invalidContextValue($key);
             }
         }
@@ -112,7 +196,11 @@ final class LoggableInput implements LoggableInputInterface
     }
 
     /**
-     * Validates the log channel.
+     * Validates the log channel (non-empty string or null).
+     *
+     * @param string|null $channel
+     * @return string|null
+     * @throws InvalidLoggableInputException If the channel is an empty string.
      */
     private function validateChannel(?string $channel): ?string
     {

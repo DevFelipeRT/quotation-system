@@ -4,46 +4,42 @@ declare(strict_types=1);
 
 namespace Logging\Domain\ValueObject;
 
+use Logging\Domain\Security\Contract\LogSecurityInterface;
 use Logging\Domain\Exception\InvalidLogDirectoryException;
 use RuntimeException;
 
 /**
- * Value Object representing a secure log directory.
+ * Immutable Value Object representing a secure log directory.
  *
- * - Strong validation and sanitization.
- * - Path traversal, null bytes, and root directory protections.
+ * Ensures validation, sanitization, and secure handling of directory paths,
+ * utilizing domain-specific security and validation logic.
+ * 
+ * @immutable
  */
 final class LogDirectory
 {
     /**
-     * @var string
+     * @var string The validated and sanitized log directory path.
      */
     private string $path;
 
     /**
-     * Creates a validated, secure LogDirectory value object.
+     * Constructs a LogDirectory instance using domain security facade.
      *
-     * @param string $path Absolute or relative path to the log directory.
-     * @throws InvalidLogDirectoryException If the path is invalid, unsafe, or empty.
+     * @param string                $path      The raw directory path.
+     * @param LogSecurityInterface  $security  Domain security facade.
+     *
+     * @throws InvalidLogDirectoryException If directory path validation fails.
      */
-    public function __construct(string $path)
+    public function __construct(string $path, LogSecurityInterface $security)
     {
-        $sanitized = $this->sanitizePath($path);
-
-        if ($this->isEmptyPath($sanitized)) {
-            throw InvalidLogDirectoryException::empty();
-        }
-        if ($this->isRootPath($sanitized)) {
-            throw InvalidLogDirectoryException::unsafe('Path must not be system root.');
-        }
-        if (!$this->isSafePath($sanitized)) {
-            throw InvalidLogDirectoryException::unsafe("Path contains invalid or dangerous characters: {$sanitized}");
-        }
-        $this->path = $this->normalizePath($sanitized);
+        $this->path = $this->sanitizeAndValidate($path, $security);
     }
 
     /**
-     * Returns the absolute directory path as a string.
+     * Retrieves the normalized directory path.
+     *
+     * @return string
      */
     public function getPath(): string
     {
@@ -51,21 +47,23 @@ final class LogDirectory
     }
 
     /**
-     * Ensures that the directory exists, creating it if necessary.
+     * Ensures the directory exists, creating it safely if necessary.
      *
      * @throws RuntimeException If the directory cannot be created.
      */
     public function ensureExists(): void
     {
         if (!is_dir($this->path)) {
-            if (!$this->safeMkdir($this->path, 0770)) {
+            if (!@mkdir($this->path, 0770, true) && !is_dir($this->path)) {
                 throw new RuntimeException("Failed to create log directory: {$this->path}");
             }
         }
     }
 
     /**
-     * Verifies that the directory is writable.
+     * Checks if the directory path is writable.
+     *
+     * @return bool
      */
     public function isWritable(): bool
     {
@@ -77,43 +75,20 @@ final class LogDirectory
         return $this->path;
     }
 
-    // --- Private Security and Validation Methods ---
-
     /**
-     * Removes null bytes and trims the path.
+     * Sanitizes and validates the directory path using domain security facade.
+     *
+     * @param string               $path
+     * @param LogSecurityInterface $security
+     *
+     * @return string
+     *
+     * @throws InvalidLogDirectoryException
      */
-    private function sanitizePath(string $path): string
+    private function sanitizeAndValidate(string $path, LogSecurityInterface $security): string
     {
-        return rtrim(str_replace("\0", '', trim($path)), "/\\");
-    }
+        $sanitized = $security->sanitize(['path' => $path])['path'] ?? '';
 
-    /**
-     * Appends a directory separator if not present.
-     */
-    private function normalizePath(string $path): string
-    {
-        return $path . DIRECTORY_SEPARATOR;
-    }
-
-    private function isEmptyPath(string $path): bool
-    {
-        return $path === '';
-    }
-
-    private function isRootPath(string $path): bool
-    {
-        // Unix root or Windows root (like C:\)
-        return $path === DIRECTORY_SEPARATOR || preg_match('#^[a-zA-Z]:\\\\$#', $path) === 1;
-    }
-
-    private function isSafePath(string $path): bool
-    {
-        // Forbid parent directory traversal and suspicious characters
-        return !preg_match('#(\.\.|[\x00]|[<>:"|?*])#', $path);
-    }
-
-    private function safeMkdir(string $dir, int $mode): bool
-    {
-        return @mkdir($dir, $mode, true) || is_dir($dir);
+        return $security->validateDirectory($sanitized);
     }
 }

@@ -4,15 +4,21 @@ declare(strict_types=1);
 
 namespace Logging\Domain\ValueObject;
 
+use Logging\Domain\Security\Contract\LogSecurityInterface;
 use Logging\Domain\Exception\InvalidLogLevelException;
-use Logging\Domain\Security\Contract\LogSanitizerInterface;
 
 /**
- * Value Object representing a log level.
- * All external input is validated and sanitized by the domain sanitizer.
+ * Immutable Value Object representing a log level.
+ *
+ * Ensures validation and sanitization using centralized domain-specific security logic.
  */
 final class LogLevel
 {
+    /**
+     * Default standard PSR-3 log levels.
+     *
+     * @var string[]
+     */
     private const DEFAULT_LEVELS = [
         'debug', 'info', 'notice', 'warning', 'error', 'critical', 'alert', 'emergency'
     ];
@@ -25,29 +31,29 @@ final class LogLevel
     private array $validLevels;
 
     /**
-     * @param string $level
-     * @param LogSanitizerInterface $sanitizer
-     * @param string[]|null $customLevels
-     * @throws InvalidLogLevelException
+     * Constructs a LogLevel instance validated against allowed levels.
+     *
+     * @param string                $level        Log level to validate.
+     * @param LogSecurityInterface  $security     Security facade for sanitization and validation.
+     * @param string[]|null         $customLevels Optional custom allowed levels.
+     *
+     * @throws InvalidLogLevelException If validation fails.
      */
     public function __construct(
         string $level,
-        LogSanitizerInterface $sanitizer,
+        LogSecurityInterface $security,
         ?array $customLevels = null
     ) {
-        $this->validLevels = $this->sanitizeAllLevels(
-            array_merge(self::DEFAULT_LEVELS, $customLevels ?? []),
-            $sanitizer
-        );
-        $this->level = $this->sanitizeLevel($level, $sanitizer);
+        $this->validLevels = $this->buildValidLevels($security, $customLevels);
 
-        if (!in_array($this->level, $this->validLevels, true)) {
-            throw InvalidLogLevelException::forLevel($level);
-        }
+        $sanitizedLevel = $security->sanitize(['level' => $level])['level'] ?? '';
+        $this->level = $security->validateLevel($sanitizedLevel, $this->validLevels);
     }
 
     /**
-     * Returns the normalized string value of the log level.
+     * Retrieves the validated log level.
+     *
+     * @return string
      */
     public function value(): string
     {
@@ -55,7 +61,19 @@ final class LogLevel
     }
 
     /**
-     * Returns all valid log levels for this instance.
+     * Checks equality with another LogLevel.
+     *
+     * @param LogLevel $other
+     * @return bool
+     */
+    public function equals(LogLevel $other): bool
+    {
+        return $this->level === $other->level;
+    }
+
+    /**
+     * Returns the list of valid log levels.
+     *
      * @return string[]
      */
     public function validLevels(): array
@@ -64,52 +82,36 @@ final class LogLevel
     }
 
     /**
-     * Compares two LogLevel instances for equality.
+     * String representation of the log level.
+     *
+     * @return string
      */
-    public function equals(LogLevel $other): bool
-    {
-        return $this->level === $other->level;
-    }
-
     public function __toString(): string
     {
         return $this->level;
     }
 
     /**
-     * Sanitizes and normalizes all provided log levels.
+     * Builds and validates the complete list of valid log levels.
      *
-     * @param string[] $levels
-     * @param LogSanitizerInterface $sanitizer
+     * @param LogSecurityInterface $security
+     * @param string[]|null $customLevels
+     *
      * @return string[]
-     * @throws InvalidLogLevelException If no valid levels remain after sanitization.
+     *
+     * @throws InvalidLogLevelException If any custom level is invalid.
      */
-    private function sanitizeAllLevels(array $levels, LogSanitizerInterface $sanitizer): array
+    private function buildValidLevels(LogSecurityInterface $security, ?array $customLevels): array
     {
-        $sanitized = [];
-        foreach ($levels as $level) {
-            $norm = $this->sanitizeLevel($level, $sanitizer);
-            if ($norm !== '' && !in_array($norm, $sanitized, true)) {
-                $sanitized[] = $norm;
+        $validatedLevels = self::DEFAULT_LEVELS;
+
+        if ($customLevels !== null) {
+            foreach ($customLevels as $customLevel) {
+                $sanitizedLevel = $security->sanitize(['level' => $customLevel])['level'] ?? '';
+                $validatedLevels[] = $security->validateLevel($sanitizedLevel, [$sanitizedLevel]);
             }
         }
-        if (empty($sanitized)) {
-            throw InvalidLogLevelException::forLevel('[none]');
-        }
-        return $sanitized;
-    }
 
-    /**
-     * Sanitizes and normalizes a single log level value.
-     *
-     * @param string $level
-     * @param LogSanitizerInterface $sanitizer
-     * @return string
-     */
-    private function sanitizeLevel(string $level, LogSanitizerInterface $sanitizer): string
-    {
-        $result = $sanitizer->sanitize(['level' => $level])['level'] ?? '';
-        $result = mb_strtolower(trim((string)$result));
-        return ($result === '' || preg_match('/[\x00-\x1F\x7F]/', $result)) ? '' : $result;
+        return array_values(array_unique($validatedLevels));
     }
 }

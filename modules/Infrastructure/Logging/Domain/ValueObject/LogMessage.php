@@ -4,74 +4,50 @@ declare(strict_types=1);
 
 namespace Logging\Domain\ValueObject;
 
-use Logging\Domain\Security\Contract\LogSanitizerInterface;
 use Logging\Domain\Exception\InvalidLogMessageException;
+use Logging\Domain\Security\Contract\LogSecurityInterface;
 
 /**
- * Value Object representing a log message.
- * Always sanitized and validated to be safe for logging.
+ * Value Object representing a sanitized and validated log message.
  */
 final class LogMessage
 {
-    /**
-     * @var string
-     */
     private string $message;
 
     /**
-     * @param string $message
-     * @param LogSanitizerInterface $sanitizer
+     * Creates a sanitized and validated log message instance.
+     *
+     * @param string $message Raw input message.
+     * @param LogSecurityInterface $security Domain security facade.
+     *
      * @throws InvalidLogMessageException
      */
-    public function __construct(string $message, LogSanitizerInterface $sanitizer)
+    public function __construct(string $message, LogSecurityInterface $security)
     {
-        $sanitized = $this->sanitizeWithSanitizer($message, $sanitizer);
-        $this->validateMessage($sanitized);
-        $this->message = $sanitized;
+        $sanitizedMessage = $security->sanitize(['message' => $message])['message'];
+        $this->message = $this->validateMessage($sanitizedMessage, $security);
     }
 
     /**
-     * Returns the log message as string.
+     * Retrieves the validated and sanitized message.
+     *
+     * @return string
      */
     public function value(): string
     {
         return $this->message;
     }
 
-    public function __toString(): string
-    {
-        return $this->message;
-    }
-
     /**
-     * Applies the domain sanitizer to the message string.
+     * Validates the sanitized message using the security facade.
      *
      * @param string $message
-     * @param LogSanitizerInterface $sanitizer
+     * @param LogSecurityInterface $security
+     *
      * @return string
      */
-    private function sanitizeWithSanitizer(string $message, LogSanitizerInterface $sanitizer): string
+    private function validateMessage(string $message, LogSecurityInterface $security): string
     {
-        $result = $sanitizer->sanitize(['message' => $message])['message'] ?? '';
-        return trim((string)$result);
-    }
-
-    /**
-     * Validates the sanitized log message.
-     *
-     * @param string $message
-     * @throws InvalidLogMessageException
-     */
-    private function validateMessage(string $message): void
-    {
-        if ($message === '') {
-            throw InvalidLogMessageException::empty();
-        }
-        if (preg_match('/[\x00-\x08\x0B-\x1F\x7F]/', $message)) {
-            throw InvalidLogMessageException::invalidCharacters();
-        }
-        if (mb_strlen($message) > 2000) {
-            throw InvalidLogMessageException::tooLong();
-        }
+        return $security->validateMessage($message);
     }
 }

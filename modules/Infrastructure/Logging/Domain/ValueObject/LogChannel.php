@@ -4,35 +4,41 @@ declare(strict_types=1);
 
 namespace Logging\Domain\ValueObject;
 
-use Logging\Domain\Security\Contract\LogSanitizerInterface;
+use Logging\Domain\Security\Contract\LogSecurityInterface;
 use Logging\Domain\Exception\InvalidLogChannelException;
 
 /**
- * Value Object representing a log channel (logger name or destination).
- * Ensures safety, normalization, and immutability by using a LogSanitizer.
+ * Immutable Value Object representing a log channel (logger name or destination).
  *
+ * This class encapsulates validation and sanitization logic to ensure
+ * that the provided log channel conforms strictly to domain requirements.
+ * 
  * @immutable
  */
 final class LogChannel
 {
     /**
-     * @var string
+     * @var string The validated and sanitized log channel.
      */
     private string $channel;
 
     /**
-     * @param string $channel
-     * @param LogSanitizerInterface $sanitizer
-     * @throws InvalidLogChannelException
+     * Constructs a LogChannel instance, validating and sanitizing the provided channel.
+     *
+     * @param string               $channel  The raw log channel string.
+     * @param LogSecurityInterface $security Domain security facade for validation and sanitization.
+     *
+     * @throws InvalidLogChannelException If the provided channel is invalid.
      */
-    public function __construct(string $channel, LogSanitizerInterface $sanitizer)
+    public function __construct(string $channel, LogSecurityInterface $security)
     {
-        $sanitized = $this->sanitizeChannel($channel, $sanitizer);
-        $this->channel = $this->validateChannel($sanitized);
+        $this->channel = $this->sanitizeAndValidate($channel, $security);
     }
 
     /**
-     * Returns the channel as string.
+     * Returns the log channel as a string.
+     *
+     * @return string
      */
     public function value(): string
     {
@@ -40,7 +46,9 @@ final class LogChannel
     }
 
     /**
-     * String representation for direct echo, print, etc.
+     * String representation of the log channel for direct echoing or printing.
+     *
+     * @return string
      */
     public function __toString(): string
     {
@@ -48,32 +56,23 @@ final class LogChannel
     }
 
     /**
-     * Applies the sanitizer and normalization to the input.
-     */
-    private function sanitizeChannel(string $channel, LogSanitizerInterface $sanitizer): string
-    {
-        $sanitized = $sanitizer->sanitize(['channel' => $channel])['channel'] ?? '';
-        return mb_strtolower(trim($sanitized));
-    }
-
-    /**
-     * Validates a sanitized, normalized channel string.
+     * Sanitizes and validates the log channel.
      *
-     * @param string $chan
-     * @return string
-     * @throws InvalidLogChannelException
+     * Utilizes the domain security facade to sanitize the input,
+     * then applies domain-specific validation rules.
+     *
+     * @param string               $channel
+     * @param LogSecurityInterface $security
+     *
+     * @return string $sanitizedAndValidated
+     *
+     * @throws InvalidLogChannelException If validation rules are violated.
      */
-    private function validateChannel(string $chan): string
+    private function sanitizeAndValidate(string $channel, LogSecurityInterface $security): string
     {
-        if ($chan === '') {
-            throw InvalidLogChannelException::empty();
-        }
-        if (preg_match('/[\x00-\x1F\x7F]/', $chan)) {
-            throw InvalidLogChannelException::invalidCharacters();
-        }
-        if (mb_strlen($chan) > 128) {
-            throw InvalidLogChannelException::tooLong();
-        }
-        return $chan;
+        $sanitized = $security->sanitize(['channel' => $channel])['channel'] ?? '';
+        $sanitizedAndValidated = $security->validateChannel($sanitized);
+
+        return $sanitizedAndValidated;
     }
 }

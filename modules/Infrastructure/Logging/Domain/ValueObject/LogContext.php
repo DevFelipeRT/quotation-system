@@ -4,33 +4,39 @@ declare(strict_types=1);
 
 namespace Logging\Domain\ValueObject;
 
-use Logging\Domain\Security\Contract\LogSanitizerInterface;
+use Logging\Domain\Security\Contract\LogSecurityInterface;
 use Logging\Domain\Exception\InvalidLogContextException;
 
 /**
- * Value Object representing a log context.
- * Enforces safe, validated, immutable associative array, always sanitized via LogSanitizer.
+ * Immutable Value Object representing a log context.
+ *
+ * Encapsulates a sanitized and validated associative array,
+ * leveraging domain-specific security and validation logic.
+ * 
+ * @immutable
  */
 final class LogContext
 {
     /**
-     * @var array<string, mixed>
+     * @var array<string, mixed> The validated and sanitized context data.
      */
     private array $context;
 
     /**
-     * @param array<mixed> $context
-     * @param LogSanitizerInterface $sanitizer
-     * @throws InvalidLogContextException
+     * Constructs a LogContext instance using security facade for validation and sanitization.
+     *
+     * @param array                 $context  The raw context data.
+     * @param LogSecurityInterface  $security Domain security facade.
+     *
+     * @throws InvalidLogContextException If context validation fails.
      */
-    public function __construct(array $context, LogSanitizerInterface $sanitizer)
+    public function __construct(array $context, LogSecurityInterface $security)
     {
-        $sanitized = $sanitizer->sanitize($context);
-        $this->context = $this->validateContext($sanitized);
+        $this->context = $this->sanitizeAndValidate($context, $security);
     }
 
     /**
-     * Returns the associative context array (always string keys).
+     * Returns the context array.
      *
      * @return array<string, mixed>
      */
@@ -40,7 +46,7 @@ final class LogContext
     }
 
     /**
-     * Returns value for a given key or null.
+     * Retrieves the value associated with the specified key, or null if not present.
      *
      * @param string $key
      * @return mixed|null
@@ -61,75 +67,19 @@ final class LogContext
     }
 
     /**
-     * Validates the context array after sanitization.
+     * Sanitizes and validates the context array.
      *
-     * @param array<string, mixed> $context
+     * @param array                 $context
+     * @param LogSecurityInterface  $security
+     *
      * @return array<string, mixed>
-     * @throws InvalidLogContextException
+     *
+     * @throws InvalidLogContextException If validation rules are violated.
      */
-    private function validateContext(array $context): array
+    private function sanitizeAndValidate(array $context, LogSecurityInterface $security): array
     {
-        $result = [];
-        foreach ($context as $key => $value) {
-            $this->assertKeyIsString($key);
-            $trimmedKey = $this->assertKeyContent($key);
-            $this->assertKeyNotDuplicate($trimmedKey, $result);
-            $this->assertValidValue($trimmedKey, $value);
-            $result[$trimmedKey] = $value;
-        }
-        return $result;
-    }
+        $sanitized = $security->sanitize($context);
 
-    /**
-     * @param mixed $key
-     * @throws InvalidLogContextException
-     */
-    private function assertKeyIsString($key): void
-    {
-        if (!is_string($key)) {
-            throw InvalidLogContextException::invalidKeyType($key);
-        }
-    }
-
-    /**
-     * @param string $key
-     * @return string
-     * @throws InvalidLogContextException
-     */
-    private function assertKeyContent(string $key): string
-    {
-        $trimmedKey = trim($key);
-        if ($trimmedKey === '' || preg_match('/[\x00-\x1F\x7F]/', $trimmedKey)) {
-            throw InvalidLogContextException::invalidKeyContent($key);
-        }
-        return $trimmedKey;
-    }
-
-    /**
-     * @param string $trimmedKey
-     * @param array<string, mixed> $result
-     * @throws InvalidLogContextException
-     */
-    private function assertKeyNotDuplicate(string $trimmedKey, array $result): void
-    {
-        if (array_key_exists($trimmedKey, $result)) {
-            throw InvalidLogContextException::duplicateKey($trimmedKey);
-        }
-    }
-
-    /**
-     * @param string $key
-     * @param mixed $value
-     * @throws InvalidLogContextException
-     */
-    private function assertValidValue(string $key, $value): void
-    {
-        if (
-            !is_scalar($value)
-            && $value !== null
-            && !is_array($value)
-        ) {
-            throw InvalidLogContextException::invalidValueType($key, $value);
-        }
+        return $security->validateContext($sanitized);
     }
 }
