@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Logging\Infrastructure;
 
 use Logging\Application\Contract\LogEntryAssemblerInterface;
+use Logging\Domain\Exception\InvalidLogLevelException;
 use Logging\Domain\Security\Contract\LogSecurityInterface;
 use PublicContracts\Logging\LoggableInputInterface;
 use Logging\Domain\ValueObject\Contract\LogEntryInterface;
@@ -85,18 +86,31 @@ final class LogEntryAssembler implements LogEntryAssemblerInterface
 
     /**
      * Instantiates the LogLevel value object, using fallback if necessary.
+     *
+     * @param LoggableInputInterface $input
+     * @return LogLevel
+     * @throws \Logging\Domain\Exception\InvalidLogLevelException Se não for possível criar nem mesmo com fallback
      */
     private function buildLogLevel(LoggableInputInterface $input): LogLevel
     {
         $level = $input->getLevel();
-        if ($level === null && $this->defaultLevel !== null) {
-            $level = $this->defaultLevel;
+
+        try {
+            return new LogLevel(
+                (string) $level,
+                $this->security,
+                $this->customLogLevels
+            );
+        } catch (InvalidLogLevelException $e) {
+            if ($this->defaultLevel !== null && $level !== $this->defaultLevel) {
+                return new LogLevel(
+                    (string) $this->defaultLevel,
+                    $this->security,
+                    $this->customLogLevels
+                );
+            }
+            throw $e;
         }
-        return new LogLevel(
-            (string) $level,
-            $this->security,
-            $this->customLogLevels
-        );
     }
 
     /**
