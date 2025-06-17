@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Logging\Domain\Security;
 
-use Logging\Domain\Exception\InvalidLogSanitizerConfigException;
 use Normalizer;
+use Logging\Domain\Security\Contract\SanitizerInterface;
+use Logging\Domain\Exception\InvalidLogSanitizerConfigException;;
+use PublicContracts\Logging\SanitizationConfigInterface;
 
 /**
  * Sanitizer
@@ -18,19 +20,21 @@ use Normalizer;
  * - Customizable, always-bracketed mask token.
  * - Blocks token collisions and ensures only safe tokens are used.
  */
-final class Sanitizer
+final class Sanitizer implements SanitizerInterface
 {
+    private const MAX_RECURSION_DEPTH = 8;
     private const DEFAULT_MASK = '[MASKED]';
     private const DEFAULT_SENSITIVE_KEYS = [
         'password', 'token', 'api_key', 'secret', 'authorization', 'credit_card', 'ssn',
         'senha', 'chave_api', 'segredo', 'autorizacao', 'cartao_credito', 'cpf', 'cnpj', 'acesso_token',
     ];
     private const DEFAULT_SENSITIVE_PATTERNS = [
-        '/\b\d{3}\.\?\d{3}\.\?\d{3}-?\d{2}\b/',                       // CPF
+        '/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/',                         // CPF
         '/\b\d{16}\b/',                                               // Credit card (16 digits)
         '/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i',                   // Email
         '/(senha|password|secret|token|chave)[\s:]*[a-z0-9\-\._]+/i', // Credential phrases
     ];
+    private const DEFAULT_MASK_TOKEN_FORBIDDEN_PATTERN = '/[\x00-\x1F\x7F]|base64|script|php/i';
 
     /** @var string[] */
     private array $sensitiveKeys;
@@ -40,27 +44,28 @@ final class Sanitizer
     private int $maxDepth;
     /** @var string */
     private string $maskToken;
+    /** @var string */
+    private string $maskTokenForbiddenPattern;
 
     /**
-     * @param string[]|null $customSensitiveKeys
-     * @param string[]|null $customSensitivePatterns
-     * @param int|null $maxDepth
-     * @param string|null $maskToken
+     * @param SanitizationConfigInterface $config
      */
-    public function __construct(
-        ?array $customSensitiveKeys = null,
-        ?array $customSensitivePatterns = null,
-        ?int $maxDepth = null,
-        ?string $maskToken = null
-    ) {
-        $customKeys = $customSensitiveKeys ?? [];
+    public function __construct(SanitizationConfigInterface $config)
+    {
+        // Load sensitive keys from config or fallback to default.
+        $customKeys = $config->sensitiveKeys();
         $this->sensitiveKeys = $this->prepareSensitiveKeys(
             array_merge(self::DEFAULT_SENSITIVE_KEYS, $customKeys)
         );
-        $customPatterns = $customSensitivePatterns ?? [];
+
+        // Load patterns from config or fallback to default.
+        $customPatterns = $config->sensitivePatterns();
         $this->sensitivePatterns = array_merge(self::DEFAULT_SENSITIVE_PATTERNS, $customPatterns);
-        $this->maxDepth = $maxDepth ?? 8;
-        $this->maskToken = $this->sanitizeMaskToken($maskToken ?? self::DEFAULT_MASK);
+
+        // Use config values for maxDepth and maskToken or fallback to default.
+        $this->maxDepth  = $config->maxDepth() ?? self::MAX_RECURSION_DEPTH;
+        $this->maskTokenForbiddenPattern = $config->maskTokenForbiddenPattern() ?? self::DEFAULT_MASK_TOKEN_FORBIDDEN_PATTERN;
+        $this->maskToken = $this->sanitizeMaskToken($config->maskToken() ?? self::DEFAULT_MASK);
     }
 
     /**
@@ -226,6 +231,10 @@ final class Sanitizer
 
     /**
      * Sanitizes and brackets the mask token, always [UPPERCASE].
+     *
+     * The forbidden character/pattern policy is obtained from the SanitizationConfigInterface,
+     * ensuring security rules are externally configurable and domain-agnostic.
+     *
      * @param string $maskToken
      * @return string
      * @throws InvalidLogSanitizerConfigException
@@ -233,17 +242,21 @@ final class Sanitizer
     private function sanitizeMaskToken(string $maskToken): string
     {
         $clean = trim($maskToken);
+        $pattern = $this->maskTokenForbiddenPattern;
+
         if (
             $clean === '' ||
             mb_strlen($clean) > 40 ||
-            preg_match('/[\x00-\x1F\x7F]|base64|script|php/i', $clean)
+            preg_match($pattern, $clean)
         ) {
             throw InvalidLogSanitizerConfigException::forMaskToken($maskToken);
         }
+
         // Remove brackets if already present
         $unwrapped = preg_replace('/^\[([^\[\]]*)\]$/', '$1', $clean);
         $unwrapped = str_replace(['[', ']'], '', $unwrapped);
         $final = '[' . mb_strtoupper($unwrapped) . ']';
         return $final;
     }
+
 }

@@ -4,193 +4,244 @@ declare(strict_types=1);
 
 namespace Logging\Domain\Security;
 
+use DateTimeImmutable;
+use Logging\Domain\Exception\InvalidLoggableInputException;
+use Logging\Domain\Exception\InvalidLogLevelException;
+use Logging\Domain\Exception\InvalidLogMessageException;
 use Logging\Domain\Exception\InvalidLogChannelException;
 use Logging\Domain\Exception\InvalidLogContextException;
 use Logging\Domain\Exception\InvalidLogDirectoryException;
-use Logging\Domain\Exception\InvalidLogLevelException;
-use Logging\Domain\Exception\InvalidLogMessageException;
+use Logging\Domain\Security\Contract\ValidatorInterface;
+use PublicContracts\Logging\ValidationConfigInterface;
 
 /**
- * Centralized validation utility for domain Value Objects.
- * All methods throw domain-specific exceptions on failure.
+ * Validates all value objects within the logging domain.
+ *
+ * All validation rules and constraints are provided via a
+ * ValidationConfigInterface. Each method throws a domain‐specific
+ * exception if validation fails.
  */
-final class Validator
+final class Validator implements ValidatorInterface
 {
+    private readonly ValidationConfigInterface $config;
+
     /**
-     * Validates a generic string for the domain.
-     *
-     * @param string      $value
-     * @param bool        $allowEmpty
-     * @param int|null    $maxLength
-     * @param bool        $allowWhitespace
-     * @return string
+     * @param ValidationConfigInterface $config Configuration of all validation parameters.
      */
-    public static function string(
+    public function __construct(ValidationConfigInterface $config)
+    {
+        $this->config = $config;
+    }
+
+    /**
+     * Validates a generic domain string.
+     *
+     * @param string     $value
+     * @param bool       $allowEmpty
+     * @param int|null   $maxLength
+     * @param bool       $allowWhitespace
+     * @return string
+     *
+     * @throws InvalidLoggableInputException If the string is empty (when not allowed),
+     *                                       contains forbidden characters, or exceeds length.
+     */
+    public function validateString(
         string $value,
         bool $allowEmpty = false,
         ?int $maxLength = null,
         bool $allowWhitespace = true
     ): string {
-        $val = $allowWhitespace ? trim($value) : preg_replace('/\s+/', '', $value);
+        $max   = $maxLength ?? $this->config->defaultStringMaxLength();
+        $clean = $allowWhitespace
+            ? trim($value)
+            : preg_replace('/\s+/', '', $value);
 
-        if (!$allowEmpty && $val === '') {
-            throw InvalidLogMessageException::empty();
+        if (!$allowEmpty && $clean === '') {
+            throw new InvalidLoggableInputException('Value must not be empty.');
         }
-        if (preg_match('/[\x00-\x1F\x7F]/', $val)) {
-            throw InvalidLogMessageException::invalidCharacters();
+        if (preg_match($this->config->stringForbiddenCharsRegex(), $clean)) {
+            throw new InvalidLoggableInputException('Value contains forbidden characters.');
         }
-        if ($maxLength !== null && mb_strlen($val) > $maxLength) {
-            throw InvalidLogMessageException::tooLong();
+        if ($max !== null && mb_strlen($clean) > $max) {
+            throw new InvalidLoggableInputException(
+                sprintf('Value exceeds maximum length of %d characters.', $max)
+            );
         }
-        return $val;
-    }
 
-    /**
-     * Validates a channel name: non-empty, no invalid chars, normalized to lowercase.
-     *
-     * @param string $channel
-     * @return string
-     */
-    public static function channel(string $channel): string
-    {
-        $value = trim($channel);
-        if ($value === '') {
-            throw InvalidLogChannelException::empty();
-        }
-        if (preg_match('/[\x00-\x1F\x7F]/', $value)) {
-            throw InvalidLogChannelException::invalidCharacters();
-        }
-        if (mb_strlen($value) > 128) {
-            throw InvalidLogChannelException::tooLong();
-        }
-        return mb_strtolower($value);
-    }
-
-    /**
-     * Validates and normalizes a log context associative array.
-     *
-     * All keys must be non-empty strings without control characters.
-     * All values must be scalar or null; after conversion to string, values must not be empty 
-     * (unless the original value is 0 or false) and must not contain control characters.
-     *
-     * @param array $context Associative array of context data.
-     * @return array<string, string> Normalized context (string keys and string values).
-     *
-     * @throws InvalidLogContextException If any key or value is invalid.
-     */
-    public static function context(array $context): array
-    {
-        $result = [];
-        $seenKeys = [];
-        foreach ($context as $key => $value) {
-            // Key validation
-            if (!is_string($key)) {
-                throw InvalidLogContextException::invalidKeyType($key);
-            }
-            if (trim($key) === '' || preg_match('/[\x00-\x1F\x7F]/', $key)) {
-                throw InvalidLogContextException::invalidKeyContent($key);
-            }
-            if (in_array($key, $seenKeys, true)) {
-                throw InvalidLogContextException::duplicateKey($key);
-            }
-            $seenKeys[] = $key;
-
-            // Value validation
-            if (!is_scalar($value) && $value !== null) {
-                throw InvalidLogContextException::invalidValueType($key, $value);
-            }
-            $strVal = (string) $value;
-            if ($strVal === '' && $value !== 0 && $value !== false) {
-                throw InvalidLogContextException::invalidValueContent($key);
-            }
-            if (preg_match('/[\x00-\x1F\x7F]/', $strVal)) {
-                throw InvalidLogContextException::invalidValueContent($key);
-            }
-            $result[$key] = $strVal;
-        }
-        return $result;
-    }
-
-    /**
-     * Validates a directory path: non-empty, no null byte, no traversal, not root.
-     *
-     * @param string $path
-     * @return string
-     */
-    public static function directory(string $path): string
-    {
-        $clean = rtrim(str_replace("\0", '', trim($path)), "/\\");
-        if ($clean === '' || $clean === '/') {
-            throw InvalidLogDirectoryException::empty();
-        }
-        if (strpos($clean, '..') !== false) {
-            throw InvalidLogDirectoryException::unsafe('parent directory traversal not allowed');
-        }
-        if (preg_match('/[\x00-\x1F\x7F]/', $clean)) {
-            throw InvalidLogDirectoryException::unsafe('contains invalid characters');
-        }
         return $clean;
     }
 
     /**
-     * Validates a log level: non-empty, lowercased, and in allowed set.
+     * Validates a log channel name.
+     *
+     * @param string $channel
+     * @return string
+     *
+     * @throws InvalidLogChannelException If the channel is empty or contains invalid characters.
+     */
+    public function validateChannel(string $channel): string
+    {
+        $clean = trim($channel);
+
+        if ($clean === '') {
+            throw new InvalidLogChannelException('Channel cannot be empty.');
+        }
+        if (preg_match($this->config->stringForbiddenCharsRegex(), $clean)) {
+            throw new InvalidLogChannelException('Channel contains invalid characters.');
+        }
+
+        return mb_strtolower($clean);
+    }
+
+    /**
+     * Validates an associative context array.
+     *
+     * @param array $context
+     * @return array<string, string>
+     *
+     * @throws InvalidLogContextException If any key or value is invalid.
+     */
+    public function validateContext(array $context): array
+    {
+        $maxKey   = $this->config->contextKeyMaxLength();
+        $maxValue = $this->config->contextValueMaxLength();
+        $forbid   = $this->config->stringForbiddenCharsRegex();
+        $result   = [];
+
+        foreach ($context as $key => $value) {
+            if (!is_string($key)
+                || trim($key) === ''
+                || mb_strlen($key) > $maxKey
+                || preg_match($forbid, $key)
+            ) {
+                throw new InvalidLogContextException(
+                    sprintf('Invalid context key "%s".', $key)
+                );
+            }
+
+            if (!is_scalar($value) && $value !== null) {
+                throw new InvalidLogContextException(
+                    sprintf('Context value for key "%s" must be scalar or null.', $key)
+                );
+            }
+
+            $strVal = (string)$value;
+            if (($strVal === '' && $value !== 0 && $value !== false)
+                || mb_strlen($strVal) > $maxValue
+                || preg_match($forbid, $strVal)
+            ) {
+                throw new InvalidLogContextException(
+                    sprintf('Invalid context value for key "%s".', $key)
+                );
+            }
+
+            $result[$key] = $strVal;
+        }
+
+        return $result;
+    }
+
+    /**
+     * Validates a directory path.
+     *
+     * @param string $path
+     * @return string
+     *
+     * @throws InvalidLogDirectoryException If the path is empty, root, contains traversal, or invalid chars.
+     */
+    public function validateDirectory(string $path): string
+    {
+        $clean = rtrim(str_replace("\0", '', trim($path)), "/\\");
+
+        if ($clean === '' || $clean === $this->config->directoryRootString()) {
+            throw new InvalidLogDirectoryException('Directory path cannot be empty or root.');
+        }
+        if (strpos($clean, $this->config->directoryTraversalString()) !== false) {
+            throw new InvalidLogDirectoryException('Directory path contains parent traversal.');
+        }
+        if (preg_match($this->config->stringForbiddenCharsRegex(), $clean)) {
+            throw new InvalidLogDirectoryException('Directory path contains invalid characters.');
+        }
+
+        return $clean;
+    }
+
+    /**
+     * Validates a log level.
      *
      * @param string   $level
      * @param string[] $allowedLevels
      * @return string
+     *
+     * @throws InvalidLogLevelException If the level is empty or not in the allowed set.
      */
-    public static function level(string $level, array $allowedLevels): string
+    public function validateLevel(string $level, array $allowedLevels): string
     {
         $norm = mb_strtolower(trim($level));
+
         if ($norm === '') {
-            throw InvalidLogLevelException::forLevel($level);
+            throw new InvalidLogLevelException('Log level cannot be empty.');
         }
         if (!in_array($norm, $allowedLevels, true)) {
-            throw InvalidLogLevelException::forLevel($norm);
+            throw new InvalidLogLevelException(
+                sprintf('Invalid log level "%s".', $norm)
+            );
         }
+
         return $norm;
     }
 
     /**
-     * Validates a log message: non-empty, limited, normalized (capitalizes first, ends with period).
+     * Validates a log message.
      *
-     * @param string $message
-     * @param int    $maxLength
+     * @param string   $message
+     * @param int|null $maxLength
      * @return string
+     *
+     * @throws InvalidLogMessageException If the message is invalid, too long, or violates formatting rules.
      */
-    public static function message(string $message, int $maxLength = 2000): string
+    public function validateMessage(string $message, int $maxLength = null): string
     {
+        $max = $maxLength ?? $this->config->logMessageMaxLength();
         $msg = trim($message);
+
         if ($msg === '') {
-            throw InvalidLogMessageException::empty();
+            throw new InvalidLogMessageException('Message cannot be empty.');
         }
-        if (preg_match('/[\x00-\x1F\x7F]/', $msg)) {
-            throw InvalidLogMessageException::invalidCharacters();
+        if (preg_match($this->config->stringForbiddenCharsRegex(), $msg)) {
+            throw new InvalidLogMessageException('Message contains invalid characters.');
         }
-        if (mb_strlen($msg) > $maxLength) {
-            throw InvalidLogMessageException::tooLong();
+        if (mb_strlen($msg) > $max) {
+            throw new InvalidLogMessageException(
+                sprintf('Message exceeds maximum length of %d.', $max)
+            );
         }
+
         // Capitalize first letter
         $msg = mb_strtoupper(mb_substr($msg, 0, 1)) . mb_substr($msg, 1);
-        // Add period if needed
-        if (!preg_match('/[.!?]$/u', $msg)) {
+
+        // Append terminal punctuation if missing
+        if (!preg_match($this->config->logMessageTerminalPunctuationRegex(), $msg)) {
             $msg .= '.';
         }
+
         return $msg;
     }
 
     /**
-     * Validates an instance of DateTimeImmutable.
+     * Validates a DateTimeImmutable timestamp.
      *
      * @param mixed $date
-     * @return \DateTimeImmutable
+     * @return DateTimeImmutable
+     *
+     * @throws InvalidLogMessageException If the timestamp is invalid.
      */
-    public static function timestamp($date): \DateTimeImmutable
+    public function validateTimestamp($date): DateTimeImmutable
     {
-        if ($date instanceof \DateTimeImmutable) {
-            return $date;
+        if (!($date instanceof DateTimeImmutable)) {
+            throw new InvalidLogMessageException('Invalid timestamp object.');
         }
-        // Pode ser criado uma exceção específica se desejar
-        throw new \InvalidArgumentException('Invalid timestamp object.');
+
+        return $date;
     }
 }
