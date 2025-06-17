@@ -36,8 +36,8 @@ final class LogEntryAssemblyException extends Exception
     public static function fromPrevious(LoggableInputInterface $input, Throwable $previous): self
     {
         $msg = sprintf(
-            'Failed to assemble LogEntry from input (code: %s, message: %s): %s',
-            $input->getCode() ?? '[null]',
+            'Failed to assemble LogEntry from input (level: %s, message: %s): %s',
+            $input->getLevel() ?? '[null]',
             $input->getMessage() ?? '[null]',
             $previous->getMessage()
         );

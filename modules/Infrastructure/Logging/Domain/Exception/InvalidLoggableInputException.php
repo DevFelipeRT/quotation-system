@@ -11,7 +11,7 @@ use InvalidArgumentException;
  */
 final class InvalidLoggableInputException extends InvalidArgumentException
 {
-    public static function emptyCode(): self
+    public static function emptyLevel(): self
     {
         return new self('Log level code must not be empty.');
     }
