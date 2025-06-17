@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 declare(strict_types=1);
 
@@ -6,26 +6,38 @@ namespace Tests;
 
 use Config\ConfigProvider;
 
+/**
+ * Base class for integration and persistence tests.
+ *
+ * Provides environment bootstrap, result tracking, error reporting,
+ * and integrates the IntegrationTestPrinter trait for all test output.
+ */
 class IntegrationTestHelper
 {
+    use IntegrationTestPrinter {
+        IntegrationTestPrinter::printErrors as printErrorsFromTrait;
+    }
+
     public string $testName = '';
     public ?ConfigProvider $configProvider = null;
-    public array $testResult = [];
+    public array $testResults = [];
     public array $testErrors = [];
 
+    /**
+     * Initializes the test session and prepares the environment.
+     *
+     * @param string $testName A human-readable test name for reporting.
+     */
     public function __construct(string $testName = '')
     {
         $this->testName = $testName;
-        echo "<pre>";
-        $this->printStatus("Starting test: $this->testName.", 'INFO');
+        echo '<pre>';
+        $this->printStatus("Starting test: {$this->testName}.", 'INFO');
         $this->setUp();
     }
 
     /**
-     * Sets up the test environment, including loading the bootstrap file.
-     * This method is called before each test to ensure the environment is ready.
-     *
-     * @return void
+     * Sets up the environment and loads configuration.
      */
     public function setUp(): void
     {
@@ -38,50 +50,23 @@ class IntegrationTestHelper
         } catch (\Throwable $e) {
             $this->saveResult('Bootstrap execution', false);
             $this->handleException($e);
-            $this->printStatus("Bootstrap failed. Subsequent tests might be affected or fail.", 'ERROR');
+            $this->printStatus("Bootstrap failed. Subsequent tests may fail.", 'ERROR');
+        }
+    }
+
+    public function runTestSafely(callable $testMethod): void
+    {
+        try {
+            call_user_func($testMethod);
+        } catch (\Throwable $e) {
+            $this->handleException($e);
         }
     }
 
     /**
-     * Prints a formatted status message.
-     * If a step number is provided and the status is 'STEP', it formats as [STEP X].
+     * Registers an exception for error reporting.
      *
-     * @param string $message     The message to print.
-     * @param string $status      The status type (e.g., INFO, STEP, OK, ERROR).
-     * @param ?int   $stepNumber  Optional step number, used if status is 'STEP'.
-     * @param int    $indentLevel The number of indentation levels.
-     * @return void
-     */
-    public function printStatus(string $message, string $status = 'INFO', ?string $stepNumber = null, ?int $indentLevel = 0): void
-    {
-        $statusTag = strtoupper($status);
-        // Only prepend step number if status is 'STEP' and a number is provided
-        if ($stepNumber !== null && $status === 'STEP') {
-            $statusOutput = sprintf("%s %s", $statusTag, $stepNumber);
-        } else {
-            $statusOutput = $statusTag;
-        }
-        $string = sprintf("[%s] %s%s", $statusOutput, $message, PHP_EOL);
-        $this->printIndented($string, $indentLevel);
-    }
-
-    /**
-     * Saves a test result to the global collection for the final summary.
-     *
-     * @param string $description Description of the test.
-     * @param bool $result The outcome of the test (true for OK, false for FAIL).
-     * @return void
-     */
-    public function saveResult(string $description, bool $result): void
-    {
-        $this->testResult[] = ['description' => $description, 'result' => $result];
-    }
-
-    /**
-     * Saves an exception that occurred during test execution.
-     *
-     * @param \Throwable $e The caught exception/error.
-     * @return void
+     * @param \Throwable $e
      */
     public function handleException(\Throwable $e): void
     {
@@ -89,133 +74,104 @@ class IntegrationTestHelper
     }
 
     /**
-     * Outputs all exceptions that occurred during test execution.
+     * Stores a test result for summary reporting.
      *
-     * @return void
+     * @param string $description Description of the assertion.
+     * @param bool   $result      Assertion outcome (true for pass).
+     */
+    public function saveResult(string $description, bool $result): void
+    {
+        $this->testResults[] = ['description' => $description, 'result' => $result];
+        $status = $result ? 'OK' : 'FAIL';
+        $this->printStatus($description, $status);
+    }
+
+    /**
+     * Prints a summary of all exceptions encountered using the trait's method.
      */
     public function printErrors(): void
     {
-        echo PHP_EOL . "--- ERRORS ---" . PHP_EOL;
-        if (empty($this->testErrors)) {
-            $this->printStatus('No exceptions thrown.', 'INFO');
-            return;
-        }
-        foreach ($this->testErrors as $e) {
-            $this->printStatus("Exception occurred: " . get_class($e), 'ERROR_DETAIL');
-            $this->printContext($e);
-
-            echo "    [Message] {$e->getMessage()}" . PHP_EOL;
-            echo "    [File] {$e->getFile()}:{$e->getLine()}" . PHP_EOL;
-            echo "    [Trace]" . PHP_EOL;
-
-            $trace = $e->getTrace();
-            foreach ($trace as $i => $frame) {
-                $file = isset($frame['file']) ? $frame['file'] : '[internal function]';
-                $line = isset($frame['line']) ? $frame['line'] : '-';
-                $function = $frame['function'] ?? '';
-                $class = $frame['class'] ?? '';
-                $type = $frame['type'] ?? '';
-                $args = array_map(function ($arg) {
-                    if (is_object($arg)) {
-                        return get_class($arg);
-                    } elseif (is_array($arg)) {
-                        return 'Array';
-                    } elseif (is_string($arg)) {
-                        return '"' . $arg . '"';
-                    } elseif (is_null($arg)) {
-                        return 'NULL';
-                    } elseif (is_bool($arg)) {
-                        return $arg ? 'true' : 'false';
-                    } else {
-                        return (string) $arg;
-                    }
-                }, $frame['args'] ?? []);
-                $argsString = implode(', ', $args);
-
-                printf(
-                    "        #%02d %s(%s): %s%s%s(%s)" . PHP_EOL,
-                    $i,
-                    $file,
-                    $line,
-                    $class,
-                    $type,
-                    $function,
-                    $argsString
-                );
-            }
-            printf("        #%02d {main}" . PHP_EOL, count($trace));
-            $this->saveResult("Exception: " . get_class($e), false);
-        }
+        $this->printErrorsFromTrait($this->testErrors);
     }
 
-
     /**
-     * Outputs the final results of all tests after completion.
-     *
-     * @return void
-     */	
+     * Prints the summary of all test results and errors.
+     */
     public function finalResult(): void
     {
-        echo "\nAll tests finished.\n";
-        $this->printAll($this->testResult);
+        $this->printStatus("All tests finished.", 'END');
+        $this->printAll($this->testResults);
+        $this->printErrors();
         echo "</pre>";
     }
 
+    // -------------- Assertion Methods --------------
+
     /**
-     * Prints a summary of all accumulated test results.
-     *
-     * @param array<int, array{description: string, result: bool}> $results The array of test results.
-     * @return void
+     * Asserts that a value is not null.
      */
-    public function printAll(array $results): void
+    protected function assertNotNull($actual, string $message = ''): void
     {
-        echo PHP_EOL . "--- TEST SUMMARY ---" . PHP_EOL;
-        foreach ($results as $result) {
-            // Uses the printResult function for consistent formatting.
-            $this->printResult($result['description'], $result['result']);
-        }
+        $description = $message !== '' ? $message : 'Assert value is not null.';
+        $result = $actual !== null;
+        $this->saveResult($description, $result);
     }
 
     /**
-     * Prints an immediate test result message.
-     * This is often used for direct feedback, while saveResult() is used for the final summary.
-     *
-     * @param string $description Description of the check.
-     * @param bool $result The outcome (true for OK, false for FAIL).
-     * @param int $length Optional length for padding the description, default is 100.
-     * @return void
+     * Asserts that a value is true.
      */
-    public function printResult(string $description, bool $result, int $length = 100): void
+    protected function assertTrue($actual, string $message = ''): void
     {
-        echo str_pad($description, $length, '.') . ($result ? "OK\n" : "FAIL\n");
+        $description = $message !== '' ? $message : 'Assert value is true.';
+        $result = $actual === true;
+        $this->saveResult($description, $result);
     }
 
     /**
-     * Prints a string with the specified indentation level.
-     *
-     * @param string $text            The text to be printed.
-     * @param int    $indentLevel     The number of indentation levels.
-     * @param int    $spacesPerLevel  The number of spaces per indentation level (default: 2).
-     *
-     * @return void
+     * Asserts that a value is false.
      */
-    private function printIndented(string $text, int $indentLevel = 0, int $spacesPerLevel = 2): void
+    protected function assertFalse($actual, string $message = ''): void
     {
-        if ($indentLevel < 0) {
-            $indentLevel = 0;
-        }
-        $indentation = str_repeat(' ', $indentLevel * $spacesPerLevel);
-        echo $indentation . $text;
+        $description = $message !== '' ? $message : 'Assert value is false.';
+        $result = $actual === false;
+        $this->saveResult($description, $result);
     }
 
-    private function printContext(\Throwable $e): void
+    /**
+     * Asserts that two values are equal (==).
+     */
+    protected function assertEquals($expected, $actual, string $message = ''): void
     {
-        if (property_exists($e, 'context') && !empty($e->context)) {
-            echo "    [Context] ";
-            foreach ($e->context as $key => $value) {
-                $parts[] = "{$key}: {$value}";
-            }
-            echo implode(', ', $parts) . PHP_EOL;
-        }
+        $description = $message !== '' ? $message : 'Assert equality.';
+        $result = $expected == $actual;
+        $this->saveResult($description, $result);
+    }
+
+    /**
+     * Asserts that a string contains a substring.
+     */
+    protected function assertStringContains(string $needle, string $haystack, string $message = ''): void
+    {
+        $description = $message !== '' ? $message : "Assert string contains '{$needle}'.";
+        $result = strpos($haystack, $needle) !== false;
+        $this->saveResult($description, $result);
+    }
+
+    /**
+     * Asserts that a variable is an instance of the given class/interface.
+     */
+    protected function assertInstanceOf(string $expected, $actual, string $message = ''): void
+    {
+        $description = $message !== '' ? $message : "Assert instance of {$expected}.";
+        $result = $actual instanceof $expected;
+        $this->saveResult($description, $result);
+    }
+
+    /**
+     * Asserts that a condition is true (alias for assertTrue).
+     */
+    protected function assert($condition, string $message = ''): void
+    {
+        $this->assertTrue($condition, $message);
     }
 }

@@ -45,7 +45,6 @@ final class PersistenceTest extends IntegrationTestHelper
         $this->runComponentsMethodTest(1);
         $this->runKernelMethodTest(1);
         $this->printStatus('All Persistence Module tests completed.', 'END');
-        $this->printErrors();
         $this->finalResult();
     }
 
