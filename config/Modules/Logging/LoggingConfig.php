@@ -4,29 +4,32 @@ declare(strict_types=1);
 
 namespace Config\Modules\Logging;
 
-use Config\Paths\PathsConfig;
+use Config\Modules\Logging\Security\SanitizationConfig;
+use Config\Modules\Logging\Security\ValidationConfig;
+use PublicContracts\Logging\AssemblerConfigInterface;
+use PublicContracts\Logging\SanitizationConfigInterface;
+use PublicContracts\Logging\ValidationConfigInterface;
 
 final class LoggingConfig
 {
     private readonly string $baseLogPath;
-    private readonly LogSecurityConfig $securityConfig;
+    private readonly SanitizationConfigInterface $sanitizationConfig;
+    private readonly ValidationConfigInterface $validationConfig;
+    private readonly AssemblerConfigInterface $assemblerConfig;
 
     /**
-     * LoggingConfig constructor.
-     *
-     * @param PathsConfig $pathsConfig Source for base log directory.
-     * @param LogSecurityConfig $securityConfig Security configuration for logging (e.g. sanitizer config).
+     * @param string $loggingDirectory
      */
-    public function __construct(PathsConfig $pathsConfig)
+    public function __construct(string $loggingDirectory)
     {
-        $logPath = $pathsConfig->getLogsDirPath();
-
-        if (trim($logPath) === '') {
-            throw new \InvalidArgumentException('Base log path cannot be empty.');
+        if (trim($loggingDirectory) === '') {
+            throw new \InvalidArgumentException('Logging directory path cannot be empty.');
         }
 
-        $this->baseLogPath = $logPath;
-        $this->securityConfig = new LogSecurityConfig();
+        $this->baseLogPath = $loggingDirectory;
+        $this->sanitizationConfig = new SanitizationConfig;
+        $this->validationConfig = new ValidationConfig;
+        $this->assemblerConfig = new AssemblerConfig;
     }
 
     /**
@@ -40,12 +43,32 @@ final class LoggingConfig
     }
 
     /**
-     * Returns the associated security configuration for logging.
+     * Returns the associated sanitization configuration for logging.
      *
-     * @return LogSecurityConfig
+     * @return SanitizationConfig
      */
-    public function logSecurityConfig(): LogSecurityConfig
+    public function sanitizationConfig(): SanitizationConfigInterface
     {
-        return $this->securityConfig;
+        return $this->sanitizationConfig;
+    }
+
+    /**
+     * Returns the validation configuration for logging value objects.
+     *
+     * @return ValidationConfig
+     */
+    public function validationConfig(): ValidationConfigInterface
+    {
+        return $this->validationConfig;
+    }
+    
+    /**
+     * Returns the LogEntryAssembler configuration.
+     *
+     * @return assemblerConfig
+     */
+    public function assemblerConfig(): assemblerConfigInterface
+    {
+        return $this->assemblerConfig;
     }
 }
