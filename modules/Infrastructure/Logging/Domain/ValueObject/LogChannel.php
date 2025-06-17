@@ -70,7 +70,7 @@ final class LogChannel
      */
     private function sanitizeAndValidate(string $channel, LogSecurityInterface $security): string
     {
-        $sanitized = $security->sanitize(['channel' => $channel])['channel'] ?? '';
+        $sanitized = $security->sanitize($channel);
         $sanitizedAndValidated = $security->validateChannel($sanitized);
 
         return $sanitizedAndValidated;
