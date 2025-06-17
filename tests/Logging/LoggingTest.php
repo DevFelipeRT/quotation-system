@@ -64,6 +64,7 @@ final class LoggingTest extends IntegrationTestHelper
 
         $this->runVOsTest();
         $this->runComponentsTest();
+        $this->runKernelTest();
 
         $this->printStatus("All Logging tests finished.", 'END');
         $this->finalResult();
@@ -91,6 +92,17 @@ final class LoggingTest extends IntegrationTestHelper
 
         $this->printStatus("All Logging components tests finished.", 'END');
     }
+    
+    public function runKernelTest(): void
+    {
+        $this->printStatus('Starting Logging Module kernel tests.', 'RUN');
+
+        $this->testKernelCreation();
+        $this->testKernelObjectsRetrieval();
+        $this->testBasicLogWrite();
+
+        $this->printStatus("All Logging kernel tests finished.", 'END');
+    }
 
     // Public Value Object test
 
@@ -100,8 +112,8 @@ final class LoggingTest extends IntegrationTestHelper
             $this->loggableInput = new LoggableInput(
                 'testing loggable input',
                 'debug',
-                ['test' => 'test'],
-                'testChannel'
+                ['password' => '1232dfsw'],
+                'channel'
             );
         } catch (\Throwable $e) {
             $this->handleException($e);
@@ -196,15 +208,15 @@ final class LoggingTest extends IntegrationTestHelper
     private function testBasicLogWrite(): void
     {
         $facade = $this->facade;
-        $channel = 'test';
         $level = 'info';
         $message = 'Test log entry';
         $context = ['user' => 'tester'];
         $now = new DateTimeImmutable();
 
-        $facade->log($level, $message, $context, $channel, $now);
+        $facade->log($level, $message, $context);
+        $facade->error($message, $context);
 
-        $expectedFile = $this->testLogDir . DIRECTORY_SEPARATOR . $channel . DIRECTORY_SEPARATOR . $level . '.log';
+        $expectedFile = $this->testLogDir . DIRECTORY_SEPARATOR . 'application' . DIRECTORY_SEPARATOR . $level . '.log';
 
         var_dump($expectedFile);
 
