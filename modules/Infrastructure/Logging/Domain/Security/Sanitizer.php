@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace Logging\Domain\Security;
 
-use Logging\Domain\Security\Contract\LogSanitizerInterface;
 use Logging\Domain\Exception\InvalidLogSanitizerConfigException;
 use Normalizer;
 
 /**
- * LogSanitizer
+ * Sanitizer
  *
  * Masks sensitive data in log inputs or parameter arrays.
  * - English/Portuguese sensitive keys (with Unicode/fuzzy/vowel-omission match).
@@ -19,7 +18,7 @@ use Normalizer;
  * - Customizable, always-bracketed mask token.
  * - Blocks token collisions and ensures only safe tokens are used.
  */
-final class LogSanitizer implements LogSanitizerInterface
+final class Sanitizer
 {
     private const DEFAULT_MASK = '[MASKED]';
     private const DEFAULT_SENSITIVE_KEYS = [
@@ -76,20 +75,6 @@ final class LogSanitizer implements LogSanitizerInterface
         $mask = $this->sanitizeMaskToken($maskToken ?? $this->maskToken);
         $seen = [];
         return $this->sanitizeRecursive($this->forceArray($input), 0, $mask, $seen);
-    }
-
-    /**
-     * Sanitize SQL parameter bindings.
-     *
-     * @param array<mixed> $params
-     * @param string|null $maskToken
-     * @return array<mixed>
-     */
-    public function sanitizeSqlParams(array $params, ?string $maskToken = null): array
-    {
-        $mask = $this->sanitizeMaskToken($maskToken ?? $this->maskToken);
-        $seen = [];
-        return $this->sanitizeRecursive($this->forceArray($params), 0, $mask, $seen);
     }
 
     /**
