@@ -69,17 +69,41 @@ final class Sanitizer implements SanitizerInterface
     }
 
     /**
-     * Sanitizes sensitive keys and values from the provided input array, 
-     * returning a copy with all confidential data masked or removed.
+     * Sanitizes any input value: arrays, objects, or scalars.
+     * - For arrays/objects: recursively sanitizes keys and values.
+     * - For strings: trims, normalizes, and applies sensitive pattern checks.
+     * - For other scalar values: returns as is.
      *
-     * @param array<string, mixed> $input
-     * @return array<string, mixed> Sanitized array safe for logging or export.
+     * @param mixed $input
+     * @param string|null $maskToken
+     * @return mixed
      */
-    public function sanitize(array $input, ?string $maskToken = null): array
+    public function sanitize(mixed $input, ?string $maskToken = null): mixed
     {
         $mask = $this->sanitizeMaskToken($maskToken ?? $this->maskToken);
         $seen = [];
-        return $this->sanitizeRecursive($this->forceArray($input), 0, $mask, $seen);
+
+        if (is_array($input)) {
+            return $this->sanitizeRecursive($input, 0, $mask, $seen);
+        }
+
+        if (is_object($input)) {
+            return $this->sanitizeRecursive($this->forceArray($input), 0, $mask, $seen);
+        }
+
+        if (is_string($input)) {
+            $sanitized = trim($this->normalizeUnicode($input));
+            if ($this->matchesSensitivePatterns($sanitized)) {
+                return $mask;
+            }
+            if ($sanitized === $mask) {
+                return '[MASKED_ORIGINAL_VALUE]';
+            }
+            return $sanitized;
+        }
+
+        // For integer, float, bool, null: return as is (cannot be sensitive)
+        return $input;
     }
 
     /**
