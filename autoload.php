@@ -26,6 +26,7 @@ spl_autoload_register(function (string $class): void {
         $prefixes['App\\']    = __DIR__ . '/src/';
         $prefixes['Config\\'] = __DIR__ . '/config/';
         $prefixes['Tests\\']  = __DIR__ . '/tests/';
+        $prefixes['PublicContracts\\'] = __DIR__ . '/modules/Shared/PublicContracts/';
 
         // 2. Dynamic namespace mappings for modules
         $modulesBasePath = __DIR__ . '/modules/';
