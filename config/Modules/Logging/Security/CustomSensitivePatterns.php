@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Config\Modules\Logging;
+namespace Config\Modules\Logging\Security;
 
 /**
  * CustomSensitivePatterns
@@ -38,5 +38,9 @@ final class CustomSensitivePatterns
 
             // Add more as your threat model or application evolves
         ];
+    }
+
+    private function __construct()
+    {
     }
 }

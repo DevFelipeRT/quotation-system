@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Config\Modules\Logging;
+namespace Config\Modules\Logging\Security;
 
 /**
  * CustomSensitiveKeys
@@ -36,5 +36,9 @@ final class CustomSensitiveKeys
             'telefone',
             // Add more keys here as needed for your security policy
         ];
+    }
+
+    private function __construct()
+    {
     }
 }
