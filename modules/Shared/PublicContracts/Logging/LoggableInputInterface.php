@@ -26,7 +26,7 @@ interface LoggableInputInterface
     /**
      * Returns the optional log level code (e.g., 'info', 'error').
      */
-    public function getCode(): ?string;
+    public function getLevel(): ?string;
 
     /**
      * Returns the logical channel for categorizing the log.
