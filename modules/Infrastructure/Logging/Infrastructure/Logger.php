@@ -6,7 +6,6 @@ namespace Logging\Infrastructure;
 
 use Logging\Application\Contract\LoggerInterface;
 use Logging\Domain\ValueObject\Contract\LogEntryInterface;
-use Logging\Infrastructure\Exception\LogWriteException;
 
 /**
  * Logger writes structured log entries to flat files in the local filesystem.

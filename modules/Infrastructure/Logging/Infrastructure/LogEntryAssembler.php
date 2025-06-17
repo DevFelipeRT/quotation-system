@@ -5,47 +5,53 @@ declare(strict_types=1);
 namespace Logging\Infrastructure;
 
 use Logging\Application\Contract\LogEntryAssemblerInterface;
+use Logging\Domain\Security\Contract\LogSecurityInterface;
+use PublicContracts\Logging\LoggableInputInterface;
 use Logging\Domain\ValueObject\Contract\LogEntryInterface;
 use Logging\Domain\ValueObject\LogEntry;
 use Logging\Domain\ValueObject\LogLevel;
 use Logging\Domain\ValueObject\LogMessage;
 use Logging\Domain\ValueObject\LogContext;
 use Logging\Domain\ValueObject\LogChannel;
-use Logging\Domain\Security\Contract\LogSanitizerInterface;
-use PublicContracts\Logging\LoggableInputInterface;
 use Logging\Infrastructure\Exception\LogEntryAssemblyException;
+use PublicContracts\Logging\AssemblerConfigInterface;
 
 /**
  * LogEntryAssembler
  *
- * Assembles immutable LogEntry objects from generic loggable input contracts.
- *
- * This class is responsible for converting raw input—typically received from
- * adapters, facades, or application boundaries—into validated and normalized
- * value objects for use throughout the logging domain.
- *
- * Responsibilities:
- *  - Orchestrates the creation of all relevant value objects (level, message, context, channel, timestamp).
- *  - Delegates validation and sanitation to the respective value object constructors.
- *  - Ensures only consistent, safe, and valid data enters the logging domain.
- *  - Captures and encapsulates any exception thrown during assembly in a
- *    LogEntryAssemblyException, preserving the cause for diagnostics.
- *
- * Usage:
- *  - Use as a bridge between input contracts and the domain model.
- *  - Inject the required LogSanitizerInterface to enforce consistent sanitization.
+ * Assembles immutable LogEntry objects from generic loggable input contracts,
+ * supporting fallback default values for input parameters, except message and timestamp.
+ * Allows injection of custom log level definitions for LogLevel construction.
  */
 final class LogEntryAssembler implements LogEntryAssemblerInterface
 {
-    private LogSanitizerInterface $sanitizer;
+    private readonly LogSecurityInterface $security;
+
+    /** @var string|null */
+    private readonly ?string $defaultLevel;
+
+    /** @var array<string, string>|null */
+    private readonly ?array $defaultContext;
+
+    /** @var string|null */
+    private readonly ?string $defaultChannel;
+
+    /** @var string[]|null */
+    private readonly ?array $customLogLevels;
 
     /**
-     * @param LogSanitizerInterface $sanitizer Sanitizer to apply during value object construction.
+     * @param LogSecurityInterface $security
+     * @param AssemblerConfigInterface $config
      */
     public function __construct(
-        LogSanitizerInterface $sanitizer
+        LogSecurityInterface $security,
+        AssemblerConfigInterface $config
     ) {
-        $this->sanitizer = $sanitizer;
+        $this->security        = $security;
+        $this->defaultLevel    = $config->defaultLevel();
+        $this->defaultContext  = $config->defaultContext();
+        $this->defaultChannel  = $config->defaultChannel();
+        $this->customLogLevels = $config->customLogLevels();
     }
 
     /**
@@ -78,35 +84,59 @@ final class LogEntryAssembler implements LogEntryAssemblerInterface
     }
 
     /**
-     * Instantiates the LogLevel value object.
+     * Instantiates the LogLevel value object, using fallback if necessary.
      */
     private function buildLogLevel(LoggableInputInterface $input): LogLevel
     {
-        return new LogLevel($input->getCode() ?? 'info', $this->sanitizer);
+        $level = $input->getLevel();
+        if ($level === null && $this->defaultLevel !== null) {
+            $level = $this->defaultLevel;
+        }
+        return new LogLevel(
+            (string) $level,
+            $this->security,
+            $this->customLogLevels
+        );
     }
 
     /**
-     * Instantiates the LogMessage value object.
+     * Instantiates the LogMessage value object. No fallback: must always be present.
      */
     private function buildLogMessage(LoggableInputInterface $input): LogMessage
     {
-        return new LogMessage($input->getMessage(), $this->sanitizer);
+        return new LogMessage(
+            $input->getMessage(),
+            $this->security
+        );
     }
 
     /**
-     * Instantiates the LogContext value object.
+     * Instantiates the LogContext value object, using fallback if necessary.
      */
     private function buildLogContext(LoggableInputInterface $input): LogContext
     {
-        return new LogContext($input->getContext(), $this->sanitizer);
+        $context = $input->getContext();
+        if ($context === null && $this->defaultContext !== null) {
+            $context = $this->defaultContext;
+        }
+        return new LogContext(
+            (array) $context,
+            $this->security
+        );
     }
 
     /**
-     * Instantiates the LogChannel value object, or returns null if channel is absent.
+     * Instantiates the LogChannel value object, using fallback if necessary.
      */
-    private function buildLogChannel(LoggableInputInterface $input): ?LogChannel
+    private function buildLogChannel(LoggableInputInterface $input): LogChannel
     {
         $channel = $input->getChannel();
-        return $channel === null ? null : new LogChannel($channel, $this->sanitizer);
+        if ($channel === null && $this->defaultChannel !== null) {
+            $channel = $this->defaultChannel;
+        }
+        return new LogChannel(
+            (string) $channel,
+            $this->security
+        );
     }
 }

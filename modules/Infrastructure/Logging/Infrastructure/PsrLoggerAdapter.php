@@ -21,7 +21,7 @@ use Logging\Domain\ValueObject\LoggableInput;
 final class PsrLoggerAdapter implements PsrLoggerInterface
 {
     public function __construct(
-        private readonly LoggerInterface $structuredLogger,
+        private readonly LoggerInterface $logger,
         private readonly LogEntryAssemblerInterface $assembler
     ) {}
 
@@ -30,7 +30,7 @@ final class PsrLoggerAdapter implements PsrLoggerInterface
         $finalMessage = $this->interpolate($message, $context);
 
         $input = new LoggableInput(
-            code: $level,
+            level: $level,
             message: (string)$finalMessage,
             context: $context,
             channel: null,
@@ -39,7 +39,7 @@ final class PsrLoggerAdapter implements PsrLoggerInterface
 
         $entry = $this->assembler->assembleFromInput($input);
 
-        $this->structuredLogger->log($entry);
+        $this->logger->log($entry);
     }
 
     public function emergency(string|Stringable $message, array $context = []): void
@@ -80,11 +80,6 @@ final class PsrLoggerAdapter implements PsrLoggerInterface
     public function debug(string|Stringable $message, array $context = []): void
     {
         $this->log('debug', $message, $context);
-    }
-
-    public function custom(string|Stringable $message, string $level, array $context = []): void
-    {
-        $this->log($level, $message, $context);
     }
 
     /**

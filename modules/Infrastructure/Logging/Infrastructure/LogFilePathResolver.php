@@ -36,6 +36,7 @@ final class LogFilePathResolver
     public function __construct(string $basePath)
     {
         $this->basePath = $this->validateAndNormalizeBasePath($basePath);
+        //var_dump($this->basePath);
     }
 
     /**

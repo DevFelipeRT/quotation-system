@@ -27,7 +27,6 @@ final class ConfigProvider
     private AppConfig             $appConfig;
     private DatabaseConfig        $databaseConfig;
     private DatabaseSchemaConfig  $schemaConfig;
-    private LoggingConfig         $loggingConfig;
     private SessionConfig         $sessionConfig;
     private KernelConfig          $kernelConfig;
 
@@ -45,7 +44,6 @@ final class ConfigProvider
         $this->appConfig       = new AppConfig($this->envLoader);
         $this->databaseConfig  = new DatabaseConfig($this->envLoader);
         $this->schemaConfig    = new DatabaseSchemaConfig();
-        $this->loggingConfig   = new LoggingConfig($this->pathsConfig);
         $this->sessionConfig   = new SessionConfig();
         $this->kernelConfig    = new KernelConfig();
     }
@@ -81,9 +79,9 @@ final class ConfigProvider
     }
 
     /** @return LoggingConfig */
-    public function loggingConfig(): LoggingConfig
+    public function loggingConfig(?string $customDirectory = null): LoggingConfig
     {
-        return $this->loggingConfig;
+        return new LoggingConfig($customDirectory ?? $this->pathsConfig->getLogsDirPath());
     }
 
     /** @return SessionConfig */

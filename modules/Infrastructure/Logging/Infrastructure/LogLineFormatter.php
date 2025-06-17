@@ -22,16 +22,18 @@ final class LogLineFormatter
     public function format(LogEntryInterface $entry): string
     {
         $timestamp = $entry->getTimestamp()->format(DateTimeInterface::ATOM);
-        $level = $entry->getLevel()->value();
+        $channel = $entry->getChannel()->value();
+        $level = strtoupper($entry->getLevel()->value());
         $message = $entry->getMessage()->value();
 
         $contextObj = $entry->getContext();
         $context = $contextObj ? $contextObj->value() : [];
 
         $contextStr = !empty($context)
-            ? ' | context: ' . json_encode($context, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
-            : '';
+            ? ' | Context: ' . json_encode($context, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+            : ''
+        ;
 
-        return "[{$timestamp}] [{$level}] {$message}{$contextStr}" . PHP_EOL;
+        return "[{$timestamp}] [{$channel}] [{$level}] {$message}{$contextStr}" . PHP_EOL;
     }
 }
