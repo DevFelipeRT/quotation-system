@@ -6,30 +6,31 @@ namespace Tests\Persistence;
 
 require __DIR__ . '/../test-bootstrap.php';
 
-use Config\Modules\Logging\LoggingConfig;
-use Logging\Infrastructure\LoggingKernel;
+use Tests\IntegrationTestHelper;
+use PublicContracts\Logging\Config\LoggingConfigInterface;
+use PublicContracts\Logging\LoggingKernelInterface;
 use PublicContracts\Logging\LoggingFacadeInterface;
-use DateTimeImmutable;
 use Logging\Application\Contract\LoggerInterface;
 use Logging\Domain\Security\Contract\LogSecurityInterface;
 use Logging\Domain\Security\Contract\SanitizerInterface;
 use Logging\Domain\Security\Contract\ValidatorInterface;
+use Logging\Domain\ValueObject\Contract\LoggableInputInterface;
+use Logging\Domain\ValueObject\Contract\LogEntryInterface;
 use Logging\Domain\Security\LogSecurity;
 use Logging\Domain\Security\Sanitizer;
 use Logging\Domain\Security\Validator;
-use Logging\Domain\ValueObject\Contract\LogEntryInterface;
 use Logging\Domain\ValueObject\LoggableInput;
+use Logging\Infrastructure\LoggingKernel;
 use Logging\Infrastructure\LogEntryAssembler;
 use Logging\Infrastructure\LogFilePathResolver;
 use Logging\Infrastructure\LogFileWriter;
 use Logging\Infrastructure\Logger;
 use Logging\Infrastructure\LogLineFormatter;
-use PublicContracts\Logging\LoggableInputInterface;
-use Tests\IntegrationTestHelper;
+use DateTimeImmutable;
 
 final class LoggingTest extends IntegrationTestHelper
 {
-    private ?LoggingConfig $config = null;
+    private ?LoggingConfigInterface $config = null;
     // Data
     private string $testLogDir;
     private ?string $resolvedPath = null;
@@ -47,7 +48,7 @@ final class LoggingTest extends IntegrationTestHelper
     private ?LogFileWriter $fileWriter = null;
     private ?LoggerInterface $logger = null;
     // Public
-    private ?LoggingKernel $kernel = null;
+    private ?LoggingKernelInterface $kernel = null;
     private ?LoggingFacadeInterface $facade = null;
 
     public function __construct()
