@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Config\Modules\Logging;
 
-use PublicContracts\Logging\AssemblerConfigInterface;
+use PublicContracts\Logging\Config\AssemblerConfigInterface;
 
 /**
  * AssemblerConfig

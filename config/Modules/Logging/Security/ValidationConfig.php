@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Config\Modules\Logging\Security;
 
-use PublicContracts\Logging\ValidationConfigInterface;
+use PublicContracts\Logging\Config\ValidationConfigInterface;
 
 /**
  * Default implementation of ValidationConfigInterface backed by DefaultValidationValues enum.

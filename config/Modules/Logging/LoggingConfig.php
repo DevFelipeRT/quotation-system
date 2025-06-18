@@ -6,11 +6,12 @@ namespace Config\Modules\Logging;
 
 use Config\Modules\Logging\Security\SanitizationConfig;
 use Config\Modules\Logging\Security\ValidationConfig;
-use PublicContracts\Logging\AssemblerConfigInterface;
-use PublicContracts\Logging\SanitizationConfigInterface;
-use PublicContracts\Logging\ValidationConfigInterface;
+use PublicContracts\Logging\Config\AssemblerConfigInterface;
+use PublicContracts\Logging\Config\LoggingConfigInterface;
+use PublicContracts\Logging\Config\SanitizationConfigInterface;
+use PublicContracts\Logging\Config\ValidationConfigInterface;
 
-final class LoggingConfig
+final class LoggingConfig implements LoggingConfigInterface
 {
     private readonly string $baseLogPath;
     private readonly SanitizationConfigInterface $sanitizationConfig;

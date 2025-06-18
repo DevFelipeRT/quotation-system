@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace PublicContracts\Logging;
+namespace PublicContracts\Logging\Config;
 
 /**
  * Provides all configurable parameters for domain validation rules.

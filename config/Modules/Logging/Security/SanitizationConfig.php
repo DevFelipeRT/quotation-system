@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Config\Modules\Logging\Security;
 
-use PublicContracts\Logging\SanitizationConfigInterface;
+use PublicContracts\Logging\Config\SanitizationConfigInterface;
 
 /**
  * SanitizationConfig
