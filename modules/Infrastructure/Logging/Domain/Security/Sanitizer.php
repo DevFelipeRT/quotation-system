@@ -6,8 +6,8 @@ namespace Logging\Domain\Security;
 
 use Normalizer;
 use Logging\Domain\Security\Contract\SanitizerInterface;
-use Logging\Domain\Exception\InvalidLogSanitizerConfigException;;
-use PublicContracts\Logging\SanitizationConfigInterface;
+use Logging\Domain\Exception\InvalidLogSanitizerConfigException;
+use PublicContracts\Logging\Config\SanitizationConfigInterface;
 
 /**
  * Sanitizer

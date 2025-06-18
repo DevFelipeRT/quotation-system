@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace Logging\Infrastructure\Exception;
 
+use Logging\Domain\ValueObject\Contract\LoggableInputInterface;
 use Exception;
 use Throwable;
-use PublicContracts\Logging\LoggableInputInterface;
+
 
 /**
  * Thrown when the LogEntryAssembler fails to assemble a LogEntry

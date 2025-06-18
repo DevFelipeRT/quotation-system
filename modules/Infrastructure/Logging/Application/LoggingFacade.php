@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace Logging\Application;
 
-use Logging\Application\Contract\LoggerInterface;
-use Logging\Application\Contract\PsrLoggerInterface;
-use Logging\Application\Contract\LogEntryAssemblerInterface;
-use PublicContracts\Logging\LoggableInputInterface;
 use PublicContracts\Logging\LoggingFacadeInterface;
+use PublicContracts\Logging\PsrLoggerInterface;
+use Logging\Application\Contract\LoggerInterface;
+use Logging\Application\Contract\LogEntryAssemblerInterface;
+use Logging\Domain\ValueObject\Contract\LoggableInputInterface;
+use Logging\Domain\ValueObject\LoggableInput;
 use Stringable;
 
 /**
@@ -41,8 +42,18 @@ final class LoggingFacade implements LoggingFacadeInterface
     /**
      * Assembles and logs from a generic loggable input.
      */
-    public function logInput(LoggableInputInterface $input): void
-    {
+    public function logInput(
+        string|Stringable $message, 
+        ?string $level, 
+        ?string $channel,
+        ?array $context = [], 
+    ): void {
+        $input = $this->createInput(
+            message:   $message,
+            level:     $level,
+            context:   $context,
+            channel:   $channel,
+        );
         $entry = $this->assembler->assembleFromInput($input);
         $this->logger->log($entry);
     }
@@ -93,5 +104,19 @@ final class LoggingFacade implements LoggingFacadeInterface
     public function debug(string|Stringable $message, array $context = []): void
     {
         $this->adapter->debug($message, $context);
+    }
+
+    private function createInput(
+        string $level, 
+        string|Stringable $message, 
+        array $context, 
+        string $channel
+    ): LoggableInputInterface {
+        return new LoggableInput(
+            message:   $message,
+            level:     $level,
+            context:   $context,
+            channel:   $channel,
+        );
     }
 }

@@ -12,7 +12,7 @@ use Logging\Domain\Exception\InvalidLogChannelException;
 use Logging\Domain\Exception\InvalidLogContextException;
 use Logging\Domain\Exception\InvalidLogDirectoryException;
 use Logging\Domain\Security\Contract\ValidatorInterface;
-use PublicContracts\Logging\ValidationConfigInterface;
+use PublicContracts\Logging\Config\ValidationConfigInterface;
 
 /**
  * Validates all value objects within the logging domain.

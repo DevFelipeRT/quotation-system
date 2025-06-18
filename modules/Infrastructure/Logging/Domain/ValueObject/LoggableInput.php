@@ -6,7 +6,7 @@ namespace Logging\Domain\ValueObject;
 
 use DateTimeImmutable;
 use Logging\Domain\Exception\InvalidLoggableInputException;
-use PublicContracts\Logging\LoggableInputInterface;
+use Logging\Domain\ValueObject\Contract\LoggableInputInterface;
 
 /**
  * Represents an immutable value object for log entry input.
@@ -71,7 +71,7 @@ final class LoggableInput implements LoggableInputInterface
      * @param string|null                $level     Log level (e.g., 'info', 'error'). May be null.
      * @param array<string, string>|null $context   Context array. If provided, keys and values must be non-empty strings.
      * @param string|null                $channel   Log channel/category. May be null.
-     * @param DateTimeImmutable|null     $timestamp Log entry timestamp. If null, must be provided by the caller.
+     * @param DateTimeImmutable|null     $timestamp Log entry timestamp. If null, defaults to current time.
      *
      * @throws InvalidLoggableInputException If any argument fails validation.
      */

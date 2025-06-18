@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Logging\Infrastructure;
 
 use Stringable;
-use DateTimeImmutable;
+use PublicContracts\Logging\PsrLoggerInterface;
 use Logging\Application\Contract\LoggerInterface;
-use Logging\Application\Contract\PsrLoggerInterface;
 use Logging\Application\Contract\LogEntryAssemblerInterface;
+use Logging\Domain\ValueObject\Contract\LoggableInputInterface;
 use Logging\Domain\ValueObject\LoggableInput;
 
 /**
@@ -29,12 +29,10 @@ final class PsrLoggerAdapter implements PsrLoggerInterface
     {
         $finalMessage = $this->interpolate($message, $context);
 
-        $input = new LoggableInput(
+        $input = $this->createInput(
             level: $level,
             message: (string)$finalMessage,
-            context: $context,
-            channel: null,
-            timestamp: new DateTimeImmutable()
+            context: $context
         );
 
         $entry = $this->assembler->assembleFromInput($input);
@@ -108,6 +106,18 @@ final class PsrLoggerAdapter implements PsrLoggerInterface
         }
         // Efficient strtr for replacement, as specified by PSR-3
         return strtr($message, $replace);
+    }
+
+    private function createInput(
+        string $level,
+        string|Stringable $message,
+        array $context,
+    ): LoggableInputInterface {
+        return new LoggableInput(
+            message:   $message,
+            level:     $level,
+            context:   $context,
+        );
     }
 
 }

@@ -4,25 +4,26 @@ declare(strict_types=1);
 
 namespace Logging\Infrastructure;
 
-use Config\Modules\Logging\LoggingConfig;
-use Logging\Domain\Security\LogSecurity;
+use PublicContracts\Logging\LoggingKernelInterface;
+use PublicContracts\Logging\Config\LoggingConfigInterface;
+use PublicContracts\Logging\Config\SanitizationConfigInterface;
+use PublicContracts\Logging\Config\ValidationConfigInterface;
+use PublicContracts\Logging\Config\AssemblerConfigInterface;
+use PublicContracts\Logging\LoggingFacadeInterface;
+use PublicContracts\Logging\PsrLoggerInterface;
 use Logging\Domain\Security\Contract\LogSecurityInterface;
+use Logging\Application\Contract\LogEntryAssemblerInterface;
+use Logging\Application\Contract\LoggerInterface;
+use Logging\Domain\Security\LogSecurity;
+use Logging\Domain\Security\Sanitizer;
+use Logging\Domain\Security\Validator;
+use Logging\Application\LoggingFacade;
 use Logging\Infrastructure\LogFileWriter;
 use Logging\Infrastructure\LogFilePathResolver;
 use Logging\Infrastructure\LogLineFormatter;
 use Logging\Infrastructure\Logger;
 use Logging\Infrastructure\LogEntryAssembler;
 use Logging\Infrastructure\PsrLoggerAdapter;
-use Logging\Application\Contract\LoggerInterface;
-use Logging\Application\Contract\LogEntryAssemblerInterface;
-use Logging\Application\Contract\PsrLoggerInterface;
-use Logging\Application\LoggingFacade;
-use Logging\Domain\Security\Sanitizer;
-use Logging\Domain\Security\Validator;
-use PublicContracts\Logging\AssemblerConfigInterface;
-use PublicContracts\Logging\LoggingFacadeInterface;
-use PublicContracts\Logging\SanitizationConfigInterface;
-use PublicContracts\Logging\ValidationConfigInterface;
 
 /**
  * LoggingKernel
@@ -36,13 +37,14 @@ use PublicContracts\Logging\ValidationConfigInterface;
  *   $logger = $kernel->logger();
  *   $facade = $kernel->logger();
  */
-final class LoggingKernel
+final class LoggingKernel implements LoggingKernelInterface
 {
+    // Config
     private readonly string $baseLogPath;
     private readonly SanitizationConfigInterface $sanitizationConfig;
     private readonly ValidationConfigInterface $validationConfig;
     private readonly AssemblerConfigInterface $assemblerConfig;
-
+    // Components
     private readonly LogSecurityInterface $security;
     private readonly LogEntryAssemblerInterface $assembler;
     private readonly LoggerInterface $logger;
@@ -53,20 +55,12 @@ final class LoggingKernel
     private readonly LogLineFormatter $formatter;
 
     /**
-     * @param LoggingConfig $config
+     * @param LoggingConfigInterface $config
      */
-    public function __construct(LoggingConfig $config)
+    public function __construct(LoggingConfigInterface $config)
     {
         $this->bootConfig($config);
-
-        $this->security     = $this->createSecurity();
-        $this->assembler    = $this->createAssembler();
-        $this->pathResolver = new LogFilePathResolver($this->baseLogPath);
-        $this->writer       = new LogFileWriter();
-        $this->formatter    = new LogLineFormatter();
-        $this->logger       = $this->createLogger();
-        $this->adapter      = $this->createAdapter();
-        $this->facade       = $this->createFacade();
+        $this->bootComponents();
     }
 
     public function logger(): LoggingFacadeInterface
@@ -79,22 +73,24 @@ final class LoggingKernel
         return $this->adapter;
     }
 
-    public function entryAssembler(): LogEntryAssemblerInterface
-    {
-        return $this->assembler;
-    }
-
-    public function rawLogger(): LoggerInterface
-    {
-        return $this->logger;
-    }
-
-    private function bootConfig(LoggingConfig $config): void
+    private function bootConfig(LoggingConfigInterface $config): void
     {
         $this->baseLogPath   = $config->baseLogPath();
         $this->sanitizationConfig = $config->sanitizationConfig();
         $this->validationConfig = $config->validationConfig();
         $this->assemblerConfig = $config->assemblerConfig();
+    }
+
+    private function bootComponents(): void
+    {
+        $this->security     = $this->createSecurity();
+        $this->assembler    = $this->createAssembler();
+        $this->pathResolver = new LogFilePathResolver($this->baseLogPath);
+        $this->writer       = new LogFileWriter();
+        $this->formatter    = new LogLineFormatter();
+        $this->logger       = $this->createLogger();
+        $this->adapter      = $this->createAdapter();
+        $this->facade       = $this->createFacade();
     }
 
     private function createSecurity(): LogSecurityInterface

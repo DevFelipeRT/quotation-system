@@ -7,15 +7,15 @@ namespace Logging\Infrastructure;
 use Logging\Application\Contract\LogEntryAssemblerInterface;
 use Logging\Domain\Exception\InvalidLogLevelException;
 use Logging\Domain\Security\Contract\LogSecurityInterface;
-use PublicContracts\Logging\LoggableInputInterface;
 use Logging\Domain\ValueObject\Contract\LogEntryInterface;
+use Logging\Domain\ValueObject\Contract\LoggableInputInterface;
 use Logging\Domain\ValueObject\LogEntry;
 use Logging\Domain\ValueObject\LogLevel;
 use Logging\Domain\ValueObject\LogMessage;
 use Logging\Domain\ValueObject\LogContext;
 use Logging\Domain\ValueObject\LogChannel;
 use Logging\Infrastructure\Exception\LogEntryAssemblyException;
-use PublicContracts\Logging\AssemblerConfigInterface;
+use PublicContracts\Logging\Config\AssemblerConfigInterface;
 
 /**
  * LogEntryAssembler
