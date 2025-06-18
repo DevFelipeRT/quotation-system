@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Logging\Application\Contract;
+namespace PublicContracts\Logging;
 
 use Stringable;
 
@@ -58,8 +58,8 @@ interface PsrLoggerInterface
     /**
      * Logs with an arbitrary level.
      *
-     * @param string $level
-     * @param string|Stringable $message
+     * @param string               $level
+     * @param string|Stringable    $message
      * @param array<string, mixed> $context
      *
      * @throws \InvalidArgumentException

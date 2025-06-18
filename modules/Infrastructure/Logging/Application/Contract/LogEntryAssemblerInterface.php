@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Logging\Application\Contract;
 
 use Logging\Domain\ValueObject\Contract\LogEntryInterface;
-use PublicContracts\Logging\LoggableInputInterface;
+use Logging\Domain\ValueObject\Contract\LoggableInputInterface;
 
 /**
  * Defines the contract for assembling LogEntry objects from loggable inputs.

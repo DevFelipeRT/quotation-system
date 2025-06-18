@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace PublicContracts\Logging;
 
-use PublicContracts\Logging\LoggableInputInterface;
 use Stringable;
 
 /**
@@ -17,17 +16,26 @@ interface LoggingFacadeInterface
 {
     /**
      * Assembles and logs from a generic loggable input (application usage).
+     * 
+     * @param string|Stringable     $message The message, possibly with placeholders
+     * @param string                $level   The log level (e.g., 'error', 'info'). May be null.
+     * @param array<string, mixed>  $context Context data for interpolation and structured logging. May be null.
+     * @param string|null           $channel Log channel/category. May be null.
      *
-     * @param LoggableInputInterface $input
      * @return void
      */
-    public function logInput(LoggableInputInterface $input): void;
+    public function logInput(
+        string|Stringable $message, 
+        ?string $level, 
+        ?string $channel,
+        ?array $context = [], 
+    ): void;
 
     /**
      * Logs a message with PSR-3 compatible arguments (adapter usage).
      *
-     * @param string $level    The log level (e.g., 'error', 'info')
-     * @param string|Stringable $message The message, possibly with placeholders
+     * @param string               $level   The log level (e.g., 'error', 'info')
+     * @param string|Stringable    $message The message, possibly with placeholders
      * @param array<string, mixed> $context Context data for interpolation and structured logging
      * @return void
      */

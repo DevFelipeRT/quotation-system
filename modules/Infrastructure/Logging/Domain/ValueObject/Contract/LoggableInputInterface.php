@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace PublicContracts\Logging;
+namespace Logging\Domain\ValueObject\Contract;
 
 use DateTimeImmutable;
 
