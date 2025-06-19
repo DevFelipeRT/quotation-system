@@ -14,6 +14,7 @@ enum AssemblerDefaultValues
     case DEFAULT_LEVEL;
     case DEFAULT_CONTEXT;
     case DEFAULT_CHANNEL;
+    case DEFAULT_MASK_TOKEN;
 
     /**
      * Returns the value associated with the enum case.
@@ -26,6 +27,7 @@ enum AssemblerDefaultValues
             self::DEFAULT_LEVEL   => 'info',
             self::DEFAULT_CONTEXT => [],
             self::DEFAULT_CHANNEL => 'application',
+            self::DEFAULT_MASK_TOKEN => '[SANITIZED_BY_CHANNEL]',
         };
     }
 }

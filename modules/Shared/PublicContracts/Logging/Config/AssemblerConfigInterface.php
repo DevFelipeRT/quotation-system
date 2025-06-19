@@ -38,4 +38,14 @@ interface AssemblerConfigInterface
      * @return string[]|null
      */
     public function customLogLevels(): ?array;
+
+    /**
+     * Returns the mask token to be applied when sanitizing a LogMessage value object
+     * in the context of a specific LogChannel.
+     *
+     * This token is used to replace it's content, ensuring messages are masked appropriately based on the channel.
+     *
+     * @return string|null The mask token for LogMessage sanitization by channel, or null for default.
+     */
+    public function maskToken(): ?string;
 }

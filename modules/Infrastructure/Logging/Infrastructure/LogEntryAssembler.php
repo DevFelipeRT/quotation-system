@@ -40,6 +40,9 @@ final class LogEntryAssembler implements LogEntryAssemblerInterface
     /** @var string[]|null */
     private readonly ?array $customLogLevels;
 
+    /** @var string|null */
+    private readonly ?string $maskToken;
+
     /**
      * @param LogSecurityInterface $security
      * @param AssemblerConfigInterface $config
@@ -53,6 +56,7 @@ final class LogEntryAssembler implements LogEntryAssemblerInterface
         $this->defaultContext  = $config->defaultContext();
         $this->defaultChannel  = $config->defaultChannel();
         $this->customLogLevels = $config->customLogLevels();
+        $this->maskToken       = $config->maskToken();
     }
 
     /**
@@ -89,7 +93,7 @@ final class LogEntryAssembler implements LogEntryAssemblerInterface
      *
      * @param LoggableInputInterface $input
      * @return LogLevel
-     * @throws \Logging\Domain\Exception\InvalidLogLevelException Se não for possível criar nem mesmo com fallback
+     * @throws InvalidLogLevelException
      */
     private function buildLogLevel(LoggableInputInterface $input): LogLevel
     {
@@ -114,12 +118,20 @@ final class LogEntryAssembler implements LogEntryAssemblerInterface
     }
 
     /**
-     * Instantiates the LogMessage value object. No fallback: must always be present.
+     * Instantiates the LogMessage value object using a message sanitized in the context of the input channel.
+     *
+     * The message is sanitized according to both its own content and the associated channel, ensuring
+     * that sensitive information is not exposed even if channel and message values are related.
+     * No fallback is applied: a valid message must be present in the input.
+     *
+     * @param LoggableInputInterface $input
+     * @return LogMessage
      */
     private function buildLogMessage(LoggableInputInterface $input): LogMessage
     {
+        $message = $this->sanitizeMassageByChannel($input);
         return new LogMessage(
-            $input->getMessage(),
+            $message,
             $this->security
         );
     }
@@ -153,4 +165,22 @@ final class LogEntryAssembler implements LogEntryAssemblerInterface
             $this->security
         );
     }
+
+    /**
+     * Sanitizes the log message in the context of its channel using the security policy.
+     *
+     * This method ensures that the message is sanitized based on the associated channel,
+     * preventing exposure of sensitive information when the channel indicates a confidential context.
+     *
+     * @param LoggableInputInterface $input
+     * @return string Sanitized message safe for logging.
+     */
+    private function sanitizeMassageByChannel(LoggableInputInterface $input): string
+    {
+        $channel = $input->getChannel() ?? '';
+        $message = $input->getMessage();
+        $sanitizedArray = $this->security->sanitize([$channel => $message], $this->maskToken);
+        return array_values($sanitizedArray)[0];
+    }
+
 }

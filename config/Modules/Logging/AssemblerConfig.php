@@ -15,15 +15,17 @@ use PublicContracts\Logging\Config\AssemblerConfigInterface;
 final class AssemblerConfig implements AssemblerConfigInterface
 {
     private readonly ?string $defaultLevel;
-    private readonly ?array $defaultContext;
+    private readonly ?array  $defaultContext;
     private readonly ?string $defaultChannel;
-    private readonly ?array $customLogLevels;
+    private readonly ?string $maskToken;
+    private readonly ?array  $customLogLevels;
 
     public function __construct()
     {
         $this->defaultLevel    = AssemblerDefaultValues::DEFAULT_LEVEL->getValue();
         $this->defaultContext  = AssemblerDefaultValues::DEFAULT_CONTEXT->getValue();
         $this->defaultChannel  = AssemblerDefaultValues::DEFAULT_CHANNEL->getValue();
+        $this->maskToken       = AssemblerDefaultValues::DEFAULT_MASK_TOKEN->getValue();
         $this->customLogLevels = CustomLogLevels::list();
     }
 
@@ -45,5 +47,10 @@ final class AssemblerConfig implements AssemblerConfigInterface
     public function customLogLevels(): ?array
     {
         return $this->customLogLevels;
+    }
+
+    public function maskToken(): ?string
+    {
+        return $this->maskToken;
     }
 }
