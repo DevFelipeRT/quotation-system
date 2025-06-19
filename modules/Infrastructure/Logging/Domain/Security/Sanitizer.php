@@ -97,7 +97,8 @@ final class Sanitizer implements SanitizerInterface
                 return $mask;
             }
             if ($sanitized === $mask) {
-                return '[MASKED_ORIGINAL_VALUE]';
+                $unwrapped = str_replace(['[', ']'], '', $maskToken);
+                return "[{$unwrapped}_ORIGINAL_VALUE]";
             }
             return $sanitized;
         }
@@ -196,7 +197,8 @@ final class Sanitizer implements SanitizerInterface
                 continue;
             }
             if ($value === $maskToken) {
-                $sanitized[$key] = '[MASKED_ORIGINAL_VALUE]';
+                $unwrapped = str_replace(['[', ']'], '', $maskToken);
+                $sanitized[$key] = "[{$unwrapped}_ORIGINAL_VALUE]";
                 continue;
             }
             $sanitized[$key] = $value;
@@ -276,11 +278,10 @@ final class Sanitizer implements SanitizerInterface
             throw InvalidLogSanitizerConfigException::forMaskToken($maskToken);
         }
 
-        // Remove brackets if already present
+        // Normalization
         $unwrapped = preg_replace('/^\[([^\[\]]*)\]$/', '$1', $clean);
         $unwrapped = str_replace(['[', ']'], '', $unwrapped);
         $final = '[' . mb_strtoupper($unwrapped) . ']';
         return $final;
     }
-
 }

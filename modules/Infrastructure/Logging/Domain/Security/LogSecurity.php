@@ -57,7 +57,7 @@ final class LogSecurity implements LogSecurityInterface
      */
     public function sanitize(mixed $input, ?string $maskToken = null): mixed
     {
-        return $this->sanitizer->sanitize($input);
+        return $this->sanitizer->sanitize($input, $maskToken);
     }
 
     /**
