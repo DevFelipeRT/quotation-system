@@ -114,7 +114,7 @@ final class LoggingTest extends IntegrationTestHelper
                 'testing loggable input',
                 'debug',
                 ['password' => '1232dfsw'],
-                'channel'
+                'password'
             );
         } catch (\Throwable $e) {
             $this->handleException($e);
