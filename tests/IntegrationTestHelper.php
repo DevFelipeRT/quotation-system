@@ -14,6 +14,7 @@ use Config\ConfigProvider;
  */
 class IntegrationTestHelper
 {
+    use TestAssertionTools;
     use IntegrationTestPrinter {
         IntegrationTestPrinter::printErrors as printErrorsFromTrait;
     }
@@ -22,6 +23,7 @@ class IntegrationTestHelper
     public ?ConfigProvider $configProvider = null;
     public array $testResults = [];
     public array $testErrors = [];
+    public int $stepCounter = 1;
 
     /**
      * Initializes the test session and prepares the environment.
@@ -54,15 +56,6 @@ class IntegrationTestHelper
         }
     }
 
-    public function runTestSafely(callable $testMethod): void
-    {
-        try {
-            call_user_func($testMethod);
-        } catch (\Throwable $e) {
-            $this->handleException($e);
-        }
-    }
-
     /**
      * Registers an exception for error reporting.
      *
@@ -83,7 +76,6 @@ class IntegrationTestHelper
     {
         $this->testResults[] = ['description' => $description, 'result' => $result];
         $status = $result ? 'OK' : 'FAIL';
-        $this->printStatus($description, $status);
     }
 
     /**
@@ -105,73 +97,85 @@ class IntegrationTestHelper
         echo "</pre>";
     }
 
-    // -------------- Assertion Methods --------------
-
-    /**
-     * Asserts that a value is not null.
-     */
-    protected function assertNotNull($actual, string $message = ''): void
+    public function runTests(string $title, array $tests = [], int $indentLevel = 0): void
     {
-        $description = $message !== '' ? $message : 'Assert value is not null.';
-        $result = $actual !== null;
-        $this->saveResult($description, $result);
+        $this->printStatus("Starting {$title} tests.", 'RUN', null, $indentLevel);
+        ++$indentLevel;
+
+        $this->startStep();
+        foreach ($tests as $test) {
+            $this->{$test}($indentLevel, $this->getStep());
+        }
+
+        --$indentLevel;
+        $this->printStatus("All {$title} tests finished.", 'END', null, $indentLevel);
     }
 
-    /**
-     * Asserts that a value is true.
-     */
-    protected function assertTrue($actual, string $message = ''): void
+    public function runSteps(string $title, array $tests = [], int $indentLevel = 0): void
     {
-        $description = $message !== '' ? $message : 'Assert value is true.';
-        $result = $actual === true;
-        $this->saveResult($description, $result);
+        $this->printStatus("Starting {$title} tests.", 'RUN', null, $indentLevel);
+        ++$indentLevel;
+
+        $this->startStep();
+
+        foreach ($tests as $key => $test) {
+            if (is_string($key) && is_string($test)) {
+                $stepTitle = $key;
+                $callable = [$this, $test];
+                $params = [];
+            } elseif (is_string($test)) {
+                $stepTitle = $test;
+                $callable = [$this, $test];
+                $params = [];
+            } elseif (is_array($test) && isset($test['method'])) {
+                $stepTitle = $test['title'] ?? $test['method'];
+                $callable = [$this, $test['method']];
+                $params = $test['params'] ?? [];
+            } else {
+                throw new \InvalidArgumentException('Invalid test definition');
+            }
+
+            $step = $this->getStep();
+
+            $this->runStep($stepTitle, $callable, $params, $indentLevel, $step);
+        }
+
+        --$indentLevel;
+        $this->printStatus("All {$title} tests finished.", 'END', null, $indentLevel);
     }
 
-    /**
-     * Asserts that a value is false.
-     */
-    protected function assertFalse($actual, string $message = ''): void
+    public function runStep(string $title, callable $test, array $params = [], int $indentLevel = 0, ?string $step = null): void
     {
-        $description = $message !== '' ? $message : 'Assert value is false.';
-        $result = $actual === false;
-        $this->saveResult($description, $result);
+        $this->printStatus("Testing {$title}.", 'STEP', $step, $indentLevel);
+        
+        try {
+            $output = $test(...$params);
+
+            if ($output !== null) {
+                ++$indentLevel;
+                $this->printOutput($output, $indentLevel);
+                --$indentLevel;
+            }
+
+            $this->printStatus("{$title} test succeeded.", 'OK', null, $indentLevel);
+            $this->saveResult("{$title} test.", true);
+        } catch (\Throwable $e) {
+            $this->printStatus("{$title} test failed.", 'ERROR', null, $indentLevel);
+            $this->saveResult("{$title} test.", false);
+            $this->handleException($e);
+        }
     }
 
-    /**
-     * Asserts that two values are equal (==).
-     */
-    protected function assertEquals($expected, $actual, string $message = ''): void
+    // -------------- Helper Methods --------------
+
+    protected function startStep(int $startStep = 1): string
     {
-        $description = $message !== '' ? $message : 'Assert equality.';
-        $result = $expected == $actual;
-        $this->saveResult($description, $result);
+        $this->stepCounter = $startStep;
+        return (string)$this->stepCounter;
     }
 
-    /**
-     * Asserts that a string contains a substring.
-     */
-    protected function assertStringContains(string $needle, string $haystack, string $message = ''): void
+    protected function getStep(): string
     {
-        $description = $message !== '' ? $message : "Assert string contains '{$needle}'.";
-        $result = strpos($haystack, $needle) !== false;
-        $this->saveResult($description, $result);
-    }
-
-    /**
-     * Asserts that a variable is an instance of the given class/interface.
-     */
-    protected function assertInstanceOf(string $expected, $actual, string $message = ''): void
-    {
-        $description = $message !== '' ? $message : "Assert instance of {$expected}.";
-        $result = $actual instanceof $expected;
-        $this->saveResult($description, $result);
-    }
-
-    /**
-     * Asserts that a condition is true (alias for assertTrue).
-     */
-    protected function assert($condition, string $message = ''): void
-    {
-        $this->assertTrue($condition, $message);
+        return (string)$this->stepCounter++;
     }
 }

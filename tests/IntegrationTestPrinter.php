@@ -73,7 +73,6 @@ trait IntegrationTestPrinter
         }
         foreach ($testErrors as $e) {
             $this->printStatus("Exception occurred: " . get_class($e), 'ERROR_DETAIL');
-            $this->printContext($e);
 
             echo "    [Message] {$e->getMessage()}" . PHP_EOL;
             echo "    [File] {$e->getFile()}:{$e->getLine()}" . PHP_EOL;
@@ -134,21 +133,81 @@ trait IntegrationTestPrinter
         echo $indentation . $text;
     }
 
-    /**
-     * Prints additional context if present on the exception.
-     *
-     * @param \Throwable $e
-     * @return void
-     */
-    private function printContext(\Throwable $e): void
-    {
-        if (property_exists($e, 'context') && !empty($e->context)) {
-            echo "    [Context] ";
-            $parts = [];
-            foreach ($e->context as $key => $value) {
-                $parts[] = "{$key}: {$value}";
+    public function printOutput(
+        $value,
+        ?int $indentLevel = 0,
+        string $status = 'OUTPUT',
+        ?string $stepNumber = null,
+        int $maxLine = 100
+    ): void {
+        ob_start();
+        var_dump($value);
+        $raw = rtrim(ob_get_clean(), "\r\n");
+
+        // Define prefixos e larguras
+        $statusTag    = strtoupper($status);
+        $statusText   = ($status === 'STEP' && $stepNumber) ? "$statusTag $stepNumber" : $statusTag;
+        $firstPrefix  = "[$statusText] | ";
+        $otherPrefix  = str_repeat(' ', strlen($firstPrefix) - 2) . "| ";
+        $spacesPerLevel = 2;
+
+        $lines = explode("\n", $raw);
+
+        // 1. Wrap manual, já considerando prefixo de cada linha!
+        $wrapped = [];
+        foreach ($lines as $lineIdx => $logicalLine) {
+            $isFirstOfBlock = true;
+            $str = $logicalLine;
+            while (mb_strlen($str) > 0) {
+                $prefix = ($lineIdx === 0 && $isFirstOfBlock) ? $firstPrefix : $otherPrefix;
+                $width = $maxLine - ($indentLevel * $spacesPerLevel) - strlen($prefix);
+                if ($width < 10) { // proteção para larguras absurdas
+                    $width = 10;
+                }
+                if (mb_strlen($str) > $width) {
+                    // Quebra preferencial em espaço antes do limite
+                    $breakAt = mb_strrpos(mb_substr($str, 0, $width), ' ');
+                    if ($breakAt === false || $breakAt < 1) {
+                        $breakAt = $width;
+                    }
+                    $wrapped[] = [$prefix, mb_substr($str, 0, $breakAt)];
+                    $str = ltrim(mb_substr($str, $breakAt));
+                    $isFirstOfBlock = false;
+                } else {
+                    $wrapped[] = [$prefix, $str];
+                    break;
+                }
             }
-            echo implode(', ', $parts) . PHP_EOL;
+        }
+
+        // 2. Pós-processamento para evitar fecho isolado
+        $closing = ['"', "'", '}', ']', ')'];
+        $final = [];
+        $i = 0;
+        while ($i < count($wrapped)) {
+            [$prefix, $line] = $wrapped[$i];
+            // Se não é a última linha, e a próxima é só fechamento
+            if (
+                isset($wrapped[$i + 1]) &&
+                mb_strlen(trim($wrapped[$i + 1][1])) === 1 &&
+                in_array(trim($wrapped[$i + 1][1]), $closing, true)
+            ) {
+                $joined = rtrim($line) . trim($wrapped[$i + 1][1]);
+                // Se cabe junto na linha, faça merge
+                $width = $maxLine - ($indentLevel * $spacesPerLevel) - strlen($prefix);
+                if (mb_strlen($joined) <= $width) {
+                    $final[] = [$prefix, $joined];
+                    $i += 2;
+                    continue;
+                }
+            }
+            $final[] = [$prefix, $line];
+            $i++;
+        }
+
+        // 3. Imprimir
+        foreach ($final as [$prefix, $outLine]) {
+            $this->printIndented($prefix . $outLine . PHP_EOL, $indentLevel, $spacesPerLevel);
         }
     }
 }
