@@ -27,6 +27,7 @@ use Logging\Infrastructure\LogFileWriter;
 use Logging\Infrastructure\Logger;
 use Logging\Infrastructure\LogLineFormatter;
 use DateTimeImmutable;
+use Logging\Domain\ValueObject\LogEntry;
 
 final class LoggingTest extends IntegrationTestHelper
 {
@@ -35,7 +36,11 @@ final class LoggingTest extends IntegrationTestHelper
     private string $testLogDir;
     private ?string $resolvedPath = null;
     private ?string $formattedLogLine = null;
+    private ?array $logFilePathCollection = null;
+    private ?array $logLineCollection = null;
     // Value Objects
+    private ?array $loggableInputCollection = null;
+    private ?array $logEntryCollection = null;
     private ?LoggableInputInterface $loggableInput = null;
     private ?LogEntryInterface $logEntry = null;
     // Components
@@ -59,154 +64,281 @@ final class LoggingTest extends IntegrationTestHelper
         $this->cleanupLogs();
     }
 
-    public function run(): void
+    public function run(int $indentLevel = 0)
     {
-        $this->printStatus('Starting Logging Module tests.', 'RUN');
-
-        $this->runVOsTest();
-        $this->runComponentsTest();
-        $this->runKernelTest();
-
-        $this->printStatus("All Logging tests finished.", 'END');
+        $this->runTests(
+            'Logging Module',
+            [
+                'runVOsTest',
+                'runComponentsTest',
+                'runKernelTest',
+            ],
+            $indentLevel
+        );
         $this->finalResult();
     }
 
-    public function runVOsTest(): void
+    public function runVOsTest(int $indentLevel = 0)
     {
-        $this->printStatus('Starting Logging Module value objects tests.', 'RUN');
-
-        $this->testLoggableInput();
-
-        $this->printStatus("All Logging value objects tests finished.", 'END');
+        $this->runTests(
+            'Logging Module Value Objects',
+            [
+                'runLoggableInputTest'
+            ],
+            $indentLevel
+        );
     }
 
-    public function runComponentsTest(): void
+    public function runComponentsTest(int $indentLevel = 0)
     {
-        $this->printStatus('Starting Logging Module components tests.', 'RUN');
-
-        $this->testLogSecurity();
-        $this->testLogEntryAssembler();
-        $this->testLogFilePathResolver();
-        $this->testLogLineFormatter();
-        $this->testLogWriter();
-        $this->testLogger();
-
-        $this->printStatus("All Logging components tests finished.", 'END');
+        $this->runTests(
+            'Logging Module Components',
+            [
+                'runLogSecurityTest',
+            ],
+            $indentLevel
+        );
+        $this->runSteps(
+            'Components',
+            [
+                'LogEntryAssembler' => 'testLogEntryAssembler',
+                'LogFilePathResolver' => 'testLogFilePathResolver',
+                'LogLineFormatter' => 'testLogLineFormatter',
+                'LogWriter' => 'testLogWriter',
+                'Logger' => 'testLogger',
+            ],
+            $indentLevel
+        );
     }
     
-    public function runKernelTest(): void
+    public function runKernelTest(int $indentLevel = 0)
     {
-        $this->printStatus('Starting Logging Module kernel tests.', 'RUN');
-
-        $this->testKernelCreation();
-        $this->testKernelObjectsRetrieval();
-        $this->testBasicLogWrite();
-
-        $this->printStatus("All Logging kernel tests finished.", 'END');
+        $this->runSteps(
+            'Logging Module Kernel',
+            [
+                'Kernel Instantiation' => 'testKernelCreation',
+                'Kernel Objects Retrieval' => 'testKernelObjectsRetrieval',
+                'Log Writing from Kernel Objects' => 'testBasicLogWrite',
+            ],
+            $indentLevel
+        );
     }
 
-    // Public Value Object test
+    // ---------- Value Object Tests -----------
 
-    private function testLoggableInput(): void
+    //  LoggableInput
+    public function runLoggableInputTest(int $indentLevel = 0)
     {
-        try {
-            $this->loggableInput = new LoggableInput(
-                'testing loggable input',
-                'debug',
-                ['password' => '1232dfsw'],
-                'password'
+        $this->runSteps(
+            'Loggable Input value object intantiantion',
+            [
+                'Loggable Input basic intantiation' => 'testBasicLoggableInput',
+                'Loggable Input complete intantiation' => 'testCompleteLoggableInput',
+                'Loggable Input sensitive context intantiation' => 'testLoggableInputSensitiveContext',
+                'Loggable Input sensitive channel intantiation' => 'testLoggableInputSensitiveChannel',
+            ],
+            $indentLevel
+        );
+    }
+
+    public function testBasicLoggableInput()
+    {
+        $this->loggableInput = new LoggableInput('Testing Basic Loggable Input');
+        $this->loggableInputCollection['basicLoggableInput'] = $this->loggableInput;
+        //return $this->loggableInput;
+    }
+    
+    public function testCompleteLoggableInput()
+    {
+        $this->loggableInput = new LoggableInput(
+            'Testing Complete Loggable Input',
+            'info',
+            ['user' => 'tester'],
+            'channel',
+            new DateTimeImmutable()
+        );
+        $this->loggableInputCollection['completeLoggableInput'] = $this->loggableInput;
+        //return $this->loggableInput;
+    }
+
+    public function testLoggableInputSensitiveContext()
+    {
+        $this->loggableInput = new LoggableInput(
+            'Sensitive context data',
+            'info',
+            ['cpf' => '12345678900'],
+            'channel',
+            new DateTimeImmutable(),
+        );
+        $this->loggableInputCollection['loggableInputSensitiveContext'] = $this->loggableInput;
+        //return $this->loggableInput;
+    }
+
+    public function testLoggableInputSensitiveChannel()
+    {
+        $this->loggableInput = new LoggableInput(
+            'Sensitive channel data',
+            'info',
+            ['user' => 'tester'],
+            'password',
+            new DateTimeImmutable(),
+        );
+        $this->loggableInputCollection['loggableInputSensitiveChannel'] = $this->loggableInput;
+        //return $this->loggableInput;
+    }
+
+    // ---------- Components Tests ----------
+    
+    // Security Component
+    public function runLogSecurityTest(int $indentLevel = 0)
+    {
+        $this->runSteps(
+            'Log Security Component',
+            [
+                'Security Validator' => 'testValidator',
+                'Security Sanitizer' => 'testSanitizer',
+                'Security LogSecurity' => 'testLogSecurity',
+            ],
+            $indentLevel
+        );
+    }
+
+    public function testValidator()
+    {
+        $this->validator = new Validator($this->config->validationConfig());
+        //return $this->validator;
+    }
+
+    public function testSanitizer()
+    {
+        $this->sanitizer = new Sanitizer($this->config->sanitizationConfig());
+        //return $this->sanitizer;
+    }
+
+    public function testLogSecurity()
+    {
+        $this->security = new LogSecurity($this->validator, $this->sanitizer);
+        //return $this->security;
+    }
+
+    // Components
+
+    public function testLogEntryAssembler()
+    {
+        $this->assembler = new LogEntryAssembler($this->security, $this->config->assemblerConfig());
+
+        foreach ($this->loggableInputCollection as $key => $value) {
+            $this->logEntryCollection[$key] = $this->assembler->assembleFromInput($value);
+        }
+
+        $output = [];
+        foreach ($this->logEntryCollection as $key => $object) {
+            $output[$key] = $this->assertInstanceOf(
+                LogEntry::class, $object,
+                "Should return a LogEntry instance for {$key}."
             );
-        } catch (\Throwable $e) {
-            $this->handleException($e);
         }
+        return $output;
     }
 
-    // Components Method
-
-    private function testLogSecurity(): void
+    public function testLogFilePathResolver()
     {
-        try {
-            $this->validator = new Validator($this->config->validationConfig());
-            $this->sanitizer = new Sanitizer($this->config->sanitizationConfig());
-            $this->security = new LogSecurity($this->validator, $this->sanitizer);
-        } catch (\Throwable $e) {
-            $this->handleException($e);
-        }
-    }
+        $this->pathResolver = new LogFilePathResolver($this->testLogDir);
 
-    private function testLogEntryAssembler(): void
-    {
-        try {
-            $this->assembler = new LogEntryAssembler($this->security, $this->config->assemblerConfig());
-            $this->logEntry = $this->assembler->assembleFromInput($this->loggableInput);
-        } catch (\Throwable $e) {
-            $this->handleException($e);
+        foreach ($this->logEntryCollection as $key => $value) {
+            $this->logFilePathCollection[$key] =  $this->pathResolver->resolve($value);
         }
-    }
 
-    private function testLogFilePathResolver(): void
-    {
-        try {
-            $this->pathResolver = new LogFilePathResolver($this->testLogDir);
-            $this->resolvedPath = $this->pathResolver->resolve($this->logEntry);
-        } catch (\Throwable $e) {
-            $this->handleException($e);
+        $output = [];
+        foreach ($this->logFilePathCollection as $key => $value) {
+            $output[$key] = $this->assertIsString($value, "Should return a string path for {$key}.") . " $value";
         }
-    }    
+
+        return $output;
+    }   
     
-    private function testLogLineFormatter(): void
+    public function testLogLineFormatter()
     {
-        try {
-            $this->lineFormatter = new LogLineFormatter();
-            $this-> formattedLogLine = $this->lineFormatter->format($this->logEntry);
-            echo "{$this-> formattedLogLine}";
-        } catch (\Throwable $e) {
-            $this->handleException($e);
+        $this->lineFormatter = new LogLineFormatter();
+        
+        foreach ($this->logEntryCollection as $key => $value) {
+            $this->logLineCollection[$key] = $this->lineFormatter->format($value);
         }
+        
+        $output = [];
+        foreach ($this->logLineCollection as $key => $value) {
+            $output[$key] = $this->assertIsString($value, "Should return a string log line for {$key}.") . " $value";
+        }
+
+        return $output;
     }
 
-    private function testLogWriter(): void
+    public function testLogWriter()
     {
-        try {
-            $this->fileWriter = new LogFileWriter();
-            $this->fileWriter->write($this->resolvedPath, $this-> formattedLogLine);
-        } catch (\Throwable $e) {
-            $this->handleException($e);
+        $this->fileWriter = new LogFileWriter();
+        
+        $array = array_combine($this->logFilePathCollection, $this->logLineCollection);
+        $output = [];
+        foreach ($array as $key => $value) {
+            $this->fileWriter->write($key, $value);
+            if (file_exists($key)) {
+                $position = array_search($value, array_values($array)) + 1;
+                $output[] = $this->assertTrue(file_exists($key), "Log file $position was created");
+                $contents = file_get_contents($key);
+                $output[] = $this->assertStringContains($value, $contents, 'Log file contains the log content.');
+            } else {
+                $output[] = $this->assertTrue(false, 'Log file was created');
+                $this->saveResult('Cannot check log contents: file not found.', false);
+            }
         }
+
+        return $output;
     }
 
     // Infrastructure Service Method
 
-    private function testLogger(): void
+    public function testLogger()
     {
-        try {
-            $this->logger = new Logger(
-                $this->pathResolver,
-                $this->lineFormatter,
-                $this->fileWriter
+        $this->logger = new Logger(
+            $this->pathResolver,
+            $this->lineFormatter,
+            $this->fileWriter
 
-            );
-            $this->logger->log($this->logEntry);
-        } catch (\Throwable $e) {
-            $this->handleException($e);
+        );
+
+        $array = array_combine($this->logFilePathCollection, $this->logEntryCollection);
+        $output = [];
+        foreach ($array as $key => $value) {
+            $this->logger->log($value);
+
+            if (file_exists($key)) {
+                $position = array_search($value, array_values($array)) + 1;
+                $output[] = $this->assertTrue(file_exists($key), "Log file $position was created");
+                $contents = file_get_contents($key);
+                $output[] = $this->assertStringContains($this->lineFormatter->format($value), $contents, 'Log file contains the log content.');
+            } else {
+                $output[] = $this->assertTrue(false, 'Log file was created');
+                $this->saveResult('Cannot check log contents: file not found.', false);
+            }
         }
+
+        return $output;
     }
 
     // Kernel Method
 
-    private function testKernelCreation(): void
+    public function testKernelCreation()
     {
         $this->kernel = new LoggingKernel($this->config);
-        $this->assertNotNull($this->kernel, 'Kernel instantiation');
     }
 
-    private function testKernelObjectsRetrieval(): void
+    public function testKernelObjectsRetrieval()
     {
         $this->facade = $this->kernel->logger();
-        $this->assertInstanceOf(LoggingFacadeInterface::class, $this->facade, 'Facade retrieval');
+        $this->assertInstanceOf(LoggingFacadeInterface::class, $this->facade, 'Kernel Facade retrieval');
     }
 
-    private function testBasicLogWrite(): void
+    public function testBasicLogWrite()
     {
         $facade = $this->facade;
         $level = 'info';
@@ -219,14 +351,12 @@ final class LoggingTest extends IntegrationTestHelper
 
         $expectedFile = $this->testLogDir . DIRECTORY_SEPARATOR . 'application' . DIRECTORY_SEPARATOR . $level . '.log';
 
-        var_dump($expectedFile);
-
         if (file_exists($expectedFile)) {
-        $this->assertTrue(file_exists($expectedFile), 'Log file was created');
-        $contents = file_get_contents($expectedFile);
-        $this->assertStringContains($message, $contents, 'Log file contains the message');
-        $this->assertStringContains('user', $contents, 'Log file contains the context key');
-        $this->assertStringContains((string)$now->format('Y'), $contents, 'Log file contains the timestamp');
+            $this->assertTrue(file_exists($expectedFile), 'Log file was created');
+            $contents = file_get_contents($expectedFile);
+            $this->assertStringContains($message, $contents, 'Log file contains the message');
+            $this->assertStringContains('user', $contents, 'Log file contains the context key');
+            $this->assertStringContains((string)$now->format('Y'), $contents, 'Log file contains the timestamp');
         } else {
             $this->assertTrue(false, 'Log file was created');
             $this->saveResult('Cannot check log contents: file not found.', false);
@@ -235,14 +365,14 @@ final class LoggingTest extends IntegrationTestHelper
 
     // Helper Methods
 
-    private function cleanupLogs(): void
+    private function cleanupLogs()
     {
         if (is_dir($this->testLogDir)) {
             $this->deleteDir($this->testLogDir);
         }
     }
 
-    private function deleteDir(string $dir): void
+    private function deleteDir(string $dir)
     {
         if (!is_dir($dir)) {
             return;
