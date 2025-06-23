@@ -129,7 +129,7 @@ final class LogEntryAssembler implements LogEntryAssemblerInterface
      */
     private function buildLogMessage(LoggableInputInterface $input): LogMessage
     {
-        $message = $this->sanitizeMassageByChannel($input);
+        $message = $this->sanitizeMessageByChannel($input);
         return new LogMessage(
             $message,
             $this->security
@@ -167,20 +167,24 @@ final class LogEntryAssembler implements LogEntryAssemblerInterface
     }
 
     /**
-     * Sanitizes the log message in the context of its channel using the security policy.
+     * Sanitizes the log message based on the sensitivity of its channel.
      *
-     * This method ensures that the message is sanitized based on the associated channel,
-     * preventing exposure of sensitive information when the channel indicates a confidential context.
+     * If the channel is considered sensitive according to the security policy,
+     * the message will be replaced with the mask token, preventing exposure of
+     * confidential information. Otherwise, the original message is returned.
      *
      * @param LoggableInputInterface $input
      * @return string Sanitized message safe for logging.
      */
-    private function sanitizeMassageByChannel(LoggableInputInterface $input): string
+    private function sanitizeMessageByChannel(LoggableInputInterface $input): string
     {
-        $channel = $input->getChannel() ?? '';
-        $message = $input->getMessage();
-        $sanitizedArray = $this->security->sanitize([$channel => $message], $this->maskToken);
-        return array_values($sanitizedArray)[0];
+        $channel = $input->getChannel() ?? $this->defaultChannel;
+
+        if ($this->security->isSensitive($channel)) {
+            return $this->maskToken;
+        }
+
+        return $input->getMessage();
     }
 
 }
