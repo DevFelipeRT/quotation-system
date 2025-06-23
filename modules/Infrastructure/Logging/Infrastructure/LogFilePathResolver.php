@@ -5,80 +5,74 @@ declare(strict_types=1);
 namespace Logging\Infrastructure;
 
 use Logging\Domain\ValueObject\Contract\LogEntryInterface;
-use InvalidArgumentException;
-use Logging\Infrastructure\Exception\InvalidLogBasePathException;
+use Logging\Domain\ValueObject\LogDirectory;
 
 /**
  * Responsible for resolving the absolute file path for a given log entry.
  *
- * Rule:
+ * Rules:
  *  - If a channel is present, the path is: <basePath>/<channel>/<level>.log
  *  - If no channel, the path is: <basePath>/<level>.log
  *  - This class does not create directories, it only computes the path.
  *
- * Example:
+ * Examples:
  *  - Channel: "auth", Level: "error" => "/var/log/app/auth/error.log"
  *  - No channel, Level: "info"       => "/var/log/app/info.log"
  *
- * Usage: Inject into FileLogger to abstract away the logic of file path construction.
+ * Usage: Inject into Logger to abstract away the logic of file path construction.
  */
 final class LogFilePathResolver
 {
     /**
-     * @var string Base directory for log files. Always with trailing separator.
+     * @var LogDirectory
      */
-    private string $basePath;
+    private LogDirectory $logDirectory;
 
     /**
-     * @param string $basePath Base directory where log files will be stored.
-     * @throws InvalidArgumentException if basePath is invalid.
+     * @param LogDirectory $logDirectory Immutable, validated base log directory.
      */
-    public function __construct(string $basePath)
+    public function __construct(LogDirectory $logDirectory)
     {
-        $this->basePath = $this->validateAndNormalizeBasePath($basePath);
-        //var_dump($this->basePath);
+        $this->logDirectory = $logDirectory;
     }
 
     /**
-     * Resolves the file path for the provided log entry.
+     * Resolves the absolute file path for the provided log entry.
      *
      * @param LogEntryInterface $entry
-     * @return string Absolute path to the target log file, following the naming convention.
+     * @return string Absolute, normalized path to the target log file.
      */
     public function resolve(LogEntryInterface $entry): string
     {
+        $basePath = $this->logDirectory->getPath();
         $level = $entry->getLevel()->value();
         $channelObj = $entry->getChannel();
 
         if ($channelObj !== null) {
             $channel = trim($channelObj->value(), "/\\");
-            return $this->basePath . $channel . DIRECTORY_SEPARATOR . $level . '.log';
+            $path = $basePath . DIRECTORY_SEPARATOR . $channel . DIRECTORY_SEPARATOR . $level . '.log';
+        } else {
+            $path = $basePath . DIRECTORY_SEPARATOR . $level . '.log';
         }
 
-        return $this->basePath . $level . '.log';
+        return $this->normalizePath($path);
     }
 
     /**
-     * Validates and normalizes the base path.
+     * Normalizes a filesystem path, collapsing redundant separators and removing trailing slashes,
+     * except for root. Ensures consistent usage of DIRECTORY_SEPARATOR.
      *
      * @param string $path
      * @return string
-     * @throws InvalidArgumentException if invalid.
      */
-    private function validateAndNormalizeBasePath(string $path): string
+    private function normalizePath(string $path): string
     {
-        $clean = trim($path);
+        $normalized = preg_replace('#[\\/\\\\]+#', DIRECTORY_SEPARATOR, $path);
 
-        if ($clean === '') {
-            throw InvalidLogBasePathException::empty();
-        }
-        if (preg_match('/[\x00-\x1F\x7F]/', $clean)) {
-            throw InvalidLogBasePathException::invalidCharacters();
-        }
-        if (preg_match('/\.log$/i', $clean)) {
-            throw InvalidLogBasePathException::notADirectory();
+        if (strlen($normalized) > 1) {
+            $normalized = rtrim($normalized, DIRECTORY_SEPARATOR);
         }
 
-        return rtrim($clean, '/\\') . DIRECTORY_SEPARATOR;
+        return $normalized;
     }
 }

@@ -18,6 +18,7 @@ use Logging\Domain\Security\LogSecurity;
 use Logging\Domain\Security\Sanitizer;
 use Logging\Domain\Security\Validator;
 use Logging\Application\LoggingFacade;
+use Logging\Domain\ValueObject\LogDirectory;
 use Logging\Infrastructure\LogFileWriter;
 use Logging\Infrastructure\LogFilePathResolver;
 use Logging\Infrastructure\LogLineFormatter;
@@ -40,11 +41,12 @@ use Logging\Infrastructure\PsrLoggerAdapter;
 final class LoggingKernel implements LoggingKernelInterface
 {
     // Config
-    private readonly string $baseLogPath;
+    private readonly string $baseLogDirectory;
     private readonly SanitizationConfigInterface $sanitizationConfig;
     private readonly ValidationConfigInterface $validationConfig;
     private readonly AssemblerConfigInterface $assemblerConfig;
     // Components
+    private readonly LogDirectory $logDirectory;
     private readonly LogSecurityInterface $security;
     private readonly LogEntryAssemblerInterface $assembler;
     private readonly LoggerInterface $logger;
@@ -75,7 +77,7 @@ final class LoggingKernel implements LoggingKernelInterface
 
     private function bootConfig(LoggingConfigInterface $config): void
     {
-        $this->baseLogPath   = $config->baseLogPath();
+        $this->baseLogDirectory   = $config->baseLogDirectory();
         $this->sanitizationConfig = $config->sanitizationConfig();
         $this->validationConfig = $config->validationConfig();
         $this->assemblerConfig = $config->assemblerConfig();
@@ -84,8 +86,9 @@ final class LoggingKernel implements LoggingKernelInterface
     private function bootComponents(): void
     {
         $this->security     = $this->createSecurity();
+        $this->logDirectory = $this->createLogDirectory();
         $this->assembler    = $this->createAssembler();
-        $this->pathResolver = new LogFilePathResolver($this->baseLogPath);
+        $this->pathResolver = $this->createLogFilePathResolver();
         $this->writer       = new LogFileWriter();
         $this->formatter    = new LogLineFormatter();
         $this->logger       = $this->createLogger();
@@ -100,12 +103,22 @@ final class LoggingKernel implements LoggingKernelInterface
         return new LogSecurity($validator, $sanitizer);
     }
 
+    private function createLogDirectory(): LogDirectory
+    {
+        return new LogDirectory($this->baseLogDirectory, $this->security);
+    }
+
     private function createAssembler(): LogEntryAssemblerInterface
     {
         return new LogEntryAssembler(
             $this->security, 
             $this->assemblerConfig
         );
+    }
+
+    private function createLogFilePathResolver(): LogFilePathResolver
+    {
+        return new LogFilePathResolver($this->logDirectory);
     }
 
     private function createLogger(): LoggerInterface
