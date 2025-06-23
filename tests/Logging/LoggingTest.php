@@ -27,6 +27,7 @@ use Logging\Infrastructure\LogFileWriter;
 use Logging\Infrastructure\Logger;
 use Logging\Infrastructure\LogLineFormatter;
 use DateTimeImmutable;
+use Logging\Domain\ValueObject\LogDirectory;
 use Logging\Domain\ValueObject\LogEntry;
 
 final class LoggingTest extends IntegrationTestHelper
@@ -41,8 +42,8 @@ final class LoggingTest extends IntegrationTestHelper
     // Value Objects
     private ?array $loggableInputCollection = null;
     private ?array $logEntryCollection = null;
+    private ?LogDirectory $logDirectory = null;
     private ?LoggableInputInterface $loggableInput = null;
-    private ?LogEntryInterface $logEntry = null;
     // Components
     private ?ValidatorInterface $validator = null;
     private ?SanitizerInterface $sanitizer = null;
@@ -69,6 +70,7 @@ final class LoggingTest extends IntegrationTestHelper
         $this->runTests(
             'Logging Module',
             [
+                'runLogSecurityTest',
                 'runVOsTest',
                 'runComponentsTest',
                 'runKernelTest',
@@ -78,53 +80,82 @@ final class LoggingTest extends IntegrationTestHelper
         $this->finalResult();
     }
 
+    // ---------- Security Tests -----------
+
+    public function runLogSecurityTest(int $indentLevel = 0)
+    {
+        $this->runSteps(
+            'Log Security Component',
+            [
+                'Security Validator' => 'testValidator',
+                'Security Sanitizer' => 'testSanitizer',
+                'Security LogSecurity' => 'testLogSecurity',
+            ],
+            $indentLevel
+        );
+    }
+
+    public function testValidator()
+    {
+        $this->validator = new Validator($this->config->validationConfig());
+        //return $this->validator;
+    }
+
+    public function testSanitizer()
+    {
+        $this->sanitizer = new Sanitizer($this->config->sanitizationConfig());
+        return $this->sanitizer->sanitize(
+            'Sensitive data: Password: 12345678900. CPF: 12345678900. Channel: password.'
+        );
+    }
+
+    public function testLogSecurity()
+    {
+        $this->security = new LogSecurity($this->validator, $this->sanitizer);
+        //return $this->security;
+    }
+
+    // ---------- Value Object Tests -----------
+
     public function runVOsTest(int $indentLevel = 0)
     {
         $this->runTests(
             'Logging Module Value Objects',
             [
-                'runLoggableInputTest'
+                'LogDirectory' => 'runLogDirectoryTest',
+                'LoggableInput' => 'runLoggableInputTest',
             ],
             $indentLevel
         );
     }
 
-    public function runComponentsTest(int $indentLevel = 0)
+    // LogDirectory
+    public function runLogDirectoryTest(int $indentLevel = 0)
     {
-        $this->runTests(
-            'Logging Module Components',
-            [
-                'runLogSecurityTest',
-            ],
-            $indentLevel
-        );
         $this->runSteps(
-            'Components',
+            'Log Directory',
             [
-                'LogEntryAssembler' => 'testLogEntryAssembler',
-                'LogFilePathResolver' => 'testLogFilePathResolver',
-                'LogLineFormatter' => 'testLogLineFormatter',
-                'LogWriter' => 'testLogWriter',
-                'Logger' => 'testLogger',
+                'Log Directory Creation' => 'testLogDirectoryCreation',
+                'Log Directory Path' => 'testLogDirectoryPath',
             ],
             $indentLevel
         );
     }
     
-    public function runKernelTest(int $indentLevel = 0)
+    public function testLogDirectoryCreation()
     {
-        $this->runSteps(
-            'Logging Module Kernel',
-            [
-                'Kernel Instantiation' => 'testKernelCreation',
-                'Kernel Objects Retrieval' => 'testKernelObjectsRetrieval',
-                'Log Writing from Kernel Objects' => 'testBasicLogWrite',
-            ],
-            $indentLevel
-        );
+        $this->logDirectory = new LogDirectory($this->testLogDir, $this->security);
+        $this->assertInstanceOf(LogDirectory::class, $this->logDirectory, 'Log Directory instance created.');
+        $this->assertIsString($this->logDirectory->getPath(), 'Log Directory path created successfully.');
+        $this->assertTrue(is_dir($this->testLogDir), 'Test log directory exists after creation.');
+        return $this->logDirectory;
     }
-
-    // ---------- Value Object Tests -----------
+    
+    public function testLogDirectoryPath()
+    {
+        $this->assertIsString($this->logDirectory->getPath(), 'Log Directory path is a string.');
+        $this->assertTrue(is_dir($this->logDirectory->getPath()), 'Log Directory path is a valid directory.');
+    }
 
     //  LoggableInput
     public function runLoggableInputTest(int $indentLevel = 0)
@@ -134,6 +165,7 @@ final class LoggingTest extends IntegrationTestHelper
             [
                 'Loggable Input basic intantiation' => 'testBasicLoggableInput',
                 'Loggable Input complete intantiation' => 'testCompleteLoggableInput',
+                'Loggable Input sensitive message intantiation' => 'testLoggableInputSensitiveMessage',
                 'Loggable Input sensitive context intantiation' => 'testLoggableInputSensitiveContext',
                 'Loggable Input sensitive channel intantiation' => 'testLoggableInputSensitiveChannel',
             ],
@@ -152,12 +184,25 @@ final class LoggingTest extends IntegrationTestHelper
     {
         $this->loggableInput = new LoggableInput(
             'Testing Complete Loggable Input',
-            'info',
+            'debug',
             ['user' => 'tester'],
-            'channel',
+            'complete',
             new DateTimeImmutable()
         );
         $this->loggableInputCollection['completeLoggableInput'] = $this->loggableInput;
+        //return $this->loggableInput;
+    }
+
+    public function testLoggableInputSensitiveMessage()
+    {
+        $this->loggableInput = new LoggableInput(
+            'Sensitive data: Password: 12345678900. CPF: 12345678900. Channel: password.',
+            'info',
+            ['user' => 'tester'],
+            'channel',
+            new DateTimeImmutable(),
+        );
+        $this->loggableInputCollection['loggableInputSensitiveMessage'] = $this->loggableInput;
         //return $this->loggableInput;
     }
 
@@ -186,42 +231,24 @@ final class LoggingTest extends IntegrationTestHelper
         $this->loggableInputCollection['loggableInputSensitiveChannel'] = $this->loggableInput;
         //return $this->loggableInput;
     }
+    
 
     // ---------- Components Tests ----------
-    
-    // Security Component
-    public function runLogSecurityTest(int $indentLevel = 0)
+
+    public function runComponentsTest(int $indentLevel = 0)
     {
         $this->runSteps(
-            'Log Security Component',
+            'Components',
             [
-                'Security Validator' => 'testValidator',
-                'Security Sanitizer' => 'testSanitizer',
-                'Security LogSecurity' => 'testLogSecurity',
+                'LogEntryAssembler' => 'testLogEntryAssembler',
+                'LogFilePathResolver' => 'testLogFilePathResolver',
+                'LogLineFormatter' => 'testLogLineFormatter',
+                'LogWriter' => 'testLogWriter',
+                'Logger' => 'testLogger',
             ],
             $indentLevel
         );
     }
-
-    public function testValidator()
-    {
-        $this->validator = new Validator($this->config->validationConfig());
-        //return $this->validator;
-    }
-
-    public function testSanitizer()
-    {
-        $this->sanitizer = new Sanitizer($this->config->sanitizationConfig());
-        //return $this->sanitizer;
-    }
-
-    public function testLogSecurity()
-    {
-        $this->security = new LogSecurity($this->validator, $this->sanitizer);
-        //return $this->security;
-    }
-
-    // Components
 
     public function testLogEntryAssembler()
     {
@@ -243,7 +270,7 @@ final class LoggingTest extends IntegrationTestHelper
 
     public function testLogFilePathResolver()
     {
-        $this->pathResolver = new LogFilePathResolver($this->testLogDir);
+        $this->pathResolver = new LogFilePathResolver($this->logDirectory);
 
         foreach ($this->logEntryCollection as $key => $value) {
             $this->logFilePathCollection[$key] =  $this->pathResolver->resolve($value);
@@ -325,7 +352,20 @@ final class LoggingTest extends IntegrationTestHelper
         return $output;
     }
 
-    // Kernel Method
+    // ---------- Kernel Tests ----------
+
+    public function runKernelTest(int $indentLevel = 0)
+    {
+        $this->runSteps(
+            'Logging Module Kernel',
+            [
+                'Kernel Instantiation' => 'testKernelCreation',
+                'Kernel Objects Retrieval' => 'testKernelObjectsRetrieval',
+                'Log Writing from Kernel Objects' => 'testBasicLogWrite',
+            ],
+            $indentLevel
+        );
+    }
 
     public function testKernelCreation()
     {
