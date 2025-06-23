@@ -24,7 +24,7 @@ final class LogMessage
      */
     public function __construct(string $message, LogSecurityInterface $security)
     {
-        $sanitizedMessage = $security->sanitize(['message' => $message])['message'];
+        $sanitizedMessage = $security->sanitize($message);
         $this->message = $this->validateMessage($sanitizedMessage, $security);
     }
 

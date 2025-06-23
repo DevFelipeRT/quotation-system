@@ -46,7 +46,7 @@ final class LogLevel
     ) {
         $this->validLevels = $this->buildValidLevels($security, $customLevels);
 
-        $sanitizedLevel = $security->sanitize(['level' => $level])['level'] ?? '';
+        $sanitizedLevel = $security->sanitize($level) ?? '';
         $this->level = $security->validateLevel($sanitizedLevel, $this->validLevels);
     }
 
