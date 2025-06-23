@@ -10,11 +10,11 @@ namespace PublicContracts\Logging\Config;
 interface LoggingConfigInterface
 {
     /**
-     * Returns the absolute base path for log storage.
+     * Returns the absolute directory path for log storage.
      *
      * @return string
      */
-    public function baseLogPath(): string;
+    public function baseLogDirectory(): string;
 
     /**
      * Returns the sanitization configuration for logging.

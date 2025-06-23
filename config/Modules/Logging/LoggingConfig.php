@@ -13,7 +13,7 @@ use PublicContracts\Logging\Config\ValidationConfigInterface;
 
 final class LoggingConfig implements LoggingConfigInterface
 {
-    private readonly string $baseLogPath;
+    private readonly string $baseLogDirectory;
     private readonly SanitizationConfigInterface $sanitizationConfig;
     private readonly ValidationConfigInterface $validationConfig;
     private readonly AssemblerConfigInterface $assemblerConfig;
@@ -27,7 +27,7 @@ final class LoggingConfig implements LoggingConfigInterface
             throw new \InvalidArgumentException('Logging directory path cannot be empty.');
         }
 
-        $this->baseLogPath = $loggingDirectory;
+        $this->baseLogDirectory = $loggingDirectory;
         $this->sanitizationConfig = new SanitizationConfig;
         $this->validationConfig = new ValidationConfig;
         $this->assemblerConfig = new AssemblerConfig;
@@ -38,9 +38,9 @@ final class LoggingConfig implements LoggingConfigInterface
      *
      * @return string
      */
-    public function baseLogPath(): string
+    public function baseLogDirectory(): string
     {
-        return $this->baseLogPath;
+        return $this->baseLogDirectory;
     }
 
     /**
