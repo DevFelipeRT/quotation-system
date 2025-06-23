@@ -22,29 +22,75 @@ use PublicContracts\Logging\Config\SanitizationConfigInterface;
  */
 final class Sanitizer implements SanitizerInterface
 {
+    /**
+     * Maximum recursion depth allowed for array and object sanitization.
+     */
     private const MAX_RECURSION_DEPTH = 8;
+
+    /**
+     * Default token used to mask sensitive data.
+     */
     private const DEFAULT_MASK = '[MASKED]';
+
+    /**
+     * Default list of sensitive keys (English and Portuguese).
+     * This list is merged with user-defined keys from the configuration.
+     */
     private const DEFAULT_SENSITIVE_KEYS = [
         'password', 'token', 'api_key', 'secret', 'authorization', 'credit_card', 'ssn',
         'senha', 'chave_api', 'segredo', 'autorizacao', 'cartao_credito', 'cpf', 'cnpj', 'acesso_token',
     ];
+
+    /**
+     * Default regular expressions for direct detection of sensitive values.
+     * These patterns are merged with user-defined patterns from the configuration.
+     */
     private const DEFAULT_SENSITIVE_PATTERNS = [
-        '/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/',                         // CPF
-        '/\b\d{16}\b/',                                               // Credit card (16 digits)
-        '/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i',                   // Email
-        '/(senha|password|secret|token|chave)[\s:]*[a-z0-9\-\._]+/i', // Credential phrases
+        '/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/',       // CPF
+        '/\b\d{16}\b/',                             // Credit card (16 digits)
+        '/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i', // Email
+        // Credential phrase patterns are dynamically generated from sensitive keys
     ];
+
+    /**
+     * Regular expression for forbidden mask tokens (prevents unsafe values).
+     */
     private const DEFAULT_MASK_TOKEN_FORBIDDEN_PATTERN = '/[\x00-\x1F\x7F]|base64|script|php/i';
 
-    /** @var string[] */
+    /**
+     * All sensitive keys after merging and normalization.
+     * Used for both key-based and phrase-based detection.
+     *
+     * @var string[]
+     */
     private array $sensitiveKeys;
-    /** @var string[] */
+
+    /**
+     * All regular expressions for value-based sensitive data detection.
+     *
+     * @var string[]
+     */
     private array $sensitivePatterns;
-    /** @var int */
+
+    /**
+     * Maximum allowed depth for recursive sanitization.
+     *
+     * @var int
+     */
     private int $maxDepth;
-    /** @var string */
+
+    /**
+     * Current mask token used to replace sensitive data.
+     *
+     * @var string
+     */
     private string $maskToken;
-    /** @var string */
+
+    /**
+     * Regular expression pattern to block unsafe mask tokens.
+     *
+     * @var string
+     */
     private string $maskTokenForbiddenPattern;
 
     /**
@@ -69,14 +115,14 @@ final class Sanitizer implements SanitizerInterface
     }
 
     /**
-     * Sanitizes any input value: arrays, objects, or scalars.
-     * - For arrays/objects: recursively sanitizes keys and values.
-     * - For strings: trims, normalizes, and applies sensitive pattern checks.
-     * - For other scalar values: returns as is.
+     * Sanitizes any input value (array, object, or scalar) by masking all sensitive information.
+     * For arrays and objects, the process is recursive and covers both keys and values.
+     * For strings, all direct value patterns and credential phrases (e.g., "password: ...") are masked in-place.
+     * Scalars that are not strings are returned as-is.
      *
-     * @param mixed $input
-     * @param string|null $maskToken
-     * @return mixed
+     * @param mixed $input The value to be sanitized.
+     * @param string|null $maskToken Optional custom mask token to use for this operation.
+     * @return mixed The sanitized input with all sensitive data masked.
      */
     public function sanitize(mixed $input, ?string $maskToken = null): mixed
     {
@@ -93,18 +139,79 @@ final class Sanitizer implements SanitizerInterface
 
         if (is_string($input)) {
             $sanitized = trim($this->normalizeUnicode($input));
-            if ($this->matchesSensitivePatterns($sanitized)) {
-                return $mask;
+
+            // 1. Mask direct value patterns (CPF, credit card, email, etc.)
+            if (!empty($this->sensitivePatterns)) {
+                foreach ($this->sensitivePatterns as $pattern) {
+                    $sanitized = preg_replace($pattern, $mask, $sanitized);
+                }
             }
-            if ($sanitized === $mask) {
-                $unwrapped = str_replace(['[', ']'], '', $maskToken);
-                return "[{$unwrapped}_ORIGINAL_VALUE]";
+
+            // 2. Mask credential phrases ("key: value") ONLY in those cases
+            if (!empty($this->sensitiveKeys)) {
+                $phrasePattern = '/\b(' . implode('|', array_map('preg_quote', $this->sensitiveKeys)) . ')[\s:]+([^\s,;]+)/iu';
+                $sanitized = preg_replace_callback(
+                    $phrasePattern,
+                    function ($matches) use ($mask) {
+                        // $matches[1] = key, $matches[2] = sensitive value
+                        return $matches[1] . ': ' . $mask;
+                    },
+                    $sanitized
+                );
             }
+
             return $sanitized;
         }
 
-        // For integer, float, bool, null: return as is (cannot be sensitive)
+        // Non-string scalars (int, float, bool, null) are not considered sensitive
         return $input;
+    }
+
+
+    /**
+     * Determines whether a given value contains sensitive information, considering both keys and values.
+     *
+     * This method inspects strings and array/object keys using all configured sensitive patterns.
+     * For arrays and objects, both keys and values are checked recursively.
+     *
+     * @param mixed $value Input to be analyzed.
+     * @return bool True if any key or value is considered sensitive; otherwise, false.
+     */
+    public function isSensitive(mixed $value): bool
+    {
+        // Check for sensitive string value
+        if (is_string($value)) {
+            if ($this->matchesSensitivePatterns($value) || $this->isSensitiveKey($value)) {
+                return true;
+            }
+            return false;
+        }
+
+        // Check arrays: both keys and values recursively
+        if (is_array($value)) {
+            foreach ($value as $key => $item) {
+                if (is_string($key) && $this->isSensitiveKey($key)) {
+                    return true;
+                }
+                if ($this->isSensitive($item)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Check objects: convert to array, check property names and values
+        if (is_object($value)) {
+            foreach (array_keys(get_object_vars($value)) as $property) {
+                if ($this->isSensitiveKey($property)) {
+                    return true;
+                }
+            }
+            return $this->isSensitive($this->forceArray($value));
+        }
+
+        // Non-string scalars (int, float, bool, null) are not considered sensitive.
+        return false;
     }
 
     /**

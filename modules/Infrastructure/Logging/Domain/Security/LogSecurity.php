@@ -61,6 +61,20 @@ final class LogSecurity implements LogSecurityInterface
     }
 
     /**
+     * Determines whether a given value contains sensitive information according to the sanitizer's patterns.
+     *
+     * This method does not perform any mutation or sanitization. It only evaluates the provided value.
+     * Keys of arrays and objects are not considered—only values are evaluated.
+     *
+     * @param mixed $value Input value to be analyzed (string, array, object, or scalar).
+     * @return bool True if the value or any of its nested elements is considered sensitive; otherwise, false.
+     */
+    public function isSensitive(mixed $value): bool
+    {
+        return $this->sanitizer->isSensitive($value);
+    }
+
+    /**
      * Validates and normalizes a generic domain string.
      *
      * Ensures the string is valid according to domain rules,

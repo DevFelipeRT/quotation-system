@@ -28,4 +28,17 @@ interface SanitizerInterface
      * @return mixed Sanitized value, of the same type as input.
      */
     public function sanitize(mixed $input, ?string $maskToken = null): mixed;
+
+    /**
+     * Determines whether a value, any of its keys, or any of its nested values/keys
+     * are considered sensitive according to the sanitizer's security policy.
+     *
+     * This method recursively evaluates arrays and objects, inspecting both their keys
+     * and values. If any key or value is identified as sensitive—either by pattern match
+     * or by sensitive-key detection—the method returns true.
+     *
+     * @param mixed $value Input to be analyzed (string, array, object, or scalar).
+     * @return bool True if any key or value (recursively) is considered sensitive; otherwise, false.
+     */
+    public function isSensitive(mixed $value): bool;
 }
