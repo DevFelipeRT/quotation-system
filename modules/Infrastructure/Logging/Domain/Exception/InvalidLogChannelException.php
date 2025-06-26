@@ -21,8 +21,8 @@ final class InvalidLogChannelException extends InvalidArgumentException
         return new self('Log channel contains invalid control characters.');
     }
 
-    public static function tooLong(): self
+    public static function tooLong(int $limit): self
     {
-        return new self('Log channel name is too long (limit: 128 characters).');
+        return new self("Log channel name is too long (limit: {$limit} characters).");
     }
 }
