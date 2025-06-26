@@ -26,8 +26,8 @@ interface LoggingFacadeInterface
      */
     public function logInput(
         string|Stringable $message, 
-        ?string $level, 
-        ?string $channel,
+        ?string $level = null, 
+        ?string $channel = null,
         ?array $context = [], 
     ): void;
 

@@ -44,8 +44,8 @@ final class LoggingFacade implements LoggingFacadeInterface
      */
     public function logInput(
         string|Stringable $message, 
-        ?string $level, 
-        ?string $channel,
+        ?string $level = null, 
+        ?string $channel = null,
         ?array $context = [], 
     ): void {
         $input = $this->createInput(
@@ -107,10 +107,10 @@ final class LoggingFacade implements LoggingFacadeInterface
     }
 
     private function createInput(
-        string $level, 
+        ?string $level, 
         string|Stringable $message, 
         array $context, 
-        string $channel
+        ?string $channel
     ): LoggableInputInterface {
         return new LoggableInput(
             message:   $message,
