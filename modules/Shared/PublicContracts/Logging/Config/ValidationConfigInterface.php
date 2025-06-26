@@ -33,13 +33,20 @@ interface ValidationConfigInterface
      * @return int
      */
     public function contextKeyMaxLength(): int;
-
+    
     /**
      * Returns the maximum allowed length for context array values.
      *
      * @return int
      */
     public function contextValueMaxLength(): int;
+    
+    /**
+     * Returns the maximum allowed length for log channels.
+     *
+     * @return int
+     */
+    public function channelMaxLength(): int;
 
     /**
      * Returns the string that represents the root directory,
