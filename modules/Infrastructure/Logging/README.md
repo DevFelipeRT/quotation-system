@@ -16,7 +16,6 @@ In context, the Logging Module can be used in web applications, CLI scripts, or 
 
 The Logging Module is designed with a multi-layer architecture, following principles of separation of concerns and domain-driven design. The codebase is organized into distinct namespaces and directories, each representing a layer or component group:
 
-
 #### Domain Layer
 Contains the core Value Objects and Security logic. This layer is responsible for the validity and integrity of logging data. It knows how to validate log messages, levels, contexts, etc., and how to sanitize sensitive data. Domain classes are pure logic with no external side effects (no file access or output).
 
@@ -25,6 +24,9 @@ Provides a Facade that serves as the public API for the module. The facade orche
 
 #### Infrastructure Layer
 Handles the lower-level concerns like constructing log entries from inputs, formatting log lines, and writing to files. It also includes a Kernel that ties all parts together using a configuration. The infrastructure layer is the bridge between the domain’s pure logic and the outside world (filesystem).
+
+#### Security Layer
+Implements centralized sanitization and validation services to enforce strict security and data integrity policies across the logging domain. This layer provides configurable routines for masking sensitive data, detecting confidential patterns, and validating all log-related input. By orchestrating both sanitizing and validation modules, it ensures that every log entry complies with security standards before being persisted or exposed.
 
 #### Configuration Layer
 Encapsulated under a Config\Modules\Logging namespace, it defines configurable parameters (such as default values, allowed log levels, sensitive data patterns) through simple classes and interfaces. This layer allows customization of the module’s behavior without altering core logic.
@@ -41,7 +43,7 @@ _Below is a conceptual diagram of the architecture for clarity:_
 
 ```
 Client Code --> LoggingKernel (Infrastructure) --> LoggingFacade (Application)
-| - boots Validator & Sanitizer (Domain Security)
+| - boots Validator & Sanitizer (Security)
 | - boots LogEntryAssembler, Logger, etc. (Infrastructure)
 v
 LoggingFacade (Application) --> LogEntryAssembler (Infrastructure) --> Domain Value Objects
@@ -61,112 +63,127 @@ _In the above flow, solid arrows indicate direct use/composition, and the dashed
 
 ---
 
-### Domain Layer (Core Logging Logic)
+### Domain Layer
 
-The domain layer ensures that every piece of data that goes into a log entry is valid and safe. It is comprised of immutable value objects and related domain services for security.
+The Domain Layer constitutes the architectural core of the logging system, serving as the definitive authority for all business logic, data integrity, and security invariants. Architected following the principles of **Clean Architecture** and **Domain-Driven Design (DDD)**, this layer meticulously isolates the core logging logic from external application concerns, such as frameworks, delivery mechanisms, and persistence technologies. Its primary mandate is to ensure that every piece of data destined for a log entry is not only valid and well-formed but also secure and compliant with established domain rules.
 
----
+The design is centered around two fundamental concepts that work in concert: **Immutable Value Objects** and a **Centralized Security Facade**.
 
-#### Domain Security (Logging\Domain\Security):
-These classes provide centralized validation and sanitization routines, used by the value objects and assemblers to enforce security rules:
+1.  **Immutable Value Objects (VOs):** Each conceptual component of a log record—such as a message (`LogMessage`), a severity level (`LogLevel`), a channel (`LogChannel`), or a directory path (`LogDirectory`)—is encapsulated within its own distinct, self-validating Value Object. These objects are the building blocks of the domain, and they enforce their own invariants upon instantiation. This design guarantees that an invalid object can never exist within the domain's boundaries. The principle of **immutability** is strictly enforced; once a VO is created, its state cannot be altered, which eliminates side effects and ensures data remains consistent and reliable throughout its lifecycle.
 
----
+2.  **Centralized Security Facade (`LogSecurity`):** All validation and sanitization logic is orchestrated through the `LogSecurity` facade, which implements the `LogSecurityInterface`. This component serves as a single, consistent entry point for applying security policies across the entire domain, including data masking, pattern validation, length constraints, and filtering of malicious input. By centralizing these routines, the system guarantees uniform policy enforcement, reduces code duplication, and simplifies maintenance and security audits.
 
-##### Validator
+The layer operates on a **fail-fast** basis. Any attempt to construct a Value Object with data that violates domain rules—such as an empty message, an unrecognized log level, or an unsafe directory path—results in an immediate, specific domain exception (e.g., `InvalidLogMessageException`, `InvalidLogLevelException`). This prevents the propagation of corrupt or insecure data and ensures that only fully-formed, trusted log entries, aggregated within the `LogEntry` object, are passed to downstream services for formatting, storage, or transmission.
 
-Implements `ValidatorInterface` and provides robust validation methods for all log-related inputs, enforcing security and consistency based on configurable rules.
-
-- **`validateMessage(string $message)`:**  
-    Ensures the log message is not empty, does not exceed the maximum allowed length, and contains only permitted characters. Applies regex checks to block control characters or forbidden patterns as defined in the `ValidationConfig`.
-
-- **`validateLevel(string $level, array $allowedLevels)`:**  
-    Verifies that the provided log level matches one of the allowed values (typically the standard PSR-3 levels, plus any custom levels from configuration). Throws `InvalidLogLevelException` if the level is not recognized.
-
-- **`validateChannel(string $channel)`:**  
-    Checks that the channel name is a non-empty, safe string, free from illegal filesystem characters or forbidden substrings (such as directory traversal patterns). Ensures the channel is suitable for use in file paths. Throws `InvalidLogChannelException` on failure.
-
-- **`validateContext(array $context)`:**  
-    Validates each key and value in the context array. Keys must be strings of acceptable length and format; values must be serializable and within size limits. May recursively validate nested arrays up to a configured maximum depth. Throws `InvalidLogContextException` if any part is invalid.
-
-- **`validateDirectory(string $path)`:**  
-    Ensures the directory path is absolute or within allowed locations, does not contain traversal sequences (like `..`), and matches security constraints from `ValidationConfig`. Throws `InvalidLogDirectoryException` if the path is unsafe.
-
-- **`validateTimestamp($date)`:**  
-    Confirms that the timestamp is a valid `DateTimeInterface` instance or a properly formatted date string. Ensures log entries are timestamped accurately.
-
-The `Validator` uses settings from the `ValidationConfig` (see Configuration Layer), such as maximum string lengths, forbidden character regex patterns, and directory rules. If any input fails validation, the corresponding domain exception is thrown (e.g., `InvalidLogLevelException`, `InvalidLogContextException`, or a general `InvalidLoggableInputException` for other cases). This strict validation ensures that only safe, well-formed data is ever written to log files.
+In essence, the Domain Layer acts as the system's gatekeeper. It guarantees that every piece of data entering the logging pipeline is rigorously vetted, sanitized, and transformed into a trusted, immutable representation. By establishing this robust foundation, the Domain Layer ensures the reliability, security, and consistency required for all subsequent operations in mission-critical environments.
 
 ---
 
-##### Sanitizer
+#### Domain Security
 
-Implements `SanitizerInterface` and provides robust functionality to cleanse or mask sensitive data, focusing primarily on strings and arrays (especially log context arrays).
+The Domain Security layer serves as the central nervous system for all validation and sanitization operations within the logging domain. Its fundamental purpose is to establish and enforce a single, unified security policy for all log-related data, ensuring that every input is rigorously vetted before it is accepted into the domain's value objects. Architected around the **Facade pattern** and the principles of **Clean Architecture**, this sub-layer enforces a strict separation of concerns, which is critical for achieving robust security, maintainability, and testability.
 
-The Sanitizer operates according to rules defined in a `SanitizationConfig`, which includes:
+At its heart is the `LogSecurity` class, a stateless facade that acts as the sole point of entry for all security-related requests. Rather than implementing the logic itself, `LogSecurity` orchestrates the process by delegating tasks to specialized service contracts: all validation checks are routed to an implementation of `ValidatorInterface`, while all data cleansing and masking operations are handled by an implementation of `SanitizerInterface`. This delegation model ensures that the facade remains lean and focused on its primary responsibility of orchestration, while the complex rule logic is encapsulated within dedicated, interchangeable components.
 
-- **Sensitive Keys:**  
-    A list of field names (such as `"password"`, `"secret"`, `"cpf"`) whose values should always be masked.
+The entire system is unified through the `LogSecurityInterface`, a composite contract that extends both the `ValidatorInterface` and `SanitizerInterface`. Domain Value Objects (e.g., `LogMessage`, `LogDirectory`) do not depend on the concrete `LogSecurity` class but solely on this interface. This strict adherence to the **Dependency Inversion Principle** is paramount: it decouples the domain's core logic from specific security implementations, allows for easy extension or replacement of security rules without affecting client code, and makes the entire domain inherently testable with mock implementations.
 
-- **Sensitive Patterns:**  
-    An array of regular expressions used to detect sensitive data within values (for example, credit card numbers or personal identifiers).
-
-- **Mask Token:**  
-    A string (e.g., `"[MASKED]"`) used to replace sensitive values or portions of values.
-
-- **Maximum Depth:**  
-    A limit for recursive sanitization to prevent performance issues with deeply nested structures.
-
-**Key Method:**
-
-- `sanitize(mixed $input, ?string $maskToken = null): mixed`  
-    Sanitizes sensitive data from any input value.  
-    Returns a sanitized version of the input, masking or removing confidential data according to the domain policy. Arrays and objects are sanitized recursively up to the configured maximum depth. Strings are sanitized individually; other scalar types are returned unchanged.  
-    - **Parameters:**  
-        - `$input` (mixed): The value to sanitize (can be array, object, string, or scalar).  
-        - `$maskToken` (string|null): Optional custom mask token; if null, uses the default from config.  
-    - **Returns:**  
-        - (mixed): Sanitized value, of the same type as input.
-
-**Additional Features:**
-
-- **Unicode Normalization:**  
-    The Sanitizer may use PHP's `Normalizer` class to ensure consistent text representation, especially for Unicode strings.
-
-- **Error Handling:**  
-    If the sanitization configuration is invalid or missing required parameters (such as a mask token), the Sanitizer throws an `InvalidLogSanitizerConfigException`. However, the module provides sensible defaults to minimize this risk.
-
-The Sanitizer ensures that sensitive information is never written to log files, providing a critical layer of security in the logging process.
+The result of this architecture is a highly secure and consistent domain. By routing all operations through a single, contract-bound facade, the system guarantees that no data can bypass the established security protocols. Changes to security policies—such as adding a new sensitive pattern to mask or tightening validation rules—can be made in one central location and are instantly propagated throughout the entire logging infrastructure. This creates a resilient, auditable, and maintainable security foundation for the entire logging system.
 
 ---
 
 ##### LogSecurity
 
-The **LogSecurity** class acts as a facade within the domain security package (`LogSecurity` implements `LogSecurityInterface`). It aggregates both a **Validator** and a **Sanitizer**, providing high-level methods for centralized validation and sanitization of log data.
+Implements the `LogSecurityInterface` and serves as the centralized security facade within the logging domain. This class aggregates both a `Validator` and a `Sanitizer`, exposing a unified interface for all validation and sanitization operations required by log-related value objects and services.
 
-###### Main Responsibilities
+###### **Responsibilities:**
 
-- **Centralization:** All validation and sanitization processes are routed through this class, ensuring consistent application of security rules.
-- **Delegation:** Each call is delegated to the corresponding Validator or Sanitizer, keeping the class stateless.
-- **Configurability:** Changes to validation or sanitization rules (via configuration) are automatically propagated throughout the system.
+* **Centralized Security Orchestration:**
+  All validation and sanitization logic is routed through `LogSecurity`, ensuring consistent application of security policies and reducing code duplication across the domain.
 
-###### Example Methods
+* **Delegated Operations:**
+  Each public method delegates its work to the appropriate specialized service: validation methods are delegated to the injected `ValidatorInterface`, and sanitization methods to the injected `SanitizerInterface`. The facade itself remains stateless, holding only service references.
 
-- `sanitize(mixed $input)`
-- `validateString(...)`
-- Domain-specific operations, such as validating a complete log entry.
+* **Strict Configuration Compliance:**
+  All configurable rules (such as forbidden patterns, maximum lengths, and masking tokens) are encapsulated within the validator and sanitizer dependencies, allowing global policy changes to be automatically enforced everywhere in the system.
 
-###### Practical Usage
+###### **Key Methods:**
 
-Value Object constructors receive a `LogSecurityInterface` instance to perform their checks. For example, the `LogMessage` class uses `$security->sanitize()` on the raw message and then calls `$security->getValidator()` to validate it, or relies on the sanitized output being already suitable.
+* `sanitize(mixed $input, ?string $maskToken = null): mixed`
+  Delegates to the sanitizer to cleanse any input—scalar, string, array, or object—according to current security policy. Returns the sanitized value of the same type as input.
 
-###### Benefits
+* `isSensitive(mixed $value): bool`
+  Checks whether the input is considered sensitive under the configured patterns and key rules, without altering the input.
 
-By centralizing operations in `LogSecurity`, any changes to security rules are automatically reflected across the system. This approach improves maintainability, increases security, and reduces code duplication.
+* `validateString(...)`, `validateChannel(...)`, `validateLevel(...)`, `validateContext(...)`, `validateDirectory(...)`, `validateMessage(...)`, `validateTimestamp(...)`
+  Each method delegates to the validator, applying strict domain-specific rules to ensure that all log inputs are well-formed, secure, and compliant. Every violation triggers a domain-specific exception.
+
+###### **Integration and Usage:**
+
+* **Constructor Injection:**
+  Receives instances of `ValidatorInterface` and `SanitizerInterface`, making the class suitable for dependency injection, extension, and testability.
+
+* **Domain-Centric Value Objects:**
+  Value objects in the domain (such as `LogMessage`, `LogDirectory`, and others) receive a `LogSecurityInterface` instance in their constructors and use it for all required validation and sanitization operations.
+
+###### **Benefits:**
+
+* **Maintainability and Consistency:**
+  Centralizing all security-related routines means any changes to validation or sanitization rules propagate instantly throughout the logging subsystem.
+
+* **Security and Compliance:**
+  Guarantees that no value object, log entry, or context field can bypass domain security checks, enforcing strict input validation and masking at all critical points.
+
+* **Extensibility:**
+  The facade pattern and explicit separation of concerns enable easy adaptation or extension of validation and sanitization logic without affecting client code.
 
 ---
 
-#### Value Objects (Logging\Domain\ValueObject)
-These classes represent the components of a log entry, each encapsulating validation logic for that part:
+##### LogSecurityInterface
+
+Contract for the security facade, guaranteeing that all necessary validation and sanitization methods are available via a unified interface.
+
+###### **Responsibilities:**
+
+* Extends both `ValidatorInterface` and `SanitizerInterface`.
+* Ensures that all log-related Value Objects depend solely on this interface for their security needs.
+* Promotes architectural decoupling, testability, and maintainability.
+* Provides a single, reliable point of enforcement for domain security rules.
+
+---
+
+##### ValidatorInterface
+
+Contract for all domain validation routines, responsible for enforcing invariants and input integrity.
+
+###### **Responsibilities:**
+
+* Provides granular validation methods for strings, channel names, log levels, dates, and other domain primitives.
+* All methods must throw specific exceptions defined in `Logging\Domain\Exception` on failure, ensuring strict input data integrity.
+* Guarantees that all Value Objects are constructed only from valid, normalized data.
+
+---
+
+##### SanitizerInterface
+
+Contract for sanitization of input data within the logging domain.
+
+###### **Responsibilities:**
+
+* Defines methods to mask or remove sensitive/confidential information from values or complex structures before any persistence, transmission, or external exposure.
+* Recursively sanitizes arrays and objects, masking sensitive keys, phrases and patterns.
+* Detects whether a value (or any nested value/key) is considered sensitive under the security policy.
+
+---
+
+#### Value Objects
+
+Value Objects are the foundational building blocks of the logging domain, representing the granular, conceptual components of a log record. Each Value Object (e.g., `LogMessage`, `LogLevel`, `LogChannel`) encapsulates a single, discrete piece of data, transforming a primitive type, such as a string or an array, into a rich, self-validating domain concept. Their primary responsibility is to enforce domain invariants at the point of creation, thereby guaranteeing that an invalid instance can never exist within the system's boundaries.
+
+Central to their design are the principles of **immutability** and **self-validation**. Upon construction, each Value Object immediately leverages the domain's `LogSecurityInterface` to sanitize and validate its input data. If the data fails to meet the strict domain criteria—such as a forbidden character in a channel name or an empty log message—a specific, descriptive exception is thrown. This fail-fast mechanism halts the process and prevents the propagation of corrupt state. Once successfully instantiated, the object's internal value is immutable and cannot be altered, guaranteeing data integrity and predictability throughout its lifecycle.
+
+These objects function within a clear compositional hierarchy. Initial log request data is typically encapsulated in the `LoggableInput` Data Transfer Object (DTO), which performs preliminary structural checks. This data is then used to construct the individual, highly-specialized Value Objects, each enforcing its own deep, context-specific rules. Finally, these validated components are assembled into the `LogEntry` aggregate—a composite Value Object that represents a complete, immutable, and fully-vetted log record. The `LogEntry` itself implicitly trusts the validity of its constituent parts, as they are guaranteed to be correct by their respective classes.
+
+This architectural approach provides significant advantages. It eliminates "primitive obsession" by making the domain's contracts explicit and expressive. By distributing validation logic across small, focused classes, the system becomes more maintainable, readable, and less prone to error. Ultimately, the rigorous use of Value Objects ensures that the entire domain operates exclusively with data that is not only of the correct type but is also semantically valid, secure, and consistent with all established business rules.
 
 ---
 
@@ -282,7 +299,7 @@ By enforcing access and lifecycle management solely within the kernel, the syste
 
 A strictly immutable Data Transfer Object (DTO) for carrying validated log request data throughout the logging domain. Implements `LoggableInputInterface`.
 
-###### **Key Responsibilities:**
+###### **Responsibilities:**
 
 * Encapsulates all attributes required to represent a loggable event:
 
@@ -408,18 +425,161 @@ If any step fails, construction is aborted, and the message is not accepted by t
 * **Security Enforcement:** All message content that reaches the logging infrastructure passes through two layers of security checks before it is stored, ensuring domain-wide consistency and preventing leakage of sensitive or malformed data.
 * **Domain Consistency:** By encapsulating message content in a strict Value Object, log records (`LogEntry`) across the system are consistent and reliable, supporting traceability and auditability in secure environments.
 
+---
 
-##### **LogLevel:** 
+##### LogLevel
 
-Represents the severity level of a log (e.g., "info", "error"). It ensures the level provided is one of the allowed values. By default, the standard PSR-3 levels are permitted (debug, info, notice, warning, error, critical, alert, emergency), and this set can be extended via configuration. If an unknown level is given, an InvalidLogLevelException is thrown. Internally, it may convert level names to a normalized form (e.g., lowercase).
+Represents an **immutable value object** encapsulating the severity level of a log entry (such as `"info"`, `"error"`), enforcing strict validation and normalization according to domain and configuration policies.
 
-##### LogContext: 
+###### **Responsibilities:**
 
-Encapsulates an associative array of context data (key-value pairs providing additional info for the log). It validates context keys and values: for example, ensuring keys are strings of acceptable length, and values are serializable (no resources or overly large data by default). It uses domain security services to sanitize sensitive information within the context (e.g., masking values of keys like "password"). If the context data structure is invalid, an InvalidLogContextException can be thrown. A valid LogContext object can provide the sanitized context via methods (e.g., toArray() to retrieve the clean array).
+* **Validation Against Allowed Levels:**
+  The `LogLevel` ensures that any provided log level string is strictly validated against an allowed set of levels.
 
-##### LogChannel: 
+  * By default, the allowed levels correspond to the [PSR-3 standard](https://www.php-fig.org/psr/psr-3/) (`debug`, `info`, `notice`, `warning`, `error`, `critical`, `alert`, `emergency`).
+  * The allowed set may be extended with custom levels via constructor injection.
 
-Represents a log channel or category (for example, an application area like "application", "auth", or "payment"). This is used to segregate log outputs (often into different files or folders). It validates that the channel name is a safe string (not empty, no illegal path characters, etc.), since it might be used as part of a directory or file name. The default channel, if none is provided, is "application". An InvalidLogChannelException is thrown if the channel contains forbidden characters or is otherwise deemed insecure.
+* **Domain-Driven Security Enforcement:**
+  All level input is sanitized and validated using a `LogSecurityInterface` instance. This centralizes all logic for string cleansing, normalization, and validation. If the input is not recognized or contains invalid data, an `InvalidLogLevelException` is thrown.
+
+* **Normalization:**
+  Level names are normalized—typically lowercased—during validation, ensuring consistent comparison and equality checks.
+
+###### **Constructor and Properties:**
+
+* The constructor receives the raw log level, a `LogSecurityInterface` instance, and an optional array of custom levels.
+* It builds the complete set of allowed levels, sanitizes and validates both built-in and custom levels, and stores only the final, validated level.
+
+###### **Public Methods:**
+
+* `value(): string`
+  Returns the validated, normalized log level string.
+
+* `equals(LogLevel $other): bool`
+  Checks strict equality with another `LogLevel` instance.
+
+* `validLevels(): array`
+  Returns the complete list of allowed log levels for this instance.
+
+* `__toString(): string`
+  Returns the log level as a string, suitable for output or serialization.
+
+###### **Internal Behavior:**
+
+* The internal helper `buildValidLevels` merges the standard and custom levels, applies sanitization and validation to each, and ensures uniqueness.
+* All operations leverage the security facade, making this value object fully compliant with system-wide security and input policy.
+
+**Error Handling:**
+
+* If any provided level (standard or custom) is invalid after sanitization and normalization, an `InvalidLogLevelException` is thrown, preventing the creation of a malformed `LogLevel` instance.
+
+---
+
+##### LogContext
+
+Represents an immutable, domain-driven value object that encapsulates a sanitized and validated associative array of context data for logging purposes. It centralizes all logic for securely managing key-value metadata that may accompany log records.
+
+###### **Responsibilities:**
+
+* **Sanitization and Validation:**
+  Utilizes a domain security facade (`LogSecurityInterface`) to sanitize all context data (masking sensitive values such as passwords, tokens, or other confidential information) and then applies strict validation rules to the sanitized result.
+
+  * Keys are validated to ensure they are strings, meet content requirements (e.g., not empty, not containing control characters), and do not conflict or repeat.
+  * Values are validated to be serializable, non-resource types, and of manageable size, ensuring compatibility with log outputs and downstream processing.
+
+* **Immutability:**
+  Once constructed, the encapsulated context cannot be altered. All accessors return either copies or immutable data.
+
+* **Exception Handling:**
+  Throws a domain-specific `InvalidLogContextException` if any sanitization or validation rules are violated—preventing the creation of invalid or unsafe log contexts.
+
+###### **Interface and Methods:**
+
+* **`__construct(array $context, LogSecurityInterface $security)`**
+
+  * Receives a raw associative array and a security facade.
+  * Immediately applies sanitization and validation, guaranteeing only safe and valid data is encapsulated.
+
+* **`value(): array`**
+
+  * Returns the entire sanitized and validated context array.
+
+* **`get(string $key): mixed|null`**
+
+  * Retrieves the value associated with the specified key, or `null` if the key does not exist.
+
+* **`keys(): array`**
+
+  * Returns a list of all context keys, in the order they appear.
+
+###### **Security and Data Integrity:**
+
+* **Centralized Security:**
+  All context-related security logic is delegated to the domain’s `LogSecurityInterface` implementation, ensuring that both sanitization (e.g., masking sensitive data) and validation (e.g., key/value checks) are applied consistently and according to domain requirements.
+
+* **Prevents Unsafe Data:**
+  Enforces that no context containing unsafe, unserializable, or overly large entries can be logged, supporting robust application security and log reliability.
+
+###### **Typical Usage:**
+
+A valid `LogContext` instance guarantees that any log context provided to the logging infrastructure is already cleaned and verified, ready for safe inclusion in persistent logs or audit trails. This abstraction prevents accidental leakage of sensitive data or invalid metadata structures.
+
+---
+
+##### LogChannel
+
+Represents an immutable, domain-driven value object for a log channel (a logical category or destination for log entries, such as "application", "persistence", or "payment"). This abstraction ensures that the channel identifier is always valid, sanitized, and safe for use in file or directory names, which is critical in logging systems that separate log streams by channel.
+
+###### **Responsibilities:**
+
+* **Validation and Sanitization:**
+
+  * Uses a domain security facade (`LogSecurityInterface`) to sanitize and validate the supplied channel name.
+  * Enforces that the channel name is a non-empty string, free from forbidden characters (such as slashes, null bytes, or any character that could compromise file system safety or application security).
+  * Applies any additional domain-specific constraints (such as allowed character sets or reserved words).
+
+* **Immutability:**
+
+  * Once constructed, the channel value cannot be altered.
+  * All accessor methods return either the validated value or its direct string representation.
+
+* **Exception Handling:**
+
+  * Throws an `InvalidLogChannelException` if the provided channel name fails validation or is otherwise unsafe for use.
+
+###### **Interface and Methods:**
+
+* **`__construct(string $channel, LogSecurityInterface $security)`**
+
+  * Receives a raw channel string and the security facade.
+  * Immediately sanitizes and validates the value before assignment.
+
+* **`value(): string`**
+
+  * Returns the sanitized and validated channel name.
+
+* **`__toString(): string`**
+
+  * Provides direct string conversion for convenience in logging or output contexts.
+
+###### **Security and Safety:**
+
+* **Centralized Enforcement:**
+
+  * All sanitization and validation logic is delegated to the domain security service, ensuring that all channel names are processed uniformly and in compliance with application security policies.
+
+* **Prevents Log Injection and Filesystem Risks:**
+
+  * Rigorously blocks empty or unsafe values, preventing issues such as path traversal, log injection, or accidental overwriting of log files.
+  * Guarantees that all log output is properly segregated and managed by a safe, domain-controlled identifier.
+
+* **Default Channel:**
+
+  * The architectural standard for defaulting, if not otherwise configured, is `"application"` (as determined by the caller or the surrounding application logic).
+
+###### **Typical Usage:**
+
+A valid `LogChannel` instance guarantees that all downstream log operations are performed under a strictly validated and sanitized channel name, eliminating the risk of unsafe output destinations or category misidentification.
 
 ---
 
@@ -427,7 +587,7 @@ Represents a log channel or category (for example, an application area like "app
 
 A domain aggregate Value Object representing a fully-validated, immutable log entry. Implements `LogEntryInterface` for a consistent contract across the logging domain.
 
-###### **Key Responsibilities:**
+###### **Responsibilities:**
 
 * Aggregates and encapsulates all components that constitute a complete log record:
 
@@ -497,18 +657,19 @@ $entry = new LogEntry(
 
 ---
 
-#### Domain Exceptions (`Logging\Domain\Exception`)
+#### Domain Exceptions
 
 The domain layer defines a set of exception classes to signal invalid inputs or configurations:
 
-- **`InvalidLogMessageException`**
-- **`InvalidLogLevelException`**
-- **`InvalidLogContextException`**
 - **`InvalidLogChannelException`**
+- **`InvalidLogContextException`**
 - **`InvalidLogDirectoryException`**
 - **`InvalidLoggableInputException`**
+- **`InvalidLogLevelException`**
+- **`InvalidLogMessageException`**
+- **`InvalidSanitizationConfigException`**
 
-Each exception extends PHP’s `Exception` class and indicates a specific rule violation. These exceptions typically include a descriptive message, such as:
+Each exception extends PHP’s `InvalidArgumentException` class and indicates a specific rule violation. These exceptions typically include a descriptive message, such as:
 
 - `"Log message cannot be empty"`
 - `"Log level 'VERBOSE' is not recognized"`
@@ -525,7 +686,7 @@ The application layer provides a streamlined and unified interface for interacti
 
 ---
 
-#### LoggingFacade (`Logging\Application\LoggingFacade`)
+#### LoggingFacade
  
 The `LoggingFacade` is the primary entry point for all logging operations within the application. By implementing `LoggingFacadeInterface`, it exposes high-level methods for logging messages and orchestrates the necessary domain and infrastructure components internally.
 
@@ -606,24 +767,24 @@ This approach allows developers to interact solely with the public, simplified i
 
 This structured workflow ensures that only secure, validated, and complete log entries are persisted, upholding the integrity and reliability of the logging system.
 
-
-
----
-
 #### Example Usage
 
 ```php
 // Obtain the logger from the kernel
 $logger = $kernel->logger();
 
+// Log a generic message.
+$logger->logInput('System loading succeeded.');
+
 // Log an error message
 $logger->error('User not found', ['user_id' => 123]);
 
-// Log with a custom channel and context
-$logger->logInput('Payment processed', 'info', 'payments', ['amount' => 100.00]);
-```
+// Log with an allowed level
+$logger->log('debug', 'User not found', []);
 
----
+// Log with a determined level, custom channel and context
+$logger->logInput('Invalid payment request.', 'warning', 'payments', ['amount' => 100.00]);
+```
 
 #### Design Benefits
 
@@ -641,1776 +802,2265 @@ $logger->logInput('Payment processed', 'info', 'payments', ['amount' => 100.00])
 
 ---
 
+### Infrastructure Layer
 
+The infrastructure layer serves as the integration point between the core logging logic and the external environment, orchestrating the end-to-end flow of log data from validated domain objects to persistent storage. This layer is responsible for the practical implementation of log output, ensuring that log entries are reliably written to the filesystem in a structured and secure manner.
 
-This layer ensures that application code interacts with a simple, robust API, while all validation, sanitization, and file I/O are handled by lower layers.
+##### Key responsibilities of the infrastructure layer include:
+
+- **Component Orchestration:**  
+  Acts as the central hub that wires together all lower-level components—such as file writers, path resolvers, and formatters—ensuring seamless collaboration between domain logic and I/O operations.
+
+- **Bootstrapping:**  
+  The `LoggingKernel` class is solely responsible for bootstrapping the entire logging subsystem. It handles dependency injection, configuration loading, and instantiates all required services, making the logging module easy to set up and integrate into any PHP application.
+
+- **File Handling:**  
+  Manages the creation, formatting, and writing of log files. This includes resolving appropriate file paths based on log channels and levels, formatting log entries into standardized text lines, and performing atomic file writes with proper error handling and directory management.
+
+- **Adapters and Integration:**  
+  Supplies adapters (such as the PSR-3 logger adapter) to ensure compatibility with external libraries and frameworks. These adapters translate standardized logging calls into the module’s internal workflow, maintaining compliance with industry standards while leveraging the module’s robust validation and sanitization features.
+
+- **Error Handling and Reliability:**  
+  Implements comprehensive error detection and reporting mechanisms, converting low-level I/O failures into meaningful exceptions and ensuring that logging failures are never silent. This guarantees that the application is always informed of any issues affecting log persistence.
+
+By encapsulating all integration and I/O concerns, the infrastructure layer abstracts away the complexities of file management and system interaction, allowing the rest of the application to focus on business logic while relying on a consistent, secure, and extensible logging foundation.
 
 ---
 
+#### LoggingKernel
 
-### Infrastructure Layer (Integration and I/O)
+The `LoggingKernel` serves as the central composition root and orchestrator for the Logging Module. Its primary role is to bootstrap, configure, and wire all domain, application, and infrastructure components necessary for robust and secure logging. The kernel abstracts the entire setup process, exposing only the finalized logging facades and adapters to the consuming application.
 
-**Purpose:** The infrastructure layer brings everything together and handles the actual output of logs to
-external systems (the filesystem, in this case). It includes factories/bootstrap classes, file handlers, and
-adapters.
+##### Responsibilities
 
-```
-LoggingKernel (Logging\Infrastructure\LoggingKernel): This is a central orchestrator that
-bootstraps the Logging Module. It implements LoggingKernelInterface. Typically, your
-application will create a LoggingKernel by passing a configuration object, and then use it to
-obtain the logging facade.
-Construction: When you construct a LoggingKernel, you provide a
-LoggingConfigInterface instance (usually an instance of the provided LoggingConfig
-class – see Configuration section). The kernel immediately calls its internal setup routines:
-bootConfig($config): This method reads the provided configuration. It stores key
-configuration objects and values such as the base log path (directory where logs will be
-saved), the SanitizationConfig, ValidationConfig, and AssemblerConfig (extracted from the
-LoggingConfig). Essentially, it makes the config’s contents available for the next boot
-step.
-bootComponents(): This method creates all the necessary components of the logging
-system, wiring them together:
-Domain Security Initialization: It creates a new Validator and Sanitizer,
-supplying them with the ValidationConfigInterface and
-SanitizationConfigInterface obtained from config. Then it creates a
-LogSecurity instance with those. At this point, the domain security services are ready
-with the rules from configuration.
-Assembler: It instantiates a LogEntryAssembler (see below) with the LogSecurity
-instance and the AssemblerConfigInterface from config. The assembler now knows
-how to assemble log entries using the domain logic and any default values (like default
-channel/level).
-Formatter & Path Resolver: It creates a LogLineFormatter (no special inputs
-needed, as it likely uses standard date formats and is stateless), and a
-LogFilePathResolver, passing in the base log directory path from config. The path
-resolver will use this path as the root for all log files.
-Writer: It creates a LogFileWriter (which may not need special config, beyond using
-default file permissions or modes).
-Core Logger: It creates a Logger service (implements LoggerInterface) by
-injecting the LogFilePathResolver, LogLineFormatter, and LogFileWriter
-```
-#### • • • • • ◦ ◦ ◦ ◦ ◦ ◦ ◦
+* **Centralized Composition:**
+  Instantiates, wires, and manages the lifecycle of all logging components—ensuring correct dependency injection, configuration propagation, and isolation of domain security logic.
 
+* **Configuration-Driven Instantiation:**
+  Receives a `LoggingConfigInterface` implementation, extracting all required configuration objects (log directory path, sanitization/validation/assembler configs) and enforcing their correct distribution throughout the module.
 
-```
-created in prior steps. This Logger is now capable of taking a LogEntry and performing
-the sequence: resolve path -> format -> write.
-Facade: It creates the LoggingFacade (Application layer) by injecting the Logger, the
-LogEntryAssembler, and a PSR adapter instance (see next). The LoggingFacade thus
-has everything it needs to handle log requests.
-PSR Adapter: It also creates a PsrLoggerAdapter (explained below) with the Logger
-and LogEntryAssembler. This adapter is kept if someone needs a
-PsrLoggerInterface implementation.
-After bootstrapping, the kernel holds references to the facade ($this->facade) and
-the adapter ($this->adapter).
-Usage: The kernel provides two main methods:
-logger(): LoggingFacadeInterface – Returns the LoggingFacade instance. In
-normal use, your code calls this after constructing the kernel, and then uses the returned
-facade to log messages.
-psrLogger(): PsrLoggerInterface – Returns the PSR-3 compliant logger adapter.
-You would use this if you need to pass the logger to a library or framework that expects a
-Psr\Log\LoggerInterface.
-```
-```
-The kernel makes it easy to set up the module: you only need to supply configuration, and it
-prepares all components correctly. It also encapsulates the wiring, so the rest of your app just
-deals with the LoggingFacadeInterface rather than manually coordinating validators,
-writers, etc.
-```
-```
-LogEntryAssembler (Logging\Infrastructure\LogEntryAssembler): This class is responsible
-for converting a raw log input (LoggableInput) into a structured LogEntry domain object. It
-implements LogEntryAssemblerInterface (defined in the Application contract).
-```
-```
-Responsibilities: Given a LoggableInput, the assembler will perform the following:
-Use the provided LogSecurity instance to validate and sanitize each part of the input.
-Under the hood, it will likely create new domain value objects:
-Construct a LogLevel object from the input’s level string (using LogSecurity to
-ensure it’s valid against allowed levels from config).
-Construct a LogMessage from the input’s message (sanitizing any problematic content).
-Construct a LogContext from the input’s context array (validating keys/values and
-masking sensitive data via the sanitizer).
-Construct a LogChannel from the input’s channel (or a default channel if none was in
-the input, though LoggableInput already defaults it).
-Retrieve or set the timestamp (the input already carries a timestamp, defaulted to current
-time if not provided).
-Handle any exceptions from the above – if any of the domain objects fail to construct due
-to invalid data (throwing domain exceptions), the assembler might catch them and throw
-a higher-level LogEntryAssemblyException to indicate the assembly process failed.
-This gives context that the error happened during log assembly.
-If all parts are valid, it creates a new LogEntry object by passing in the LogLevel,
-LogMessage, LogContext, LogChannel, and timestamp. Because each of those
-objects is already validated, the LogEntry should construct without error.
-Return the LogEntry to the caller (usually the LoggingFacade or PsrLoggerAdapter).
-AssemblerConfig: The assembler is constructed with an AssemblerConfigInterface. This
-config can supply default values or behaviors for assembly. For example, it provides the default
-log level and channel to use if the input is missing them (though in our design the
-```
-#### ◦ ◦ ◦ • ◦ ◦ • • •
+##### Construction and Boot Process
 
-#### 1.
+Upon instantiation, the kernel executes a two-stage bootstrapping process:
 
-#### 2.
+1. **Configuration Bootstrapping (`bootConfig`):**
+  Reads and stores all critical configuration values:
 
-#### 3.
+    * **Base Log Directory:** The root filesystem path for log storage.
+    * **Sanitization Configuration:** Rules and policies for masking sensitive information.
+    * **Validation Configuration:** Key and value validation requirements for logs.
+    * **Assembler Configuration:** Default values and conventions for assembling log entries.
 
-#### 4.
+2. **Component Initialization (`bootComponents`):**
+   Sequentially constructs all required components, wiring dependencies as follows:
 
-#### 5.
+   * **Domain Security Services:**
 
-#### 6.
+     * Instantiates a `Sanitizer` (with sanitization config) and a `Validator` (with validation config).
+     * Composes these into a `LogSecurity` service, encapsulating all domain-level security logic.
 
-#### 7.
+   * **Value Objects and Infrastructure:**
 
-#### 8.
+     * Instantiates a `LogDirectory` value object using the sanitized and validated log directory path.
+     * Creates a `LogEntryAssembler`, injecting both the security service and assembler config, ensuring proper log entry construction.
 
-#### 9.
+   * **Path and Formatting:**
 
-#### •
+     * Instantiates a `LogFilePathResolver`, providing path resolution rooted at the validated log directory.
+     * Creates a stateless `LogLineFormatter` (standardized date formatting).
+     * Instantiates a `LogFileWriter` (managing file write operations, using default or system-level permissions).
 
+   * **Core Logger:**
 
-```
-LoggableInput already handled defaults). It also provides any custom log levels defined by the
-user. The assembler uses this info when creating a LogLevel object – it passes the list of
-allowed levels (default + custom) so that LogLevel knows the full set.
-```
-```
-The assembler is a crucial component ensuring that by the time we reach the writing stage, we
-have a well-formed, safe LogEntry. It effectively encapsulates the business logic of turning a
-request into a log record.
-```
-```
-Logger (Logging\Infrastructure\Logger): The Logger is the service that actually writes logs by
-coordinating the path resolution, formatting, and file writing. It implements the
-LoggerInterface (defined in Application contract, not to be confused with PSR
-LoggerInterface).
-```
-```
-Method: It typically has a single main method log(LogEntryInterface $entry): void.
-When called:
-It calls the LogFilePathResolver to get the file path for the given LogEntry. The resolver
-uses the log entry’s channel and level (and possibly timestamp or other info) to compute
-the appropriate file path (for example, "/var/log/myapp/application/info.log"
-for a channel "application" and level "info").
-It calls the LogLineFormatter to format the LogEntry into a string line. The formatter will
-produce a textual representation of the log, including timestamp, level, message, and
-context data.
-It then calls the LogFileWriter to append this formatted line to the file at the resolved
-path.
-If any step fails, the Logger may throw exceptions (for instance, if the writer throws a
-LogWriteException because the file can’t be written). The Logger might also perform
-minimal error handling like using PHP’s error_log() to report if writing fails (ensuring
-that a failure to log doesn’t go completely silent).
-```
-```
-The Logger service is used by both the LoggingFacade and the PsrLoggerAdapter. It
-encapsulates the final stage of the logging pipeline so that those higher-level components don’t
-need to repeat the file-writing logic. By depending on a LoggerInterface, the facade also allows
-for the possibility of swapping out the underlying logging mechanism (for example, writing to a
-database or external service could be implemented in another LoggerInterface without
-changing the facade).
-```
-```
-LogFilePathResolver (Logging\Infrastructure\LogFilePathResolver): A utility class
-responsible for determining the correct filesystem path for a given log entry.
-```
-```
-Behavior: It takes in the base log directory (provided during construction) and likely constructs
-file paths following a rule:
-Typically: {baseLogPath}/{channel}/{level}.log
-If a channel is provided and not empty, it creates a subdirectory for that channel under
-the base path. If no channel or a default channel is used, it might write directly under
-base or under a folder named for the default channel (the default channel "application"
-results in an "application" subdirectory).
-Example: With base path /var/log/myapp, a log with channel "auth" and level "error"
-would map to /var/log/myapp/auth/error.log. A log with the default channel
-"application" and level "info" would go to /var/log/myapp/application/info.log.
-If channel were an empty string (not normally the case due to defaults), the resolver
-might omit the channel directory and use just the level (e.g., /var/log/myapp/
-```
-#### •
+     * Assembles the main `Logger` service by injecting the path resolver, formatter, and writer.
+     * This service handles the full pipeline: determining file paths, formatting entries, and persisting log data.
 
-#### •
+   * **Application Facade and Adapter:**
 
-#### •
+     * Instantiates a `LoggingFacade`, injecting the logger, log entry assembler, and PSR adapter.
+     * Constructs a `PsrLoggerAdapter` to provide full PSR-3 compatibility, enabling integration with third-party libraries and frameworks.
 
-#### 1.
+    All these components are privately retained, exposing only the appropriate interfaces for external consumption.
 
-#### 2.
+##### Public API
 
-#### 3.
+The kernel exposes the following core methods for integration with the broader application:
 
-#### 4.
+* **`logger(): LoggingFacadeInterface`**
+  Returns the configured logging facade, abstracting all internal wiring. Use this as the main entry point for logging operations within the application.
 
-#### • • • ◦ ◦ ◦ ◦
+* **`psrLogger(): PsrLoggerInterface`**
+  Returns a PSR-3 compliant logger adapter. Use this when integrating with external libraries or frameworks that expect a `Psr\Log\LoggerInterface`.
 
+##### Architectural and Design Notes
 
-```
-info.log). However, by default channel is never empty (defaults to "application"), so you
-will always see a channel directory.
-The resolver does not create directories or files; it purely returns the path string. It assumes the
-writer will handle directory creation if needed. This separation ensures the resolver has no side-
-effects, making it easy to test and modify (it’s purely string logic).
-Internally, it might use the LogDirectory value object to normalize the base path (ensuring
-it’s a valid directory string). It then probably uses the LogEntry’s channel and level values
-(which are value objects) by retrieving their underlying string values. It constructs the path using
-DIRECTORY_SEPARATOR for portability.
-```
-```
-There is minimal chance for exceptions here, except if the base path is somehow invalid (but that
-would likely have been caught when the LoggingConfig was set up or by LogDirectory). Thus,
-LogFilePathResolver is straightforward: given a valid log entry, it will always return a path.
-```
-```
-LogLineFormatter (Logging\Infrastructure\LogLineFormatter): This class handles converting
-a LogEntry object into a formatted text line for the log file.
-```
-```
-Format: The formatter typically includes key pieces of the LogEntry:
-Timestamp: formatted as an ISO 8601 string or other recognizable format. In this
-module, the code formats the timestamp using DateTimeInterface::ATOM format,
-which is the ISO 8601 standard (e.g., "2025-06-20T16:42:05-03:00"). This ensures
-timestamps in logs are unambiguous and sortable.
-Level: the log level, likely converted to uppercase (e.g., "ERROR", "INFO") for visibility.
-Channel: the channel name of the log entry.
-Message: the log message text.
-Context: the context data, usually serialized to a string. Here, likely the context is
-appended as a JSON string or a key-value list.
-By default, the format could be something like:
-```
-```
-[<timestamp>] <channel>.<LEVEL>: <message> <context_json>
-```
-```
-For example:
-```
-```
-[2025-06-20T16:42:05-03:00] application.INFO: User logged in
-{"user":"tester"}
-```
-```
-In this example, the timestamp is in brackets, followed by the channel and level separated by a
-dot, then the message, and the context as a JSON object. The context is included only if non-
-empty; otherwise, it might be omitted or just {}.
-The use of JSON for context ensures that complex data structures (arrays, etc.) are represented
-in a single line. The presence of quotes around keys/strings in JSON is fine; in the above example,
-the substring "user" appears in the log line, which is how the test can assert that the key
-user is present.
-Customization: The formatting style is currently fixed in code. If needed, a developer could
-modify this class to change the format (for example, to CSV or to include/exclude certain fields).
-There is no config for format provided, but since the class is isolated, it can be swapped or
-adjusted if necessary.
-```
-```
-The formatter is stateless and doesn’t throw exceptions under normal circumstances. It assumes
-the LogEntry provided is complete and will always produce a string.
-```
-#### • • • • • ◦ ◦ ◦ ◦ ◦ • • • •
+* **Decoupled Composition:**
+  All configuration and security policies are injected, not hardcoded, ensuring flexibility, testability, and adherence to clean architecture principles.
 
+* **Immutability and Safety:**
+  All configuration and component properties are `readonly`, guaranteeing that no mutation occurs after kernel construction. This enforces stability and predictability.
 
-```
-LogFileWriter (Logging\Infrastructure\LogFileWriter): This class abstracts the file-writing
-operation. It is responsible for taking a file path and a log line and appending the log line to the
-file, creating the file or directories if necessary.
-```
-```
-Method: Likely write(string $filepath, string $line): void. When invoked:
-It determines the directory portion of the given file path. If the directory does not exist, it
-attempts to create it (mkdir with recursive option). It uses 0777 permissions by
-default (which usually end up as 0755 on creation due to umask, allowing broad read/
-write within reason). If directory creation fails (e.g., permission issue), it will log an error
-using PHP’s error_log() and throw a LogWriteException. This exception indicates
-that the log could not be written at all (which is critical for the application to know).
-After ensuring the directory, it opens or appends to the file. The implementation uses
-file_put_contents($filepath, $line, FILE_APPEND). The FILE_APPEND flag
-ensures that new log entries are added to the end of the file without truncating existing
-content. If the file doesn’t exist, file_put_contents will create it.
-It checks the result of the write operation. If file_put_contents returns false, that
-means the write failed (disk full, permission error, etc.). In that case, it again uses
-error_log() to note the failure and throws LogWriteException to signal the error.
-On success, the method returns (void). The log line would now be persisted in the
-appropriate file.
-The writer handles low-level errors gracefully by converting them to exceptions and logging
-minimal info to PHP’s system logger. It does not attempt retries or further logic – it’s a simple
-straight write. The expectation is that if writing fails, it’s an environmental issue that the
-application needs to address (e.g., fix permissions or disk space).
-```
-```
-Performance: Writing directly with file_put_contents for each log entry is straightforward
-but could be slow under very high log volumes (each call opens and closes the file). For most
-applications and moderate logging, this is acceptable. If needed, this could be extended to use
-stream handles or buffering, but the current implementation prioritizes simplicity and reliability
-(ensuring each log entry is written immediately).
-```
-```
-PsrLoggerAdapter (Logging\Infrastructure\PsrLoggerAdapter): This class implements
-PublicContracts\Logging\PsrLoggerInterface, which is equivalent to the PSR-
-LoggerInterface. Its role is to adapt the module’s internal logging to the standardized PSR
-interface.
-```
-```
-Construction: The adapter is constructed with two things: a LoggerInterface (the module’s
-core Logger service) and a LogEntryAssemblerInterface. Notice it does not use
-LoggingFacade; instead, it bypasses the facade to directly use the lower-level services. This is
-intentional: the adapter is meant for external code that calls PSR-3 methods. The adapter will
-take those calls and do assembly + writing in one go, without going through the facade’s channel
-logic (because PSR-3 doesn’t have a channel concept).
-Methods: It implements all methods of PsrLoggerInterface:
-log($level, $message, array $context) – the generic method, and specific level
-methods like info($message, $context), etc. The specific methods typically call
-log() with the appropriate level.
-When log() is called on the adapter:
-It will likely create a LoggableInput from the provided $message, $level, and
-$context. Here, it might always use the default channel (since PSR calls don’t specify a
-channel). By default, that would be "application".
-```
-#### •
+* **Error Propagation and Fail-Fast:**
+  Any misconfiguration or validation failure during component construction will propagate as an exception, preventing partial or unsafe logging setups.
 
-#### •
+##### Usage Example
 
-#### 1.
+```php
+$config = new LoggingConfig('/var/log/myapp', ...);
+$kernel = new LoggingKernel($config);
+$logger = $kernel->logger(); // LoggingFacadeInterface
+$psrLogger = $kernel->psrLogger(); // PsrLoggerInterface
+```
 
-#### 2.
+After initialization, the consuming application interacts exclusively with the logging facade or the PSR logger interface, remaining agnostic of the internal component wiring, security concerns, or file system operations.
 
-#### 3.
+---
 
-#### 4.
+#### LogEntryAssembler
 
-#### • • • • • ◦ ◦ ◦
+The `LogEntryAssembler` is the pivotal component responsible for converting generic, potentially untrusted log input into rigorously validated and sanitized domain log entries. By implementing the `LogEntryAssemblerInterface`, it ensures that every aspect of a log event adheres to the application’s security, consistency, and integrity policies.
 
+##### Responsibilities
+
+* **Input Transformation:**
+  Accepts a `LoggableInputInterface` instance (a DTO-like contract) and systematically converts it into a structured, immutable `LogEntry` domain object.
+
+* **Domain Validation and Sanitization:**
+  The assembler delegates validation and sanitization to specialized domain Value Objects (`LogLevel`, `LogMessage`, `LogContext`, `LogChannel`), each of which uses the injected `LogSecurityInterface` for their own security checks. Specifically:
+
+  * **Level:** Passed to the `LogLevel` value object, which validates against allowed/custom levels using domain security rules.
+  * **Message:** Passed to the `LogMessage` value object, which sanitizes and validates the message; the assembler may also pre-mask the message if the channel is sensitive.
+  * **Context:** Passed to the `LogContext` value object, which recursively sanitizes and validates all keys and values, masking sensitive data as necessary.
+  * **Channel:** Passed to the `LogChannel` value object, which enforces naming and safety rules.
+  * **Timestamp:** Propagated as-is from the input; no sanitization or validation is applied at this stage.
+
+* **Fallback Policies:**
+  Where input is missing or invalid, the assembler leverages default values from the injected `AssemblerConfigInterface` (e.g., default log level, channel, or context), ensuring the logging pipeline remains robust even under incomplete input.
+
+* **Exception Handling:**
+  Any construction failure of domain value objects (such as invalid keys, unsafe values, or unknown log levels) is caught and rethrown as a `LogEntryAssemblyException`, providing a unified failure mode to consumers.
+
+##### Assembly Workflow
+
+1. **LogLevel Construction:**
+   Attempts to instantiate a `LogLevel` using the input’s value. If this fails due to invalidity and a default level is configured, it falls back and retries with the default level.
+
+2. **LogMessage Construction:**
+   Builds a `LogMessage` after potentially sanitizing the message based on the channel. If the channel is deemed sensitive, the message is replaced by the configured mask token to prevent data leakage.
+
+3. **LogContext Construction:**
+   Builds a `LogContext` value object, defaulting to the preconfigured context if none is provided. The context is fully sanitized and validated against domain rules.
+
+4. **LogChannel Construction:**
+   Instantiates a `LogChannel`, falling back to the default channel when necessary, and validates it according to domain and file system safety requirements.
+
+5. **Timestamp Propagation:**
+   Retrieves the timestamp directly from the input, with fallback policies handled upstream if required.
+
+6. **Domain Object Creation:**
+   If all components are valid, assembles them into a new, immutable `LogEntry`, ready for logging.
+
+##### Configuration and Customization
+
+* **AssemblerConfigInterface:**
+  Supplies all necessary defaults (log level, context, channel), as well as any custom log level definitions and the mask token used for sensitive masking.
+
+* **Mask Token Policy:**
+  The mask token is used to replace messages when the associated channel is deemed sensitive, ensuring compliance with security requirements.
+
+##### Public API
+
+* **`assembleFromInput(LoggableInputInterface $input): LogEntryInterface`**
+  Main entry point. Converts a loggable input to a validated and sanitized `LogEntry`. Throws `LogEntryAssemblyException` if any stage fails.
+
+##### Internal Methods Overview
+
+* **`buildLogLevel()`**:
+  Assembles a `LogLevel` with validation and fallback.
+
+* **`buildLogMessage()`**:
+  Sanitizes and assembles the message, masking as needed.
+
+* **`buildLogContext()`**:
+  Sanitizes and validates all context key-value pairs.
+
+* **`buildLogChannel()`**:
+  Validates channel name with fallback.
+
+* **`sanitizeMessageByChannel()`**:
+  Masks the message if the channel is sensitive; otherwise, returns the original message.
+
+##### Usage Flow
+
+1. The application or facade layer provides a `LoggableInputInterface` to the assembler.
+2. The assembler constructs each domain Value Object (`LogLevel`, `LogMessage`, `LogContext`, `LogChannel`), applying defaults from configuration where needed. Each Value Object internally delegates validation and sanitization to the domain security services.
+3. If construction is successful, a valid, immutable `LogEntry` is returned and ready for logging.
+4. If any part fails (due to invalid or unsafe data), a `LogEntryAssemblyException` is thrown, signaling an assembly error to the caller.
+
+##### Design Guarantees
+
+* All produced log entries are sanitized, validated, and immutable.
+* Sensitive information is consistently masked or excluded, including context data and log messages associated with sensitive channels.
+* The logging pipeline remains stable and predictable, regardless of input source or completeness.
+
+---
+
+#### Logger
+
+The `Logger` is the core infrastructure service responsible for persisting structured log entries to flat files on the local filesystem. By implementing the `LoggerInterface`, it abstracts and orchestrates the final stage of the logging pipeline, ensuring each entry is reliably and consistently recorded.
+
+##### Responsibilities
+
+* **Orchestration:**
+  Coordinates the sequence of log file path resolution, log line formatting, and file writing, relying on injected service collaborators.
+
+* **Abstraction:**
+  Shields higher application layers (such as `LoggingFacade` and `PsrLoggerAdapter`) from file system and formatting details, offering a simple contract for structured log persistence.
+
+##### Logging Workflow
+
+When `log(LogEntryInterface $entry)` is called:
+
+1. **File Path Resolution:**
+   Invokes the `LogFilePathResolver` to determine the appropriate file path for the log entry, typically organizing files by channel (folder) and level (filename).
+
+2. **Line Formatting:**
+   Uses the `LogLineFormatter` to serialize the structured `LogEntry` into a string suitable for flat-file storage.
+
+3. **File Writing:**
+   Delegates to the `LogFileWriter`, which appends the formatted line to the resolved file, handling all file system operations and write modes.
+
+4. **Error Handling:**
+   If any stage fails (for example, due to I/O errors or path resolution issues), exceptions such as `LogWriteException` may be thrown. Critical failures may optionally be reported via `error_log()` to ensure issues are surfaced.
+
+##### Design and Usage Notes
+
+* **Dependency Injection:**
+  All collaborators (`LogFilePathResolver`, `LogLineFormatter`, and `LogFileWriter`) are injected via the constructor, supporting testability and adherence to SOLID principles.
+
+* **Immutable Log Entries:**
+  Assumes that received `LogEntryInterface` objects are fully constructed, sanitized, and validated—no further mutation or checking is performed at this stage.
+
+* **Integration Point:**
+  Used internally by both the `LoggingFacade` (application layer) and `PsrLoggerAdapter` (PSR-3 adapter), ensuring a consistent, centralized log output process across all entry points.
+
+---
+
+#### LogFilePathResolver
+
+The `LogFilePathResolver` is a utility component tasked with determining the absolute file path where a given log entry should be persisted. It encapsulates all path construction logic, ensuring log files are organized consistently based on channel and level.
+
+##### Responsibilities
+
+* **Path Construction:**
+  Assembles the full file path for a log entry, following the pattern:
+
+  ```
+  {baseLogPath}/{channel}/{level}.log
+  ```
+
+  If the log entry does not specify a channel, the path defaults to:
+
+  ```
+  {baseLogPath}/{level}.log
+  ```
+
+* **Directory Normalization:**
+  Normalizes constructed paths, collapsing redundant separators and ensuring compatibility with the underlying operating system.
+
+* **Immutability and Safety:**
+  The base log directory is encapsulated in an immutable, validated `LogDirectory` value object, guaranteeing that all generated paths are rooted in a secure, pre-validated location.
+
+* **Non-intrusive:**
+  Does **not** create directories or files—its sole responsibility is path computation.
+
+##### Typical Examples
+
+* Channel: `"auth"`, Level: `"error"`
+  Path: `/var/log/myapp/auth/error.log`
+
+* Channel: `"application"`, Level: `"info"`
+  Path: `/var/log/myapp/application/info.log`
+
+* No channel, Level: `"warning"`
+  Path: `/var/log/myapp/warning.log`
+
+##### Method Overview
+
+* **`__construct(LogDirectory $logDirectory)`**
+  Receives the validated base log directory as a value object.
+
+* **`resolve(LogEntryInterface $entry): string`**
+  Returns the absolute, normalized path for the target log file based on the log entry’s channel and level.
+
+* **`normalizePath(string $path): string`**
+  Utility method that ensures all file paths are normalized, removing redundant separators and unnecessary trailing slashes (except for root).
+
+##### Integration Notes
+
+* Intended for use by the `Logger` service, abstracting away all filesystem path construction details and ensuring consistent file organization.
+* All returned paths are safe, normalized, and compatible with the underlying operating system.
+
+---
+
+#### LogLineFormatter
+
+The `LogLineFormatter` is a stateless utility responsible for serializing a structured `LogEntry` domain object into a single, human-readable text line for log file output. It enforces a standardized format to ensure all logs are clear, consistent, and easily parsed by both humans and tools.
+
+##### Default Log Line Format
 
 ```
-It then calls $assembler->assembleFromInput($input) to get a LogEntry (this
-triggers validation and sanitization exactly as it would via the facade).
-Then it calls $logger->log($entry) to actually write the entry out.
-If any exception is thrown during assembly (invalid level or message), the adapter might
-catch a domain exception and either rethrow it as a
-Psr\Log\InvalidArgumentException (as PSR-3 specifies for invalid level) or let it
-bubble. Proper PSR-3 implementation should throw
-Psr\Log\InvalidArgumentException for an invalid log level, which may be done
-internally if they mapped InvalidLogLevelException accordingly. It’s not explicitly
-stated here, but a robust adapter would handle that.
-The adapter essentially replicates what the LoggingFacade does, but it’s solely focused on
-compliance with the PSR interface. It does not expose the channel-based logInput
-method (PSR-3 knows nothing of channels).
-Usage: Normally, you don’t use PsrLoggerAdapter directly in your code. Instead, you obtain it via
-$kernel->psrLogger() after initializing the kernel. You then pass that $psrLogger to any
-library or component that expects a Psr\Log\LoggerInterface. From that point, when the
-library calls (for example) $psrLogger->error("Something broke", [...]), our adapter
-will execute the module’s logging process and write to the files just like if you called the facade.
-This ensures third-party integrations log through the same system, keeping logs unified.
-By implementing the PSR interface ourselves, we avoid requiring an external psr/log package
-and we have control over how context and levels are handled (we still align with PSR standards,
-e.g., context placeholders could be resolved if implemented, but in our case we mainly just pass
-context along for JSON output).
+[<timestamp>] [<channel>] [<LEVEL>] <message> | Context: <context_json>
 ```
+
+* **Timestamp:**
+  Rendered in ISO 8601 format (`DateTimeInterface::ATOM`), ensuring time zone and precision consistency.
+
+* **Channel:**
+  The log channel, enclosed in brackets.
+
+* **Level:**
+  Uppercase log level (e.g., `INFO`, `ERROR`).
+
+* **Message:**
+  The sanitized log message.
+
+* **Context:**
+  If non-empty, context data is appended as a JSON-encoded string (with Unicode and slashes unescaped), prefixed by `| Context:`.
+
+##### Example Output
+
+```
+[2025-06-20T16:42:05-03:00] [application] [INFO] User logged in. | Context: {"user":"tester"}
+```
+
+##### Responsibilities
+
+* **Consistent Serialization:**
+  Guarantees that every log line conforms to the expected schema, facilitating downstream parsing, searching, and monitoring.
+
+* **Stateless Operation:**
+  Maintains no internal state; formatting is purely functional.
+
+* **Graceful Handling of Empty Context:**
+  Omits the context segment when no additional data is present, reducing log noise.
+
+##### Method Overview
+
+* **`format(LogEntryInterface $entry): string`**
+  Accepts a `LogEntryInterface` and returns a single, formatted string representing the log entry, ready to be written to a file.
+
+##### Integration Notes
+
+* Typically used by the `Logger` service to serialize entries just before file writing.
+* The output format is intentionally human-friendly but also suitable for automated log collection tools.
+
+---
+
+#### LogFileWriter
+
+The `LogFileWriter` abstracts the low-level file-writing operation for log lines, ensuring reliable and atomic persistence of log data on the local filesystem. It isolates file system concerns from the rest of the logging module and guarantees that required directories exist before attempting to write.
+
+##### Responsibilities and Internal Workflow
+
+* **Directory Management:**
+  Before writing, the writer extracts the parent directory from the provided file path. If the directory does not exist, it attempts to create it recursively using `mkdir` with 0777 permissions. On failure, it logs an error via `error_log()` and throws a `LogWriteException`.
+
+* **Atomic Appending:**
+  Once the directory is ensured, the writer appends the log line to the specified file using `file_put_contents` with the `FILE_APPEND` flag. This guarantees that each log entry is added to the end of the file without overwriting previous entries. If the write operation fails, an error is logged and a `LogWriteException` is thrown.
+
+* **Error Reporting:**
+  At every stage—directory creation or file writing—any failure is both recorded via `error_log()` for system visibility and escalated to the calling layer through a domain-specific exception, ensuring that failures are not silently ignored.
+
+##### Method Overview
+
+* **`write(string $filepath, string $line): void`**
+  Main entry point. Ensures the directory exists and appends the provided log line to the file. Throws on failure.
+
+
+##### Performance Notes
+
+* The implementation is robust and suitable for most applications and moderate log volumes.
+* For scenarios with very high write rates, the class can be extended to use buffered writes or persistent stream handles for increased performance.
+
+##### Design Notes
+
+* **Single Responsibility:**
+  Does not perform formatting or path resolution—these concerns are handled by other services in the module.
+* **Resilience:**
+  Proactively handles file system edge cases to reduce log loss risk and facilitate operational troubleshooting.
+
+---
+
+#### PsrLoggerAdapter
+
+The `PsrLoggerAdapter` provides a seamless bridge between the internal, domain-driven logging infrastructure and any library, framework, or package that expects a PSR-3 compatible logger. By conforming to the PSR-3 interface, it guarantees that every log message, regardless of its source, is subject to the same validation, sanitization, and formatting rules that apply to the entire application. This adapter ensures uniformity, security, and reliability for all logging activity across project boundaries.
+
+#### Construction
+
+The adapter is constructed with two dependencies: a `LoggerInterface`, responsible for persisting log entries, and a `LogEntryAssemblerInterface`, which transforms raw loggable input (level, message, context) into validated domain `LogEntry` objects. This arrangement ensures that every log routed through the adapter passes through the same strict domain policies as internal application logs.
+
+#### Key Methods
+
+The adapter implements a local contract, `PublicContracts\Logging\PsrLoggerInterface`, which mirrors the main methods of the official PSR-3 `Psr\Log\LoggerInterface`. This design guarantees full interface compatibility with PSR-3, while allowing the application to remain decoupled from any external package. All PSR-3 standard methods are available: `log`, `emergency`, `alert`, `critical`, `error`, `warning`, `notice`, `info`, and `debug`. Each severity-specific method delegates to the generic `log` method, passing the appropriate log level string. The adapter interface thus matches the expectations of any PSR-3 consumer.
+
+#### Logging Workflow
+
+* Interpolates message placeholders according to PSR-3, replacing tokens (such as `{user}`) with corresponding scalar or stringable values from the context array.
+* Constructs a `LoggableInput` object using the interpolated message, the specified log level, and the remaining context.
+* Passes the input to the assembler, which applies domain validation and sanitization, returning a secure, validated `LogEntry`.
+* Delegates the assembled entry to the logger, which handles formatting and file writing.
+* Handles errors as required by the PSR-3 specification, such as throwing `InvalidArgumentException` for unsupported log levels.
+
+#### Usage
+
+To use the adapter, obtain an instance from the logging kernel and pass it to any component or library expecting a PSR-3 logger:
+
+```php
+$psrLogger = $kernel->psrLogger();
+$psrLogger->info('User {user} created', ['user' => 'felipe', 'ip' => '127.0.0.1']);
+```
+
+This guarantees that all messages are processed, validated, and persisted consistently, regardless of their origin.
+
+#### Integration and Design Notes
+
+* Ensures all logs, including those from third-party code, are subject to centralized validation, sanitization, and formatting.
+* Implements a local PSR-3 compatible contract, avoiding hard dependencies on external packages while remaining fully interoperable.
+* Fully PSR-3 compatible, supporting drop-in use with frameworks and libraries in the PHP ecosystem.
+* Preserves non-interpolated context data for structured logging or audit trails.
+* Stateless, supporting safe concurrent use throughout the application.
+
+---
+
+### Security Layer
+
+The Security layer is composed of two core modules: **Sanitizing** and **Validation**. These modules provide centralized, configuration-driven routines for input sanitization and validation, ensuring that all log data complies with strict security and integrity policies.
+
+Both modules are initialized and orchestrated by the `SecurityKernel`, which acts as the entry point for all security-related operations within the logging domain. The kernel exposes two main methods: `validator()` and `sanitizer()`, which return instances of `ValidationFacade` and `SanitizingService`, respectively. These classes implement the `ValidatorInterface` and `SanitizerInterface` contracts defined in the Domain layer.
+
+This design guarantees that value objects and assemblers consistently enforce security rules through a unified, maintainable interface, and allows for easy extension or replacement of validation and sanitization logic as needed.
+
+---
+
+#### Sanitizing Module
+
+The `Sanitizing` module provides a comprehensive set of services, contracts, and utilities for masking and handling sensitive data in PHP applications. Its primary purpose is to identify, sanitize, and partially mask sensitive strings, array values, and object properties before data is logged, stored, or exposed, ensuring compliance with security standards and privacy policies (e.g., GDPR, LGPD).
+
+This module is designed to be **extensible, dependency-injectable, and configurable**, supporting recursive sanitization, custom sensitivity patterns, and robust circular reference detection.
+
+##### Features:
+
+* **Sensitive Data Detection**: Identifies sensitive keys and value patterns, including credentials, tokens, personal data, and more.
+* **Partial and Full Sanitization**: Masks only the sensitive fragments within strings or data structures, preserving non-sensitive data.
+* **Configurable Mask Token**: Supports custom mask tokens, with validation and normalization.
+* **Recursive Array/Object Handling**: Processes deeply nested arrays and objects, including circular reference detection.
+* **Unicode Normalization**: Ensures reliable key and value matching, regardless of input encoding.
+* **Extensible Contracts**: Replaceable detectors and sanitizers for custom project requirements.
+
+##### Directory Structure
+
+```
+Sanitizing/
+├── Contract/
+│   ├── ArraySanitizerInterface.php
+│   ├── CircularReferenceDetectorInterface.php
+│   ├── ObjectSanitizerInterface.php
+│   ├── SensitiveKeyDetectorInterface.php
+│   ├── SensitivePatternDetectorInterface.php
+│   └── StringSanitizerInterface.php
+├── Detector/
+│   ├── CircularReferenceDetector.php
+│   ├── SensitiveKeyDetector.php
+│   └── SensitivePatternDetector.php
+├── Service/
+│   ├── ArraySanitizer.php
+│   ├── CredentialPhraseSanitizer.php
+│   ├── ObjectSanitizer.php
+│   ├── SanitizingService.php
+│   ├── SensitivePatternSanitizer.php
+│   └── StringSanitizer.php
+└── Tools/
+    ├── MaskTokenValidator.php
+    └── UnicodeNormalizer.php
+```
+
+##### Main Components
+
+###### **Contracts**
+
+All core functionality is defined via interfaces under `Contract/`, enabling dependency injection and custom implementations:
+
+* **ArraySanitizerInterface**: Recursive array masking.
+* **CircularReferenceDetectorInterface**: Safely tracks object/array cycles during recursion.
+* **ObjectSanitizerInterface**: Object property extraction and masking.
+* **SensitiveKeyDetectorInterface**: Heuristic key matching (e.g., "password", "api\_key").
+* **SensitivePatternDetectorInterface**: Regex or pattern-based value detection.
+* **StringSanitizerInterface**: Partial masking for sensitive strings.
+
+###### **Detectors**
+
+* **SensitiveKeyDetector**: Identifies sensitive keys (such as "password", "token", etc.) in arrays and objects using configurable heuristics, Unicode normalization, and fuzzy matching.
+* **SensitivePatternDetector**: Detects sensitive values based on regular expression patterns, enabling the identification of confidential data such as credit card numbers, CPFs, or tokens.
+* **CircularReferenceDetector**: Tracks object references during recursive sanitization to prevent infinite loops and accurately flag circular references.
+
+###### **Services**
+
+* **ArraySanitizer**: Recursively sanitizes arrays, masking sensitive values detected by key or pattern, and handling nested structures with depth control.
+* **ObjectSanitizer**: Recursively extracts and sanitizes object properties, using detectors to identify and mask sensitive data within objects. Implements circular reference detection to prevent infinite loops during the sanitization of nested structures.
+* **StringSanitizer**: Performs partial sanitization of strings, masking only sensitive fragments and credential phrases using pattern detection and Unicode normalization.
+* **CredentialPhraseSanitizer**: Specializes in detecting and masking credential-like phrases within strings, such as "password: value" or similar constructs.
+* **SensitivePatternSanitizer**: Focuses on masking substrings within values that match configured sensitive patterns, providing fine-grained control over data exposure.
+* **SanitizingService**: Orchestrates the sanitization process by coordinating detectors and sanitizers, providing a unified interface for comprehensive input sanitization across arrays, objects, and strings.
+
+###### **Tools**
+
+* **MaskTokenValidator**: Enforces mask token security and formatting.
+* **UnicodeNormalizer**: Standardizes Unicode input for reliable matching.
+
+##### Limitations
+
+* Detection is as strong as the patterns and keys provided/configured.
+* Extremely nested or large data structures may require tuning of maximum recursion/depth.
+
+---
+
+##### CircularReferenceDetector
+
+The `CircularReferenceDetector` is a utility that ensures safe and reliable recursive sanitization of complex data structures. Its primary responsibility is to **detect and prevent infinite recursion** caused by circular references in arrays and objects.
+
+This implementation achieves high accuracy and eliminates false positives by performing true variable identity checks, rather than relying on potentially ambiguous proxies.
+
+###### **Responsibilities**
+
+  * Tracks object instances using `SplObjectStorage` for optimal performance and accuracy.
+  * Tracks array references and verifies their true identity using a temporary marker technique.
+  * Detects when a specific array or object instance has already been visited in the current sanitization cycle.
+  * Marks data as visited to prevent redundant processing and stack overflows.
+  * Resets its internal state at the beginning of each new sanitization run.
+  * Provides a standardized marker to identify where circular references were found.
+
+###### **How It Works**
+
+The detector's accuracy stems from using different, optimized strategies for objects and arrays:
+
+  * **For Objects**: It leverages the native `SplObjectStorage` class. This data structure is specifically designed to store and check for the existence of unique object instances in a highly efficient and correct manner, eliminating the risk of ID collision that can occur with `spl_object_id`.
+  * **For Arrays**: Since arrays cannot be used as keys in standard hash maps, it employs a robust identity-check mechanism. It temporarily adds a unique, non-colliding key to one array and then checks for that key's presence in another array reference. This reliably confirms if both variables point to the same data in memory. The key is immediately removed after the check to ensure the original data structure is not mutated.
+
+###### **Usage Example**
+
+```php
+use Logging\Security\Sanitizing\Detector\CircularReferenceDetector;
+
+$detector = new CircularReferenceDetector();
+
+$data = [/* complex array or object structure, possibly circular */];
+
+// At the start of each new sanitization run:
+$detector->reset();
+
+if ($detector->isCircularReference($data)) {
+    // Handle the circular reference (e.g., mask or skip).
+    $output = $detector->handleCircularReference();
+} else {
+    $detector->markSeen($data);
+    // Proceed with further processing...
+}
+```
+
+###### **Typical Workflow in Sanitization**
+
+1.  **Start of Recursion**: `reset()` is called to clear any prior state.
+2.  **Before Processing an Array/Object**: `isCircularReference()` checks if the exact structure has already been seen.
+3.  **If Circular**: `handleCircularReference()` provides a standardized marker to replace the value.
+4.  **If Not Circular**: `markSeen()` records the structure, and recursion proceeds safely.
+
+###### **Security and Robustness**
+
+  * Provides a strong guarantee against infinite recursion by using memory identity-based checks instead of unreliable proxies.
+  * Eliminates the risk of false positives that can occur with simpler ID-based tracking mechanisms, ensuring that only true circular references are flagged.
+  * Ensures data integrity by performing non-destructive checks; the temporary marker used for array identity verification is immediately removed.
+  * Enables the safe traversal and masking of real-world data, including user input, configuration trees, and complex entity graphs.
+
+###### **Integration**
+
+It is designed to be used as a dependency of high-level sanitizers (such as `ArraySanitizer` and `ObjectSanitizer`) and implements the `CircularReferenceDetectorInterface` for interchangeability and testability.
+
+---
+
+##### SensitiveKeyDetector
+
+The `SensitiveKeyDetector` is responsible for identifying sensitive keys in key-value pairs to ensure that critical data—such as passwords, tokens, and personal identifiers—is properly masked during logging or data processing.
+
+###### **Features**
+
+* **Multilingual & Locale-Aware:** Supports detection in multiple languages (e.g., English, Portuguese) by default and can be extended with project-specific sensitive keys.
+* **Advanced Heuristics:** Uses Unicode normalization, lowercasing, fuzzy transforms (removal of underscores, dashes, special characters), and vowel removal to maximize detection accuracy across diverse input formats.
+* **Configurable:** Accepts custom sensitive keys during instantiation, merging them with a robust default set.
+* **Optimized for Recursion:** Designed for high-performance usage in recursive sanitization workflows.
+
+###### **Responsibilities**
+
+* Detects whether a provided key should be considered sensitive based on multiple normalization and transformation strategies.
+* Prepares an internal registry of sensitive keys using all supported detection heuristics.
+* Validates custom keys for correct format and absence of control characters.
+
+#### **Typical Usage**
+
+```php
+use Logging\Security\Sanitizing\Detector\SensitiveKeyDetector;
+
+$detector = new SensitiveKeyDetector([
+    'custom_sensitive_field', 'new_sensitive_field'
+]);
+
+if ($detector->isSensitiveKey('API_KEY')) {
+    // This key will be masked during sanitization
+}
+```
+
+#### **Detection Strategy**
+
+* **Lowercasing**: Case-insensitive comparison.
+* **Unicode Normalization**: Handles accents and diacritics.
+* **Fuzzy Transform**: Removes separators and common non-alphanumerics.
+* **Vowel Removal**: Improves match resilience to obfuscated or shortened keys.
+
+###### **Security and Audit**
+
+* Prevents accidental exposure of sensitive fields by maximizing detection accuracy.
+* Exposes the prepared keys for debugging, validation, or audit purposes via `getPreparedKeys()`.
+
+###### **Integration**
+
+This class is typically used as a dependency of string, array, or object sanitizers, and implements the `SensitiveKeyDetectorInterface` for interchangeability and testability.
+
+---
+
+##### SensitivePatternDetector
+
+The `SensitivePatternDetector` is responsible for identifying sensitive values within data by applying configurable regular expression patterns. This mechanism enables the detection and masking of structured sensitive information such as personal identifiers (e.g., CPF), credit card numbers, and email addresses during logging or processing operations.
+
+###### **Features**
+
+* **Default and Custom Patterns:**
+  Merges a robust default set of sensitive data patterns (for CPF, credit card numbers, email addresses, etc.) with any additional custom patterns provided at instantiation.
+* **Validated Patterns:**
+  Validates the syntax of all regular expressions at construction time, ensuring configuration safety.
+* **Extensible:**
+  Easily extended with project-specific or locale-specific regex patterns to cover additional sensitive data types.
+* **Efficient Matching:**
+  Optimized for high-throughput environments—applies all patterns in sequence, returning on the first match.
+
+###### **Responsibilities**
+
+* Detects whether a value matches any configured sensitive data pattern using regular expressions.
+* Restricts detection to string values only; non-string values are never marked as sensitive by pattern.
+* Provides access to the active set of patterns for auditing and debugging purposes.
+* Throws precise configuration exceptions if any invalid pattern is supplied.
+
+###### **Usage Example**
+
+```php
+use Logging\Security\Sanitizing\Detector\SensitivePatternDetector;
+
+$customPatterns = [
+    '/\\b\\d{4}-\\d{4}-\\d{4}-\\d{4}\\b/', // Example: alternate credit card format
+];
+$detector = new SensitivePatternDetector($customPatterns);
+
+if ($detector->matchesSensitivePatterns('123.456.789-09')) {
+    // Value is considered sensitive (matches CPF pattern)
+}
+```
+
+###### **Security and Audit**
+
+* Ensures robust protection against accidental exposure of structured personal or credential data by applying up-to-date, project-relevant patterns.
+* All pattern logic is transparent and auditable via `getPatterns()`.
+
+###### **Integration**
+
+Designed for use as a dependency in higher-level sanitizers, such as string or array sanitizers, and implements `SensitivePatternDetectorInterface` for flexibility in testing and replacement.
+
+---
+
+##### CredentialPhraseSanitizer
+
+The `CredentialPhraseSanitizer` is responsible for detecting and masking credential phrases within free-form text, such as log messages or configuration files.
+It targets values that are clearly associated with sensitive keys (e.g., `"password: mySecret"` or `"token = abc123"`), supporting a wide range of separator formats and flexible word order, both forward (`key → value`) and backward (`value ← key`).
+
+###### **Features**
+
+* **Sensitive Key Detection:**
+  Integrates with a `SensitiveKeyDetectorInterface` to obtain and use all normalized/fuzzy representations of sensitive keys.
+* **Flexible Separator Support:**
+  Recognizes and customizes separators (`:`, `=`, words like `"is"`, `"é"`, `"foi"`, arrows, and more) between keys and values.
+* **Bidirectional Analysis:**
+  Detects and masks both `key → separator → value` and `value ← separator ← key` phrases.
+* **Tolerance for Intermediate Words:**
+  Allows a configurable number of neutral/intermediate words between the key and value (e.g., `"password is currently: abc123"`).
+* **Preserves Formatting:**
+  Masks only the sensitive value, preserving original whitespace, punctuation, and phrase structure.
+
+###### **Responsibilities**
+
+* Masks values associated with sensitive credential keys using robust, locale-agnostic phrase patterns.
+* Supports customization of both the set of separators and the detection tolerance for more precise or broader coverage.
+* Throws precise configuration exceptions when invalid custom separators are supplied.
+
+###### **Usage Example**
+
+```php
+use Logging\Security\Sanitizing\Service\CredentialPhraseSanitizer;
+use Logging\Security\Sanitizing\Detector\SensitiveKeyDetector;
+
+$keyDetector = new SensitiveKeyDetector(['my_custom_key']);
+$sanitizer = new CredentialPhraseSanitizer($keyDetector, ['::']);
+
+$input = 'Database password: hunter2';
+$masked = $sanitizer->sanitizePhrase($input, '[MASKED]');
+// Output: 'Database password: [MASKED]'
+```
+
+###### **Integration**
+
+Designed for use by string sanitizers, the `CredentialPhraseSanitizer` is suitable for processing logs, environment variables, configuration files, or any context where sensitive phrases may appear.
+
+###### **Security Considerations**
+
+* Effectively prevents accidental exposure of credentials or secrets, even when logged in natural-language or non-standard formats.
+* Custom separators and word-tolerance settings can be tuned to balance coverage and false-positive rates.
+
+---
+
+##### SensitivePatternSanitizer
+
+The `SensitivePatternSanitizer` is responsible for **masking all occurrences of sensitive data patterns** within strings, using a configurable set of regular expressions.
+It is designed to efficiently and flexibly perform partial sanitization of any substring that matches known or custom patterns, such as PII (Personally Identifiable Information), credentials, or other data signatures.
+
+###### **Features**
+
+* **Pattern-Based Masking:**
+  Uses the configured `SensitivePatternDetectorInterface` to retrieve all active patterns for sensitive data (e.g., CPF, credit card, emails, and custom signatures).
+* **Partial and Flexible:**
+  Masks only the fragments of the string that match sensitive patterns, preserving the rest of the content for context and readability.
+* **Unicode Normalization:**
+  Normalizes input strings before matching to ensure robust and consistent detection, regardless of input encoding or locale.
+* **Unified Matching:**
+  Dynamically composes a unified regular expression from all configured patterns, supporting efficient single-pass detection and masking.
+* **Extensible:**
+  Easily integrates with custom or extended pattern detectors for project-specific needs.
+
+###### **Responsibilities**
+
+* Orchestrates normalization, pattern extraction, and replacement operations.
+* Ensures only known sensitive patterns are masked, reducing false positives.
+* Supports efficient, high-throughput use cases (e.g., logging pipelines).
+
+###### **Usage Example**
+
+```php
+use Logging\Security\Sanitizing\Service\SensitivePatternSanitizer;
+use Logging\Security\Sanitizing\Detector\SensitivePatternDetector;
+use Logging\Security\Sanitizing\Tools\UnicodeNormalizer;
+
+$patternDetector = new SensitivePatternDetector([...]);
+$unicodeNormalizer = new UnicodeNormalizer();
+
+$sanitizer = new SensitivePatternSanitizer($patternDetector, $unicodeNormalizer);
+
+$input = "User CPF: 123.456.789-09, email: user@example.com";
+$masked = $sanitizer->sanitizePatterns($input, '[MASKED]');
+// Output: "User CPF: [MASKED], email: [MASKED]"
+```
+
+###### **Integration**
+
+Typically used by higher-level string or array sanitizers, and may be composed with other masking and detection services for layered protection.
+
+###### **Security Considerations**
+
+* Patterns should be reviewed and updated regularly to reflect new types of sensitive data.
+* Does not alter non-matching content, minimizing the risk of over-masking or loss of context.
+
+---
+
+##### StringSanitizer
+
+The `StringSanitizer` is responsible for **partial sanitization of strings** by masking only sensitive fragments and credential phrases, while preserving the remaining content for context and traceability.
+It combines advanced phrase analysis with pattern-based detection, making it suitable for applications where both explicit credentials and generic sensitive data may appear within strings.
+
+###### **Features**
+
+* **Credential Phrase Masking:**
+  Identifies and masks sensitive credential phrases (e.g., "password: 123", "token = abc") using advanced contextual analysis, supporting flexible word order and custom separators.
+* **Pattern-Based Masking:**
+  Detects and masks any substring matching known or custom sensitive data patterns (e.g., CPF, emails, credit card numbers).
+* **Unicode Normalization:**
+  Normalizes all input to ensure consistent detection and masking across various locales and encodings.
+* **Configurable Mask Token:**
+  Applies the provided mask token exactly as received, supporting project-specific masking strategies.
+* **Compositional Design:**
+  Integrates with dedicated phrase and pattern sanitizers, allowing easy extension and replacement.
+
+###### **Responsibilities**
+
+* Orchestrates the detection and masking of both credential phrases and sensitive data patterns.
+* Ensures partial masking, leaving non-sensitive fragments intact.
+* Normalizes and trims input before applying sanitization routines.
+
+###### **Usage Example**
+
+```php
+use Logging\Security\Sanitizing\Service\StringSanitizer;
+use Logging\Security\Sanitizing\Service\SensitivePatternSanitizer;
+use Logging\Security\Sanitizing\Service\CredentialPhraseSanitizer;
+use Logging\Security\Sanitizing\Tools\UnicodeNormalizer;
+
+// Assume dependencies are configured and injected as needed
+$stringSanitizer = new StringSanitizer(
+    new SensitivePatternSanitizer(...),
+    new CredentialPhraseSanitizer(...),
+    new UnicodeNormalizer()
+);
+
+$input = 'API key: 1234567890abcdef, email: user@example.com';
+$masked = $stringSanitizer->sanitizeString($input, '[MASKED]');
+// Output: 'API key: [MASKED], email: [MASKED]'
+```
+
+###### **Integration**
+
+Implements `StringSanitizerInterface` and is typically used within higher-level sanitization services for log messages, user input, or data exports.
+
+###### **Security Considerations**
+
+* Effectively reduces risk of sensitive data leakage by masking only detected fragments, preserving auditability and debuggability of logs and output.
+* Relies on up-to-date phrase and pattern definitions for best coverage; review and update regularly.
+
+---
+
+#### ObjectSanitizer
+
+The `ObjectSanitizer` is responsible for **recursively sanitizing objects** for secure logging or data exposure. It systematically traverses all properties of a given object, applying masking and sanitization rules to any data identified as sensitive, while also handling arrays, nested objects, recursion limits, and circular references.
+
+##### **Features**
+
+* **Recursive Sanitization:**
+  Traverses and sanitizes all object properties, including deeply nested arrays and objects.
+* **Sensitive Property Masking:**
+  Entirely masks values of properties whose names are detected as sensitive by a `SensitiveKeyDetectorInterface`.
+* **Partial String Sanitization:**
+  Uses a `StringSanitizerInterface` to mask only sensitive fragments within string property values.
+* **Array Support:**
+  Recursively processes arrays found in properties, applying the same masking and depth policies.
+* **Recursion Depth Control:**
+  Enforces a maximum recursion depth to avoid performance issues or infinite descent.
+* **Circular Reference Detection:**
+  Utilizes a `CircularReferenceDetectorInterface` to safely handle self-referential or cyclic data structures.
+
+##### **Workflow**
+
+1. **Resets** the circular reference tracker before each top-level sanitization call.
+2. **Recursively traverses** each property:
+
+   * If the property name is sensitive, the value is fully masked.
+   * If the value is an array or object, it is processed recursively.
+   * If the value is a string, it is partially sanitized using the configured string sanitizer.
+   * Otherwise, the value is returned as-is.
+3. **Enforces a maximum depth**: If the limit is reached, values are replaced with the mask token.
+4. **Handles circular references**: If a previously visited object or array is encountered, returns a standardized marker.
+
+##### **Usage Example**
+
+```php
+use Logging\Security\Sanitizing\Service\ObjectSanitizer;
+use Logging\Security\Sanitizing\Detector\CircularReferenceDetector;
+use Logging\Security\Sanitizing\Detector\SensitiveKeyDetector;
+use Logging\Security\Sanitizing\Service\StringSanitizer;
+
+$objectSanitizer = new ObjectSanitizer(
+    new CircularReferenceDetector(),
+    new SensitiveKeyDetector(),
+    new StringSanitizer(...), // Pass appropriate dependencies
+    '[MASKED]',
+    8 // Maximum recursion depth
+);
+
+$sanitized = $objectSanitizer->sanitizeObject($someObject);
+// $sanitized is a fully sanitized associative array ready for logging
+```
+
+##### **Integration**
+
+This class implements `ObjectSanitizerInterface` and is typically used as a dependency within higher-level logging or audit modules that require secure serialization and masking of potentially sensitive objects.
+
+##### **Security Considerations**
+
+* Ensures sensitive information is not leaked in logs, error traces, or serialized outputs.
+* Prevents stack overflows and performance issues by enforcing a maximum recursion depth and circular reference detection.
+* Can be composed with custom key detectors or string sanitizers for project-specific policies.
+
+---
+
+##### ArraySanitizer
+
+The `ArraySanitizer` provides robust, **recursive sanitization for arrays**, ensuring that data is safe for secure logging, auditing, or API exposure. It is engineered to handle complex and deeply nested data structures, including those with circular references, guaranteeing both security and application stability.
+
+###### **Features**
+
+  * **Sensitive Key Masking:**
+    Fully masks values for keys identified as sensitive by a `SensitiveKeyDetectorInterface`.
+  * **Partial String Sanitization:**
+    Delegates string values to a `StringSanitizerInterface` for partial masking, which can preserve non-sensitive context while redacting specific patterns.
+  * **Circular Reference Handling:**
+    Leverages a `CircularReferenceDetectorInterface` to safely traverse data structures with circular dependencies, preventing infinite recursion and application crashes.
+  * **Object Sanitization Support:**
+    Delegates the sanitization of any objects found in array values to an `ObjectSanitizerInterface`.
+  * **Maximum Depth Control:**
+    Enforces a configurable recursion depth limit as a fail-safe against excessively deep or runaway data structures.
+
+###### **Workflow**
+
+The sanitization process follows a strict order of operations to ensure security and stability:
+
+1.  The main `sanitizeArray` method is called, which first **resets the circular reference detector** to begin a fresh run.
+2.  As it traverses the array, it processes each element by first checking for structural hazards:
+      * **Is it a circular reference?** If an array or object has already been seen in the current run, it is replaced with a `[CIRCULAR_REFERENCE_DETECTED]` marker.
+      * **Is the max depth reached?** If so, recursion stops, and a `[MAX_DEPTH_REACHED]` marker is returned.
+3.  If the element is safe to process, it is handled based on its type:
+      * **Sensitive key:** The entire value is replaced with the mask token.
+      * **Array value:** The sanitization process recurses into the nested array.
+      * **Object value:** The object is passed to the `ObjectSanitizerInterface` for processing.
+      * **String value:** The string is passed to the `StringSanitizerInterface` for partial masking.
+      * **Other types (int, bool, etc.):** The value is returned as-is.
+
+###### **Usage Example**
+
+```php
+use Logging\Security\Sanitizing\Service\ArraySanitizer;
+use Logging\Security\Sanitizing\Service\StringSanitizer;
+use Logging\Security\Sanitizing\Service\ObjectSanitizer;
+use Logging\Security\Sanitizing\Detector\SensitiveKeyDetector;
+use Logging\Security\Sanitizing\Detector\CircularReferenceDetector;
+
+$arraySanitizer = new ArraySanitizer(
+    new StringSanitizer(...),
+    new SensitiveKeyDetector(...),
+    new ObjectSanitizer(...),
+    new CircularReferenceDetector(),
+    '[MASKED]',
+    10 // max depth
+);
+
+// $dataArray could be a simple array or a complex structure with circular references.
+$sanitized = $arraySanitizer->sanitizeArray($dataArray);
+
+// $sanitized now contains the fully sanitized and safe array.
+```
+
+###### **Integration**
+
+The `ArraySanitizer` implements the `ArraySanitizerInterface` and is designed for composition. It acts as a central orchestrator, delegating specific tasks to specialized components, making the system modular and easy to test.
+
+###### **Security and Robustness**
+
+  * **Prevents Data Leakage:** Ensures that sensitive information does not leak into logs, API responses, or other outputs.
+  * **Denial-of-Service Prevention:** Prevents application crashes and resource exhaustion by correctly handling infinite recursion in circular data structures. The maximum depth limit serves as an additional layer of protection.
+  * **Extensibility:** Its behavior can be customized via dependency injection, allowing for different detection strategies, sanitization rules, or masking tokens.
+
+---
+
+##### SanitizingService
+
+The `SanitizingService` orchestrates all sanitization logic in the logging domain, providing a **centralized entry point** for recursively masking or redacting sensitive data across any structure—string, array, or object.
+It coordinates specialized collaborators for detection and masking, automatically delegating each input to the appropriate strategy based on its type, and ensuring domain-wide consistency.
+
+###### **Key Features**
+
+* **Unified Entry Point:**
+  Centralizes all sanitization and sensitivity checks behind a single interface (`SanitizerInterface`), simplifying integration and maintenance.
+* **Type Routing:**
+  Automatically detects the type of input and delegates sanitization to the correct service—array, object, or string sanitizer.
+* **Recursive Handling:**
+  Traverses and sanitizes complex, deeply nested structures, applying masking policies at every level.
+* **Mask Token Validation:**
+  Validates or defaults the mask token via `MaskTokenValidator` for each operation, protecting against unsafe or ambiguous masking.
+* **Comprehensive Sensitivity Detection:**
+  Determines whether any given value (or nested structure) is or contains sensitive data, leveraging pattern and key detectors.
+* **Configurable and Extensible:**
+  Composed of interchangeable dependencies (detectors, validators, sanitizers), supporting custom security policies and domain needs.
+
+###### **Responsibilities**
+
+* Receives arbitrary input, routes it to the appropriate sanitizer, and returns the sanitized result.
+* Validates and applies the configured mask token or falls back to a secure default.
+* Provides domain-consistent sensitivity detection via `isSensitive`.
+* Ensures non-string scalars are returned as-is (for performance and relevance).
+
+###### **Usage Example**
+
+```php
+use Logging\Security\Sanitizing\Service\SanitizingService;
+use Logging\Security\Sanitizing\Service\ArraySanitizer;
+use Logging\Security\Sanitizing\Service\ObjectSanitizer;
+use Logging\Security\Sanitizing\Service\StringSanitizer;
+use Logging\Security\Sanitizing\Detector\SensitivePatternDetector;
+use Logging\Security\Sanitizing\Detector\SensitiveKeyDetector;
+use Logging\Security\Sanitizing\Tools\MaskTokenValidator;
+
+$service = new SanitizingService(
+    new ArraySanitizer(...),
+    new ObjectSanitizer(...),
+    new StringSanitizer(...),
+    new SensitivePatternDetector(...),
+    new SensitiveKeyDetector(...),
+    new MaskTokenValidator(),
+    '[MASKED]'
+);
+
+$data = [
+    'user' => 'admin',
+    'password' => 'secret123',
+    'profile' => (object)['cpf' => '123.456.789-09']
+];
+
+$sanitized = $service->sanitize($data);
+// $sanitized: sensitive values replaced with '[MASKED]'
+```
+
+###### **Integration**
+
+Implements `SanitizerInterface` and is designed to be injected into higher-level application services, controllers, or middleware that require secure, consistent data sanitization.
+
+###### **Security Considerations**
+
+* Prevents exposure of sensitive data in logs, APIs, or error traces across any PHP type.
+* Enforces strict validation and safe fallback for mask tokens.
+* Modular architecture supports continuous policy evolution.
+
+---
+
+##### MaskTokenValidator
+
+The `MaskTokenValidator` is responsible for **validating and normalizing mask tokens** used to replace sensitive data during sanitization.
+It enforces domain-specific security policies, ensuring that every mask token used throughout the system is safe, properly formatted, and resistant to misuse or injection vulnerabilities.
+
+###### **Features**
+
+* **Validation:**
+  Checks that the mask token is non-empty, within the maximum allowed length, and does not match any forbidden patterns (e.g., control characters, "base64", "script", or "php").
+* **Normalization:**
+  Standardizes all valid tokens by trimming whitespace, unwrapping any brackets, converting to uppercase, and re-wrapping in brackets (e.g., "masked" → "\[MASKED]").
+* **Configurable Policy:**
+  Allows for custom forbidden patterns and length constraints via constructor parameters, supporting project-specific security requirements.
+* **Strict Exception Handling:**
+  Throws a precise domain exception (`InvalidSanitizationConfigException`) on invalid input, enabling safe fail-fast behavior.
+
+###### **Responsibilities**
+
+* Guarantees that every mask token used for data sanitization is secure, clear, and predictable in log output.
+* Prevents accidental use of unsafe, ambiguous, or potentially malicious tokens in production environments.
+
+###### **Usage Example**
+
+```php
+use Logging\Security\Sanitizing\Tools\MaskTokenValidator;
+
+$validator = new MaskTokenValidator();
+
+try {
+    $validatedToken = $validator->validate('  masked  '); // Returns: '[MASKED]'
+} catch (InvalidSanitizationConfigException $e) {
+    // Handle invalid mask token: log error, fallback, etc.
+}
+```
+
+###### **Integration**
+
+Typically used by sanitizers and orchestrator services to ensure that all sensitive data is masked using only safe, validated tokens, and to enforce consistent output formatting across the logging domain.
+
+###### **Security Considerations**
+
+* Prevents the use of mask tokens that could be misinterpreted, injected, or abused in logs or external systems.
+* Configuration flexibility enables adaptation to evolving security policies and compliance requirements.
+
+---
+
+##### UnicodeNormalizer
+
+The `UnicodeNormalizer` is a domain service dedicated to **normalizing strings to Unicode FORM\_KC**, ensuring consistent representation and comparison of textual data throughout the application.
+This process is especially important for applications handling multilingual, accented, or visually ambiguous Unicode data, as it guarantees that equivalent strings are treated identically for detection, comparison, and sanitization.
+
+###### **Key Features**
+
+* **Unicode Normalization:**
+  Converts strings to [Unicode Normalization Form KC (NFKC)](https://unicode.org/reports/tr15/), standardizing visually and semantically equivalent characters for robust processing.
+* **Graceful Fallback:**
+  Automatically returns the original string if the PHP [intl extension](https://www.php.net/manual/en/book.intl.php) or the `Normalizer` class is not available, preserving system stability and compatibility.
+* **Transparency:**
+  Operates silently; applications do not need to check or handle the presence of the extension.
+
+###### **Responsibilities**
+
+* Provides a simple interface for normalizing input or stored text, supporting downstream detection (e.g., sensitive key matching) and sanitization logic.
+* Ensures that Unicode normalization is consistently applied across all relevant code paths.
+
+###### **Usage Example**
+
+```php
+use Logging\Security\Sanitizing\Tools\UnicodeNormalizer;
+
+$normalizer = new UnicodeNormalizer();
+
+$input = "Café";
+$normalized = $normalizer->normalize($input);
+// Output: "Café" (normalized to Unicode FORM_KC, if supported)
+```
+
+###### **Integration**
+
+Typically used by detectors and sanitizers that rely on string comparison, pattern matching, or linguistic consistency, such as sensitive key detectors and string sanitizers.
+
+###### **Security and Data Integrity**
+
+* Prevents bypass of sensitive data detection due to Unicode anomalies, visually deceptive characters, or accented inputs.
+* Fosters internationalization-readiness in any application that processes user input, log data, or configuration files.
+
+---
+
+#### Validation Module
+
+The `Validation` module provides a comprehensive suite of services and utilities for rigorously validating all value objects and core properties within PHP logging systems. Its primary purpose is to enforce domain integrity, normalization, and compliance with security and operational policies before data is persisted, logged, or further processed.
+
+This module is designed to be **modular, extensible, and fully configurable**. It supports centralized rule enforcement, custom validation constraints, and easy adaptation to varied application requirements via dependency injection and externalized configuration.
+
+###### **Architecture**
+
+The module is organized into three primary layers:
+
+* **Facade**: The `ValidationFacade` provides a single entry point and unifies all value object validation logic, implementing the domain’s `ValidatorInterface`.
+* **Validators (Services)**: Each service encapsulates the validation rules for a single value object, such as log channels, contexts, directories, levels, messages, and timestamps.
+* **Tools**: Utility traits and helpers, such as `StringValidationTrait`, provide reusable logic to reduce duplication across validators.
+
+External configuration (via `ValidationConfigInterface`) allows runtime adaptation of all limits and rules, ensuring flexibility across diverse projects.
+
+###### **Features**
+
+* **Dedicated Value Object Validators**: Specialized services for validating log channels, levels, contexts, directories, messages, and timestamps, each enforcing domain-specific rules.
+* **Configurable Constraints**: All maximum lengths, forbidden patterns, allowed values, and normalization policies are externally configurable and environment-agnostic.
+* **Unified Facade Interface**: The `ValidationFacade` provides a single entry point for all log-related validations, decoupling domain logic from implementation details.
+* **Exception-Based Failure Handling**: Domain-specific exceptions are thrown on invalid input, supporting robust error management and traceability.
+* **Reusable String Logic**: A shared trait delivers consistent string sanitization and normalization across all validators.
+* **Extensible Contracts**: All validators are designed for substitution or extension, enabling custom rule sets for unique domain needs.
+
+###### **Directory Structure**
+
+```
+Validation/
+├── Services/
+│   ├── ChannelValidator.php
+│   ├── ContextValidator.php
+│   ├── DirectoryValidator.php
+│   ├── LevelValidator.php
+│   ├── MessageValidator.php
+│   └── TimestampValidator.php
+├── Tools/
+│   └── StringValidationTrait.php
+└── ValidationFacade.php
+```
+
+###### **Main Components**
+
+* **ValidationFacade**
+
+  Aggregates all validation services and exposes a unified interface for domain object validation, implementing the main `ValidatorInterface`.
+
+* **Services**
+
+  * **ChannelValidator**: Enforces non-emptiness, normalization, and forbidden character rules for log channel names.
+  * **ContextValidator**: Validates associative log context arrays, checking key/value types, allowed lengths, and forbidden characters.
+  * **DirectoryValidator**: Checks directory paths for non-emptiness, safe usage (no traversal), and allowed character sets.
+  * **LevelValidator**: Ensures log level strings are non-empty, normalized, and present in the allowed set.
+  * **MessageValidator**: Validates message strings for length, forbidden characters, and required punctuation.
+  * **TimestampValidator**: Asserts that timestamps are valid instances of `DateTimeImmutable`.
+
+* **Tools**
+
+  * **StringValidationTrait**: Provides reusable string sanitation, normalization, and emptiness checks used internally by all validators.
+
+###### **Integration**
+
+The `Validation` module is initialized and managed by the `SecurityKernel`, which automatically handles all dependency wiring. There is no need to manually instantiate or configure individual validators. The kernel provides a fully configured, production-ready validation service that can be used throughout your application.
+
+* **Initialization:**
+  Instantiate `SecurityKernel` with a `ValidationConfigInterface` implementation.
+
+* **Validator Access:**
+  Retrieve the validation facade by calling:
+
+  ```php
+  $kernel = new SecurityKernel($sanitizationConfig, $validationConfig);
+  $validator = $kernel->validator(); // Implements ValidatorInterface
+  ```
+
+* **Usage:**
+  Use `$validator` to validate log channels, levels, contexts, messages, directories, and timestamps according to your configuration. All domain validation rules are enforced transparently.
+
+###### **Limitations**
+
+* Effectiveness depends on the provided configuration, including all length limits and allowed/disallowed value sets.
+* Only validates as thoroughly as the contracts and external configuration define—application-level policies may require further extensions.
+
+-----
+
+##### ValidationFacade
+
+The `ValidationFacade` serves as a centralized, high-level entry point for all data validation within the logging domain. It implements the **Facade design pattern** to provide a simple, unified interface that abstracts the complexity of multiple specialized validation services. Its core purpose is to ensure that all log-related data—such as channels, messages, and context—is consistently and reliably validated against domain rules before use.
+
+###### **Responsibilities**
+
+  * **Simplifies Complexity:** Provides a single, simplified API for a complex validation subsystem, hiding the underlying individual validator services from the client.
+  * **Delegates Tasks:** Delegates each specific validation task (e.g., for a channel, log level, or message) to a dedicated, single-responsibility validator service.
+  * **Centralizes Enforcement:** Acts as the single point of enforcement for all domain validation rules, ensuring consistency across the application.
+  * **Promotes Decoupling:** Decouples domain objects from concrete validation implementations. This allows validation logic to be modified or swapped without impacting business code, as long as the facade's contract is maintained.
+
+###### **How It Works**
+
+The facade's operation is straightforward and focuses on delegation:
+
+1.  **Instantiation:** The `ValidationFacade` is instantiated by injecting a complete set of specialized validator services (e.g., `ChannelValidator`, `ContextValidator`, etc.) via its constructor. This is typically handled by a dependency injection container.
+2.  **Execution:** When a validation method like `validateChannel()` is called on the facade, it does not contain the validation logic itself.
+3.  **Delegation:** It transparently delegates the call and its arguments to the corresponding injected service—in this case, `channelValidator->validate(...)`.
+4.  **Return Value:** The result (a normalized value) or any thrown exception from the specialized service is returned directly to the original caller, making the facade a clean, pass-through entry point.
+
+###### **Usage Example**
+
+```php
+use Logging\Security\Validation\ValidationFacade;
+use Logging\Security\Validation\Services\ChannelValidator;
+use Logging\Security\Validation\Services\ContextValidator;
+use Logging\Security\Validation\Services\DirectoryValidator;
+use Logging\Security\Validation\Services\LevelValidator;
+use Logging\Security\Validation\Services\MessageValidator;
+use Logging\Security\Validation\Services\TimestampValidator;
+
+// These could be instantiated by a DI container.
+$channelValidator = new ChannelValidator();
+$contextValidator = new ContextValidator();
+$directoryValidator = new DirectoryValidator();
+$levelValidator = new LevelValidator();
+$messageValidator = new MessageValidator();
+$timestampValidator = new TimestampValidator();
+
+// Create the facade instance with all its dependencies.
+$validationFacade = new ValidationFacade(
+    $channelValidator,
+    $contextValidator,
+    $directoryValidator,
+    $levelValidator,
+    $messageValidator,
+    $timestampValidator
+);
+
+// Use the simple, unified interface to validate different data types.
+try {
+    $validChannel = $validationFacade->validateChannel(' application.events ');
+    $validMessage = $validationFacade->validateMessage('User logged in successfully.');
+    $validContext = $validationFacade->validateContext(['user_id' => 123, 'ip_address' => '127.0.0.1']);
+
+    // echo "Channel: $validChannel"; // Output: 'application.events' (if normalized)
+} catch (Exception $e) {
+    // Handle any validation exceptions...
+}
+```
+
+###### **Architectural Significance**
+
+  * **Facade Pattern:** Implements the Facade pattern to provide a simplified interface to a complex subsystem, making the validation framework much easier to use for client code.
+  * **SOLID Principles:** Adheres strictly to SOLID principles, promoting a clean and maintainable architecture.
+      * **Single Responsibility Principle:** Each validator (`ChannelValidator`, etc.) has only one reason to change. The facade's single responsibility is to orchestrate these services.
+      * **Dependency Inversion Principle:** The facade and its clients depend on stable contracts. By using dependency injection, concrete implementations can be easily swapped without affecting the client.
+  * **Testability:** Greatly enhances testability. Each specialized validator can be unit-tested in isolation. Furthermore, client code that uses the facade can be tested by injecting a mock version of the facade or its dependencies.
+
+---
+
+##### Validator Services
+
+Each validator is a specialized, single-responsibility service designed to enforce the integrity of a specific domain concept. They ensure that all data conforms to predefined business rules before it is used, throwing a meaningful, domain-specific exception upon any rule violation. All critical validation parameters (like length limits and forbidden characters) are derived from a central `ValidationConfigInterface`, ensuring consistency and ease of maintenance.
+
+###### **ChannelValidator**
+
+Validates log channel names to ensure they are well-formed and adhere to the application's naming policy.
+
+* **Validation Rules:**
+    * The channel name must not be empty after trimming whitespace.
+    * Its length must not exceed the configured `channelMaxLength`.
+    * It must not contain any characters matching the configured `stringForbiddenCharsRegex`.
+
+* **Normalization Steps:**
+    * Trims whitespace from the beginning and end of the string.
+    * Converts the entire string to lowercase for consistency.
+
+* **Configuration Dependencies:**
+    * `channelMaxLength()`: Defines the maximum allowed length.
+    * `stringForbiddenCharsRegex()`: Defines a regular expression for disallowed characters.
+
+* **Exception Thrown:** `InvalidLogChannelException` on failure.
+
+###### **ContextValidator**
+
+Performs a comprehensive validation of associative arrays used for logging context, examining both keys and values.
+
+* **Key Validation Rules:**
+    * Keys must be of type `string`.
+    * Keys must not be empty after trimming.
+    * Keys must not have duplicate names (comparison is performed on the cleaned key).
+    * Key length must not exceed the configured `contextKeyMaxLength`.
+    * Keys must not contain characters matching `stringForbiddenCharsRegex`.
+
+* **Value Validation Rules:**
+    * Values must be of a scalar type (`string`, `int`, `float`, `bool`) or `null`.
+    * When cast to a string, the value must not be empty (unless the original value was `0` or `false`).
+    * The string-cast value's length must not exceed `contextValueMaxLength`.
+    * The string-cast value must not contain characters matching `stringForbiddenCharsRegex`.
+
+* **Normalization Steps:**
+    * Keys are trimmed of whitespace.
+    * Values are cast to their `string` representation.
+
+* **Configuration Dependencies:**
+    * `contextKeyMaxLength()`: Maximum length for a context key.
+    * `contextValueMaxLength()`: Maximum length for a string-cast context value.
+    * `stringForbiddenCharsRegex()`: Regex for disallowed characters in both keys and values.
+
+* **Exception Thrown:** `InvalidLogContextException` on violation.
+
+###### **DirectoryValidator**
+
+Validates and normalizes directory paths to ensure they are safe and suitable for log storage.
+
+* **Validation Rules:**
+    * The path must not be empty after normalization.
+    * The path must not be the configured root directory string (e.g., "/").
+    * The path must not contain the parent directory traversal string (e.g., "..").
+    * The path must not contain characters matching `stringForbiddenCharsRegex`.
+
+* **Normalization Steps:**
+    * Trims whitespace.
+    * Removes `NULL` bytes (`\0`).
+    * Removes any trailing forward or backslashes.
+
+* **Configuration Dependencies:**
+    * `directoryRootString()`: The string representing the root directory.
+    * `directoryTraversalString()`: The string representing parent directory traversal.
+    * `stringForbiddenCharsRegex()`: Regex for disallowed characters.
+
+* **Exception Thrown:** `InvalidLogDirectoryException` on failure.
+
+###### **LevelValidator**
+
+Validates log level strings against a dynamic set of allowed values.
+
+* **Validation Rules:**
+    * The level must not be an empty string.
+    * The normalized, lowercase level must exist within the provided `$allowedLevels` array.
+
+* **Normalization Steps:**
+    * Trims whitespace.
+    * Converts the string to lowercase for comparison and for the return value.
+
+* **Configuration Dependencies:** None. The allowed levels are passed as a method argument.
+
+* **Exception Thrown:** `InvalidLogLevelException` on error.
+
+###### **MessageValidator**
+
+Validates and normalizes log message strings to ensure they are clean, properly formatted, and within size limits.
+
+* **Validation Rules:**
+    * The message must not be empty.
+    * It must not contain characters matching `stringForbiddenCharsRegex`.
+    * Its length must not exceed the configured `logMessageMaxLength` (which can be overridden per call).
+
+* **Normalization Steps:**
+    * Trims whitespace.
+    * Capitalizes the first letter of the message in a Unicode-safe way.
+    * Appends a period (`.`) if the message does not already end with punctuation matching the `logMessageTerminalPunctuationRegex`.
+
+* **Configuration Dependencies:**
+    * `logMessageMaxLength()`: The default maximum message length.
+    * `stringForbiddenCharsRegex()`: Regex for disallowed characters.
+    * `logMessageTerminalPunctuationRegex()`: Regex to check for existing terminal punctuation.
+
+* **Exception Thrown:** `InvalidLogMessageException` if invalid.
+
+###### **TimestampValidator**
+
+Provides a strict type check for timestamp values used in log entries.
+
+* **Validation Rules:**
+    * The value must be an instance of `DateTimeImmutable`.
+
+* **Normalization Steps:** None.
+
+* **Configuration Dependencies:** None.
+
+* **Exception Thrown:** `InvalidArgumentException` if the type is incorrect.
+
+---
+
+##### Tools
+
+* StringValidationTrait
+
+  * Provides shared logic for string sanitization, trimming, emptiness checks, etc.
+  * Methods never throw exceptions; instead, they return normalized values or boolean results.
+  * Used internally by validators to enforce string-related constraints.
+
+---
+
+#### Extension and Customization
+
+* **Custom Validators**: Additional validators can be created for new domain concepts by following the existing service pattern and injected into the facade.
+* **Configuration**: Substitute or extend the configuration provider to adapt rules and limits as required.
+* **Exception Handling**: Downstream code should handle domain-specific exceptions to provide actionable error messages or remediation.
+* **Trait Reuse**: The `StringValidationTrait` can be reused in custom validators to maintain consistency.
+
+---
+
+#### Exception Contracts
+
+Every validation service throws explicit, domain-specific exceptions when constraints are violated. Consumers should handle these exceptions to maintain system integrity and provide user feedback or error reporting.
+
+---
+
 ### Configuration Layer
 
-**Purpose:** The configuration classes define default behaviors and allow for customization of the logging
-module’s validation and sanitization rules. All config classes reside under the
-Config\Modules\Logging namespace (which is separate from the Logging module’s main
-namespace to indicate they can be treated as configuration data).
+The configuration layer defines how the logging module’s validation and sanitization rules are set and customized. All configuration classes are under the `Config\Modules\Logging` namespace, separate from the main `Logging` namespace to clarify their role as configuration data.
 
-```
-LoggingConfig (Config\Modules\Logging\LoggingConfig): This is the main configuration class
-that implements LoggingConfigInterface. It aggregates all other config parts and is the
-one you pass to LoggingKernel.
-Usage: When instantiating LoggingConfig, you provide the base directory path for logs:
-```
-```
+-----
+
+#### LoggingConfig
+
+`LoggingConfig` is the main configuration aggregator for the logging module, implementing `LoggingConfigInterface`. It encapsulates and exposes all internal configuration objects necessary for the logging infrastructure and is passed to the `LoggingKernel` upon initialization.
+
+##### Construction
+
+The constructor requires a non-empty string path to the base log directory.
+
+```php
 $config = new LoggingConfig('/path/to/log/directory');
 ```
-```
-In the constructor, it will validate that the path string is not empty (throwing an
-InvalidArgumentException if it is). It does not create the directory (that’s handled later by
-writer), but it ensures you gave a sensible path.
-Composition: LoggingConfig creates internally:
-a SanitizationConfig object,
-a ValidationConfig object,
-an AssemblerConfig object,
-possibly sets up any custom values. It stores these, as well as the base path.
-Interface: It provides methods as per LoggingConfigInterface:
-baseLogPath(): string – returns the base log directory path.
-sanitizationConfig(): SanitizationConfigInterface – returns the
-SanitizationConfig instance.
-```
-#### ◦ ◦ ◦ ◦ • • • • • ◦ ◦ ◦ ◦ • ◦ ◦
 
+  * If the path is empty or contains only whitespace, an `InvalidArgumentException` is thrown.
+  * The class does **not** validate, create, or normalize the directory path on disk; it only stores the provided string.
 
-```
-validationConfig(): ValidationConfigInterface – returns the ValidationConfig
-instance.
-assemblerConfig(): AssemblerConfigInterface – returns the AssemblerConfig
-instance. The LoggingKernel uses these to get the config objects for initializing
-components.
-```
-```
-This class is also a convenient place to change which config classes are used. If a developer
-wanted to extend or modify configuration behavior, they could subclass LoggingConfig to
-override the creation of these components (for example, use a custom ValidationConfig with
-different rules). By default, it uses the module’s provided configs which cover common needs.
-```
-```
-AssemblerConfig (Config\Modules\Logging\AssemblerConfig): Implements
-AssemblerConfigInterface. It defines configuration for the assembler and related domain
-defaults:
-```
-```
-defaultLevel(): string – The default log level to use if none is provided. By default, this
-returns "info". This ensures that every log entry has a level; the LoggableInput uses it when
-$level is null.
-defaultContext(): array – The default context array to use if none provided. Typically, this
-is an empty array []. It’s there for interface completeness.
-defaultChannel(): string – The default channel name if none is specified. By default, this
-returns "application". This value is used by LoggableInput/assembler so that even if you
-don’t specify a channel, logs are categorized under a general "application" channel.
-customLogLevels(): array – Any additional log levels (beyond the standard ones) that the
-system should recognize. By default, this might return the list of standard levels (since in code
-they provided a CustomLogLevels class that initially lists the standard levels anyway). However,
-the intention is that a developer can extend the list. For instance, if your application wants a level
-"verbose" or "trace", you could add it here and the Validator/LogLevel would allow it. Out of the
-box, customLogLevels() uses the static list from CustomLogLevels::list(). By default
-that list includes
-'debug','info','notice','warning','error','critical','alert','emergency' –
-essentially reiterating the standard levels. To truly add custom ones, you’d modify that class.
-maskToken(): string – This returns a token used to mark sanitized content in logs. It ties
-into how the assembler or sanitizer might indicate that something was removed. The default
-implementation might draw this from a default values enum. In our module, the default mask
-token in AssemblerConfig is defined as "[SANITIZED_BY_CHANNEL]" (meaning content was
-sanitized; the phrase hints it could mention the channel, although by default it's a static string).
-This token might be inserted in logs in place of entire messages or context entries if they were
-deemed too sensitive. It’s worth noting that the Sanitizer uses a different default mask token
-("[MASKED]") at a lower level for context values, but the assembler’s mask token could be
-used for marking entire log messages or perhaps for channel-specific sanitization notes. In
-practice, for simplicity, consider the mask token as "[MASKED]" in output, as that is what the
-Sanitizer applies to context values.
-```
-```
-AssemblerConfig uses AssemblerDefaultValues (an enum AssemblerDefaultValues)
-internally to get the defaults for level, context, channel, and mask token. This enum is basically a
-set of constants:
-```
-```
-DEFAULT_LEVEL => 'info'
-DEFAULT_CONTEXT => []
-DEFAULT_CHANNEL => 'application'
-```
-#### ◦ ◦ • • • • • • • • ◦ ◦ ◦
+##### Composition
 
+Upon instantiation, `LoggingConfig` creates and stores the following configuration objects:
 
-```
-DEFAULT_MASK_TOKEN => '[SANITIZED_BY_CHANNEL]' The AssemblerConfig returns
-those, unless overridden.
-```
-```
-ValidationConfig (Config\Modules\Logging\Security\ValidationConfig): Implements
-ValidationConfigInterface. It provides all the parameters needed by the Validator to
-enforce rules.
-```
-```
-Key methods include:
-defaultStringMaxLength(): int – Maximum length for generic strings if not
-otherwise specified. Default is 255 characters. This could be used as a catch-all limit to
-prevent extremely long strings (like an entire stack trace pasted into a single context field)
-from overwhelming logs.
-stringForbiddenCharsRegex(): string – A regex pattern of characters disallowed
-in strings. By default, this might be /[\x00-\x1F\x7F]/, which blocks control
-characters (non-printable ASCII and DEL). This prevents log messages or context from
-containing newlines or other control codes that could mess up log formatting.
-contextKeyMaxLength(): int – Max length for context array keys. Default could be
-```
-128. This ensures keys (usually short identifiers) are not absurdly long.
-    contextValueMaxLength(): int – Max length for individual context values (if they
-are strings). Default could be 256. Larger values might be truncated or cause validation to
-fail.
-    directoryRootString(): string – A string that represents the root directory.
-Default is / (forward slash). This could be used by the Validator to check if a given
-directory path attempts to reference the filesystem root inappropriately or to enforce
-absolute paths.
-    directoryTraversalString(): string – A substring that should not appear in
-directory paths, defaulting to ... The Validator uses this to prevent directory traversal
-(for example, if someone tried to set a base path to /var/log/../etc, it would be
-caught).
-    logMessageMaxLength(): int – Maximum length for a log message. Default is 2000
-characters. This prevents extremely verbose messages from a single log entry. If a
-message is longer, the Validator might truncate it or throw an exception.
-    logMessageTerminalPunctuationRegex(): string – A regex pattern to detect
-undesired ending punctuation in messages. Default is /[.!?]$/u, which matches if a
-message ends in a period, exclamation mark, or question mark. This might be a stylistic
-choice: perhaps the system chooses to warn or modify messages that end with
-punctuation (to avoid duplicate punctuation when appending context, or just a logging
-style guideline). The Validator could strip a trailing period from messages, for example.
+  * `SanitizationConfig` (`SanitizationConfigInterface`)
+  * `ValidationConfig` (`ValidationConfigInterface`)
+  * `AssemblerConfig` (`AssemblerConfigInterface`)
 
-```
-ValidationConfig uses an enum DefaultValidationValues to get its default constants. This
-enum defines the values mentioned above (e.g., 255 for max length, regex for control chars,
-etc.). The idea is that if you need to change one of these defaults, you could either override
-ValidationConfig or modify the enum values (the latter is not dynamic at runtime, but can be
-edited in code).
-```
-```
-SanitizationConfig (Config\Modules\Logging\Security\SanitizationConfig): Implements
-SanitizationConfigInterface. It supplies the Sanitizer with what it needs to know:
-```
-```
-sensitiveKeys(): array – Returns a list of keys that are considered sensitive. By default,
-this is provided by CustomSensitiveKeys::list(). Out of the box, this list might include
-common sensitive terms (the code allows extension, but likely includes "password",
-```
-#### ◦ • • ◦ ◦ ◦ ◦ ◦ ◦ ◦ ◦ • • •
+Each is exposed through a dedicated accessor as defined in the `LoggingConfigInterface`.
 
+##### Accessors
 
-```
-"passwd", "secret", "api_key", "cpf", etc., and it’s meant to be adjusted as needed).
-Any context entries with a key in this list will have their values masked.
-sensitivePatterns(): array – Returns a list of regex patterns for sensitive data in values.
-Provided by CustomSensitivePatterns::list(). For example, this might include patterns
-matching a credit card number, an email address, or a Brazilian CPF format. If a context value
-matches one of these patterns, it will be masked even if the key name isn’t explicitly sensitive.
-maxDepth(): int – The maximum depth for nested context structures that the Sanitizer will
-traverse. Default is 8 (via DefaultSanitizationValues::MAX_DEPTH). This prevents
-extremely deep arrays from causing recursion issues or performance problems.
-maskToken(): string – The string used to replace sensitive data. Default is "[MASKED]"
-(from DefaultSanitizationValues::MASK_TOKEN). This is the literal token that will appear
-in place of sensitive values in the context. For example, if context was ["password" =>
-"secret123"], after sanitization it might become ["password" => "[MASKED]"].
-maskTokenForbiddenPattern(): string – A regex that flags any dangerous content in the
-mask token or related usage. Default might be /[\x00-\x1F\x7F]|base64|script|php/i.
-This is a security check ensuring that the mask token itself (or any replacement text) doesn’t
-inadvertently contain something that looks like an attempt to hide malicious data. In simpler
-terms, it might ensure the mask token doesn’t contain non-printable chars or certain substrings
-like "base64" or "script" that could hint at an attempt to inject masked content. The Sanitizer
-could use this to avoid masking with a token that might be interpreted as something else.
-SanitizationConfig’s constructor sets up the arrays using CustomSensitiveKeys and
-CustomSensitivePatterns (which by default might just return an empty array or a basic set
-```
-- the idea is developers extend those). It uses DefaultSanitizationValues for the numeric
-and token defaults.
+  * `baseLogDirectory(): string`
+    Returns the path to the log storage directory.
 
-```
-This config can be extended if needed: for example, an application could subclass
-SanitizationConfig to add more keys or patterns at runtime, or simply edit the
-CustomSensitiveKeys/Patterns classes to include more entries.
-```
-```
-CustomSensitiveKeys / CustomSensitivePatterns
-(Config\Modules\Logging\Security\CustomSensitiveKeys, CustomSensitivePatterns): These
-classes (or enums, if implemented as such) are simple containers for additional user-defined
-sensitive terms.
-```
-```
-CustomSensitiveKeys::list() returns an array of strings that should be considered
-sensitive keys. By default, it might include some placeholders or be empty. It is intended for the
-developer to modify. For instance, one could add 'ssn' or 'credit_card' to this list to
-ensure those keys are always masked.
-CustomSensitivePatterns::list() returns an array of regex patterns (strings or RegExp
-objects) for sensitive data in values. For example, a pattern for a 11-digit number (CPF) or a
-pattern for credit card numbers (/\d{4}-\d{4}-\d{4}-\d{4}/ etc.). By default, it might
-include none or some example patterns. The developer can add to this list if certain sensitive
-data should be caught by content rather than key.
-```
-```
-These classes make it easy to adjust what the Sanitizer looks for without digging into the
-Sanitizer code. They centralize such configuration.
-```
-```
-CustomLogLevels (Config\Modules\Logging\CustomLogLevels): Similarly, this class provides
-a list of non-standard log levels accepted by the system.
-```
-#### • • • • • • • • • • •
+  * `sanitizationConfig(): SanitizationConfigInterface`
+    Returns the configuration object responsible for log data sanitization.
 
+  * `validationConfig(): ValidationConfigInterface`
+    Returns the configuration object governing value object validation.
 
-```
-CustomLogLevels::list(): array – By default, this returns the standard PSR-3 levels
-(which technically aren’t "custom", but the idea is that all allowed levels are defined here). Out of
-the box, the list is
-['debug','info','notice','warning','error','critical','alert','emergency'].
-If a developer wants to support an additional level name, they would add it to this list (for
-example 'verbose' or 'trace').
-The Assembler/Validator uses this combined with the LogLevel’s internal defaults. The
-LogLevel class in domain also had a default list of levels (the same ones). The presence of this
-CustomLogLevels config suggests that ultimately the allowed levels list comes from
-configuration (which is better for extensibility).
-If you add a new level via CustomLogLevels, ensure that any code using log levels (like
-LoggingFacade’s methods or external systems) is aware of the new level string.
-```
-**Summary of Config Defaults:** Out of the box, the module’s config is set to: - Default log level: **info**. -
-Default log channel: **application**. - Allowed log levels: **debug, info, notice, warning, error, critical,
-alert, emergency** (standard 8 levels). - Default mask token for sensitive data: "[MASKED]" (and a
-special "[SANITIZED_BY_CHANNEL]" token used internally for marking entire messages, though by
-default it doesn’t appear in output). - Sensitive keys: includes common terms like "password" and a few
-others (the exact list can be extended). - Sensitive patterns: none or a few examples (should be
-extended per project needs). - Max message length: 2000 chars; max context value length: 256 chars;
-max context depth: 8. - Forbidden characters: Control chars in any input are not allowed. - Directory
-traversal is prevented (.. not allowed in paths).
+  * `assemblerConfig(): AssemblerConfigInterface`
+    Returns the configuration object used for log entry assembly.
 
-All these can be adjusted by editing the configuration classes, ensuring the logging behavior can be
-tailored as needed.
+##### Extensibility
+
+As this class is `final`, it cannot be extended via inheritance. To customize the logging behavior, you must either:
+
+1.  Modify the underlying configuration classes directly (`SanitizationConfig`, `ValidationConfig`, `AssemblerConfig`).
+2.  Create your own implementation of `LoggingConfigInterface` that allows for dependency injection of custom configuration objects.
+
+-----
+
+#### AssemblerConfig
+
+`AssemblerConfig` is the concrete implementation of `AssemblerConfigInterface`. It centralizes and exposes the default configuration values and custom log levels used by the log entry assembler component. All values are sourced from the `AssemblerDefaultValues` enum and the `CustomLogLevels` provider.
+
+##### Construction
+
+Upon instantiation, all configuration values are set using static providers:
+
+  * The default level, context, channel, and mask token are obtained from the corresponding entries in `AssemblerDefaultValues`.
+  * The allowed custom log levels are retrieved via `CustomLogLevels::list()`.
+
+##### Accessors
+
+  * `defaultLevel(): ?string`
+    Returns the default log level (e.g., `"info"`).
+
+  * `defaultContext(): ?array`
+    Returns the default log context (an empty array).
+
+  * `defaultChannel(): ?string`
+    Returns the default log channel (e.g., `"application"`).
+
+  * `customLogLevels(): ?array`
+    Returns the complete list of permitted log levels.
+
+  * `maskToken(): ?string`
+    Returns the token used to mark or mask sanitized log content (default: `"[SANITIZED_BY_CHANNEL]"`).
+
+##### Usage Notes
+
+All configuration properties are immutable and set at instantiation. Since the class is `final`, customization must be achieved by modifying the provider components it relies on (`AssemblerDefaultValues` and `CustomLogLevels`).
+
+-----
+
+#### AssemblerDefaultValues
+
+`AssemblerDefaultValues` is an `enum` that centralizes all default fallback values required for log entry assembly. Each case corresponds to a distinct configuration attribute, ensuring a single source of truth for default behaviors within the logging domain.
+
+##### Enum Cases
+
+  * `DEFAULT_LEVEL`
+    The default log level assigned to new log entries (`'info'`).
+
+  * `DEFAULT_CONTEXT`
+    The default context array assigned to new log entries (`[]`).
+
+  * `DEFAULT_CHANNEL`
+    The default channel name for log entries (`'application'`).
+
+  * `DEFAULT_MASK_TOKEN`
+    The default token used to indicate sanitized content (`'[SANITIZED_BY_CHANNEL]'`).
+
+##### Methods
+
+  * `getValue(): string|array|null`
+    Returns the value associated with the enum case:
+
+      * `DEFAULT_LEVEL`: Returns `'info'`.
+      * `DEFAULT_CONTEXT`: Returns an empty array.
+      * `DEFAULT_CHANNEL`: Returns `'application'`.
+      * `DEFAULT_MASK_TOKEN`: Returns `'[SANITIZED_BY_CHANNEL]'`.
+
+##### Usage Notes
+
+  * The enum ensures all assembler defaults are explicit, immutable, and type-safe.
+  * To update default values, modify the `getValue` method within the enum source code.
+
+-----
+
+#### CustomLogLevels (`Config\Modules\Logging\CustomLogLevels`)
+
+`CustomLogLevels` provides a static, centralized list of all log levels recognized and accepted by the logging domain. It serves as the single point of truth for the application's permitted log levels, supporting both standard and custom strategies.
+
+##### Responsibilities
+
+  * Defines a static method for retrieving all accepted log levels in the domain.
+  * Prevents instantiation by having a private constructor.
+
+##### Accessors
+
+  * `list(): array`
+    Returns an indexed array of all allowed log levels as strings (e.g., `"debug"`, `"info"`, `"warning"`, `"error"`, `"critical"`, `"alert"`, `"emergency"`). Additional log levels (such as `"audit"`) may be uncommented or added as needed to support specific application requirements.
+
+##### Usage Notes
+
+  * This class cannot be instantiated.
+  * To tailor the accepted log levels for your application, extend or modify the array returned by the `list()` method.
+  * By default, the returned list includes all standard [PSR-3](https://www.php-fig.org/psr/psr-3/) log levels.
+
+---
+
+#### SanitizationConfig
+
+`SanitizationConfig` implements `SanitizationConfigInterface` and encapsulates all settings related to data sanitization for the logging module. It aggregates its configuration from dedicated enums and provider classes, centralizing all sanitization rules and operational limits.
+
+##### Responsibilities
+
+* Loads custom sensitive keys from `CustomSensitiveKeys`.
+* Loads custom sensitive value patterns from `CustomSensitivePatterns`.
+* Loads recursion depth, mask token, and the mask token's validation pattern from the `DefaultSanitizationValues` enum.
+
+##### Properties
+
+* **Sensitive Keys:** A list of string keys whose values must be masked or sanitized.
+* **Sensitive Patterns:** A list of regular expression patterns used to detect sensitive values.
+* **Max Depth:** An integer limit for recursion depth during the sanitization of nested data structures.
+* **Mask Token:** The string token used to replace or mark sanitized values.
+* **Mask Token Forbidden Pattern:** A regular expression pattern specifying forbidden characters or sequences within the mask token itself to prevent injection attacks.
+
+##### Accessors
+
+* `sensitiveKeys(): array`
+    Returns the list of keys to be sanitized.
+* `sensitivePatterns(): array`
+    Returns the list of regular expressions to match sensitive values.
+* `maxDepth(): int`
+    Returns the maximum recursion depth permitted during sanitization.
+* `maskToken(): string`
+    Returns the token used to mask sensitive data.
+* `maskTokenForbiddenPattern(): string`
+    Returns the regex pattern used to validate the mask token.
+
+##### Export
+
+* `toArray(): array`
+    Exports the configuration properties as an associative array for consumption by other modules or for debugging.
+
+##### Usage Notes
+
+* All configuration values are loaded upon instantiation and are immutable for the object's lifetime.
+* As this class is `final`, it cannot be extended. Customization must be achieved by modifying the provider classes it depends on (`CustomSensitiveKeys`, `CustomSensitivePatterns`, or `DefaultSanitizationValues`).
+
+---
+
+#### DefaultSanitizationValues
+
+`DefaultSanitizationValues` is an enum that provides the default values for core sanitization settings. It centralizes defaults for recursion depth, mask tokens, and mask token validation, ensuring a consistent and secure baseline configuration.
+
+##### Enum Cases
+
+* `MAX_DEPTH`
+    The default maximum recursion depth for nested data sanitization operations (`8`).
+* `MASK_TOKEN`
+    The default string token used to mask sensitive values (`'[MASKED]'`).
+* `MASK_TOKEN_FORBIDDEN_PATTERN`
+    The default regex pattern identifying forbidden characters or strings within the mask token (`'/[\x00-\x1F\x7F]|base64|script|php/i'`).
+
+##### Methods
+
+* `getValue(): int|string`
+    Returns the raw value associated with each enum case.
+
+##### Usage Notes
+
+* This enum defines baseline defaults for the sanitizer's operational parameters. Sensitive keys and value patterns are managed in separate provider classes.
+* To adjust global defaults for sanitization operations, modify the values directly within this enum's `getValue()` method.
+
+---
+
+#### CustomSensitiveKeys / CustomSensitivePatterns
+
+These configuration-only classes provide application-specific sensitive keys and regular expression patterns for data sanitization. They are designed for static management of custom rules, which are then merged with the sanitizer's other rules.
+
+##### CustomSensitiveKeys
+
+* **Purpose:**
+    Centralizes a list of additional sensitive keys (parameter names) whose values must be masked in logs.
+* **Usage:**
+    * `CustomSensitiveKeys::list(): array` returns a hardcoded array of custom sensitive keys. Examples include:
+        * `"auth_token"`, `"refresh_token"`, `"jwt"`
+        * `"pin"`, `"creditcard"`, `"ccv"`
+        * `"accesskey"`, `"apikey"`, `"secretkey"`
+        * `"biometria"`, `"passport"`, `"telefone"`
+* **Design Notes:**
+    The class is non-instantiable (`final` with a `private constructor`) and intended strictly for static configuration.
+
+##### CustomSensitivePatterns
+
+* **Purpose:**
+    Centralizes a list of additional regular expression patterns used to identify sensitive values by their format, not just by their key.
+* **Usage:**
+    * `CustomSensitivePatterns::list(): array` returns a hardcoded array of regex patterns. Examples include:
+        * Brazilian cellphone numbers (`'/\b(?:\+?55)?\s?\d{2}\s?\d{4,5}-?\d{4}\b/'`)
+        * Visa, MasterCard, and American Express card numbers
+        * Brazilian RG (ID card) numbers (`'/\b\d{1,2}\.?\d{3}\.?\d{3}-?[\dXx]\b/'`)
+        * Custom application tokens (`'/app_[a-z0-9]{32}/i'`)
+* **Design Notes:**
+    This class is also non-instantiable and intended exclusively for static configuration.
+
+---
+
+#### ValidationConfig
+
+`ValidationConfig` is the default implementation of `ValidationConfigInterface`. It sources all of its values from the `DefaultValidationValues` enum, providing a consistent and immutable source for validation rules used throughout the logging module.
+
+##### Responsibilities
+
+* Implements the `ValidationConfigInterface` contract.
+* Delegates every method call to the `DefaultValidationValues` enum to retrieve the corresponding rule.
+
+##### Accessors
+
+* `defaultStringMaxLength(): int`: Returns the max length for generic strings.
+* `stringForbiddenCharsRegex(): string`: Returns the regex for forbidden characters.
+* `contextKeyMaxLength(): int`: Returns the max length for context keys.
+* `contextValueMaxLength(): int`: Returns the max length for context values.
+* `channelMaxLength(): int`: Returns the max length for channel names.
+* `directoryRootString(): string`: Returns the string representing the root directory.
+* `directoryTraversalString(): string`: Returns the string used to detect directory traversal.
+* `logMessageMaxLength(): int`: Returns the max length for log messages.
+* `logMessageTerminalPunctuationRegex(): string`: Returns the regex for validating terminal punctuation.
+
+##### Usage Notes
+
+* All values are immutable and resolved at runtime from `DefaultValidationValues`.
+* As this class is `final`, it cannot be extended. To provide custom validation rules, you must either modify the `DefaultValidationValues` enum or create a new class that implements `ValidationConfigInterface`.
+
+---
+
+#### DefaultValidationValues
+
+`DefaultValidationValues` is an enum that defines all default validation parameters used in the logging domain. It serves as the single source of truth for built-in validation rules.
+
+##### Enum Cases
+
+* `DEFAULT_STRING_MAX_LENGTH`: Max length for generic strings (`255`).
+* `STRING_FORBIDDEN_CHARS_REGEX`: Regex for forbidden control characters (`'/[\x00-\x1F\x7F]/'`).
+* `CONTEXT_KEY_MAX_LENGTH`: Max length for context keys (`128`).
+* `CONTEXT_VALUE_MAX_LENGTH`: Max length for context values (`256`).
+* `CHANNEL_MAX_LENGTH`: Max length for channel names (`64`).
+* `DIRECTORY_ROOT_STRING`: String representing the root directory (`'/'`).
+* `DIRECTORY_TRAVERSAL_STRING`: String used to detect directory traversal (`'..'`).
+* `LOG_MESSAGE_MAX_LENGTH`: Max length for log messages (`2000`).
+* `LOG_MESSAGE_TERMINAL_PUNCTUATION_REGEX`: Regex for required terminal punctuation (`'/[.!?]$/u'`).
+
+##### Methods
+
+* `getValue(): int|string`
+    Returns the default value associated with each enum case.
+
+##### Usage Notes
+
+* All validation rules are centralized for easy maintenance.
+* To alter these global default values, update the return values within the enum's `getValue()` method.
+
+---
 
 ### Public Contracts (Interfaces)
 
-The **PublicContracts\Logging** namespace defines interfaces that formalize the module’s API and allow
-for substitutions or mocking in tests:
+The `PublicContracts\Logging` namespace and its sub-namespaces define the formal API for the logging module. These interfaces ensure that consuming code remains decoupled from concrete implementations, which allows for robust testing, extensibility, and substitution.
 
-```
-LoggingFacadeInterface: Defines the methods that the LoggingFacade must implement (as
-described earlier). This interface extends no external interface directly, but it includes all the
-PSR-3 level methods and the additional logInput method. By coding to this interface, the rest
-of your application can remain unaware of the concrete LoggingFacade class. In theory, you
-could swap in a different implementation of LoggingFacadeInterface (for example, a stub for
-testing, or another logging system) without changing your code that uses it.
-LoggingKernelInterface: Defines the contract for the LoggingKernel. It includes at least
-logger(): LoggingFacadeInterface and psrLogger(): PsrLoggerInterface. This
-allows the kernel to be mocked or replaced if needed. It also helps if you want to integrate the
-kernel differently; as long as it provides those two methods, the rest of the system can use any
-kernel that implements the interface.
-PsrLoggerInterface: This interface mirrors the PSR-3 LoggerInterface (with methods
-emergency through debug and log ). The PsrLoggerAdapter class implements this
-interface. We provide our own interface here likely to avoid a direct dependency on the psr/
-log package, but it’s fully compatible. Code expecting a Psr\Log\LoggerInterface can use
-an instance of PsrLoggerInterface from this module, since it has the same methods. (If
-needed, one could even have PsrLoggerInterface extend Psr\Log\LoggerInterface for full
-interop, but that’s an internal detail.)
-LoggerInterface (Logging\Application\Contract\LoggerInterface): This interface (not to
-confuse with PSR) defines the log(LogEntryInterface $entry) method for our internal
-```
-#### • • • • • • •
+---
 
+#### Core Service Interfaces
 
-```
-Logger service. The Logging\Infrastructure\Logger class implements it. By using an
-interface, the LoggingFacade and Kernel only depend on the interface, allowing the actual
-logging mechanism to be swapped. For example, if one wanted to direct logs to a different sink
-(say a database or an API), one could implement a new LoggerInterface that sends logs there,
-and then configure the kernel to use that instead of the file-based Logger. (Currently, the kernel
-always uses the file Logger, but the abstraction is in place.)
-LogEntryAssemblerInterface (Logging\Application\Contract\LogEntryAssemblerInterface):
-Defines the assembler’s behavior, likely with a method like
-assembleFromInput(LoggableInputInterface $input): LogEntryInterface. The
-LogEntryAssembler implements this. This interface could allow alternate assembly logic or
-facilitate testing by mocking the assembler.
-LoggableInputInterface, LogEntryInterface: Domain contracts for the value objects. These
-just ensure that the value objects expose certain methods (e.g., LogEntryInterface likely
-has getters like getLevel(), getMessage(), getContext(), getChannel(),
-getTimestamp()). The rest of the system (formatter, resolver) uses these interfaces to interact
-with log entries without needing the concrete class (improving decoupling).
-Config Interfaces: LoggingConfigInterface, AssemblerConfigInterface,
-ValidationConfigInterface, SanitizationConfigInterface mirror the methods of
-the config classes described. These allow you to provide different config implementations to the
-kernel. For instance, one could create a LoggingConfig that reads settings from a PHP file or
-environment variables but still implements LoggingConfigInterface so that LoggingKernel
-accepts it. In our module, the provided classes already implement these interfaces.
-```
-In summary, the PublicContracts layer ensures that each major component has an interface type. This
-not only guides the structure (developers know what methods are available) but also makes the module
-more modular and testable. One can swap implementations if needed or use these interfaces to mock
-behaviors in unit tests (e.g., mocking LoggerInterface to verify that a log entry would be written,
-without actually writing a file).
+These interfaces define the main entry points and capabilities of the logging system.
 
-## Logical Flow and Functioning
+##### LoggingKernelInterface
 
-To understand how all these pieces work together, consider a typical scenario: **logging a message via
-the facade**. Below is the step-by-step flow for a central use case – recording a log entry – with emphasis
-on the sequence of interactions, validations, and outcomes:
+This is the primary contract for the module's kernel. It acts as a service locator or factory, responsible for building and exposing the main logging components.
 
-```
-Initiating a Log: The client code (your application) invokes a logging call. For example, in your
-code you might do:
-```
-```
-$logger = $loggingKernel->logger(); // Obtain LoggingFacadeInterface
-from the kernel
-$logger->info("User login successful", ["user" => "tester"]);
-```
-```
-This call is requesting to log a message "User login successful" at the info level with a context
-containing the user name. At this point, the LoggingFacade (through info() method) is
-engaged.
-Facade Handling: The LoggingFacade receives the call to info($message, $context).
-Inside the info method (defined by LoggingFacadeInterface), it will typically call the more
-generic method with the appropriate parameters, something akin to:
-```
-#### •
+* **Purpose:** To provide access to the pre-configured, ready-to-use logging facades.
+* **Key Methods:**
+    * `logger(): LoggingFacadeInterface`: Returns the main logging facade, which is the primary entry point for most application-level logging.
+    * `psrLogger(): PsrLoggerInterface`: Returns a PSR-3 compliant logger instance, suitable for integration with third-party libraries or frameworks that expect a standard logger.
 
-#### •
+##### LoggingFacadeInterface
 
-#### •
+This interface defines the main, high-level API for logging. It orchestrates the entire logging cycle, from receiving input to assembling and dispatching log entries.
 
-#### 1.
+* **Purpose:** To provide a simple, unified set of methods for all logging needs, including PSR-3 compatibility.
+* **Key Methods:**
+    * `logInput(...)`: A flexible, high-level method designed for general application use, allowing the explicit setting of level, channel, and context.
+    * `log(...)`: The standard PSR-3 method for logging with an arbitrary level.
+    * `emergency()`, `alert()`, `critical()`, `error()`, `warning()`, `notice()`, `info()`, `debug()`: The eight standard PSR-3 logging methods for logging at specific levels.
 
-#### 2.
+##### PsrLoggerInterface
 
+This interface mirrors the official `Psr\Log\LoggerInterface` to provide full PSR-3 compatibility without creating a direct dependency on the `psr/log` package.
 
-```
-$this->logInput($message, "info", null, $context);
-```
-```
-Here, logInput is used with level="info" and channel=null (meaning no specific
-channel was given, so default will be used). All level-specific methods (info, error, etc.) likely
-funnel into logInput or log.
-Creating Loggable Input: Within LoggingFacade::logInput(), the code creates a new
-LoggableInput object to encapsulate this log request. For example:
-```
-```
-$input = new LoggableInput(
-message: "User login successful",
-level: "info",
-context: ["user" => "tester"],
-channel: null, // no channel specified by user
-timestamp: null // timestamp not provided, will default
-);
-```
-```
-The LoggableInput constructor runs its validation:
-It checks the message is not empty (it’s not, so OK).
-It sees a level "info" is provided, likely validates that (if level were null, it would substitute default
-"info"; here it's already "info", which is allowed).
-It takes the context array (not null, so uses as is; it might ensure it's an array – it is).
-Channel is null: LoggableInput will substitute the default channel. It calls its
-validateChannel(null) which returns "application" (the default channel name). So
-now the LoggableInput’s channel property is set to "application".
-Timestamp is null: the constructor sets it to new DateTimeImmutable() with current time.
-The result is a LoggableInput with: message = "User login successful", level = "info",
-context = ["user" => "tester"], channel = "application", timestamp = (current time).
-If any of these validations had failed (e.g., empty message), an exception would be thrown here
-and the logging process would abort with an error.
-Assembling LogEntry: The facade then passes this LoggableInput to the assembler:
-```
-```
-$entry = $this->assembler->assembleFromInput($input);
-```
-```
-Now inside LogEntryAssembler :
-It receives the LoggableInput. It retrieves from it the raw values (level string "info", message
-string, context array, channel string "application", timestamp object).
-It begins constructing domain value objects with the help of LogSecurity :
-Creates a LogLevel object: calls new LogLevel("info", $logSecurity,
-$customLevelsArray). The LogLevel constructor checks "info" against allowed levels.
-Allowed levels are the default ones plus any custom from config. "info" is recognized, so
-it’s valid. It likely stores it in lowercase. (If "info" wasn’t in allowed list, this step would
-throw InvalidLogLevelException).
-Creates a LogMessage object: calls new LogMessage("User login successful",
-$logSecurity). Inside LogMessage, it asks LogSecurity’s Sanitizer to sanitize the
-message if needed (perhaps removing control characters or trimming trailing
-punctuation). Given this message is simple text, sanitization probably returns it
-unchanged. Then LogMessage validates it’s not empty (and maybe length < 2000, which it
-```
-#### 3.
+* **Purpose:** To allow any component expecting a standard PSR-3 logger to seamlessly use this module's implementation.
+* **Key Methods:**
+    * Defines all standard PSR-3 methods: `emergency`, `alert`, `critical`, `error`, `warning`, `notice`, `info`, `debug`, and the generic `log`.
 
-#### 4.
+---
 
-#### 5.
+#### Configuration Interfaces
 
-#### 6.
+These interfaces define the contracts for configuration objects, allowing different configuration strategies (e.g., loading from environment variables, files, or enums) to be used as long as the interface is satisfied.
 
-#### 7.
+##### LoggingConfigInterface
 
-#### 8.
+This is the top-level configuration contract, acting as an aggregator for all other, more specific configuration objects.
 
-#### 9.
+* **Key Methods:**
+    * `baseLogDirectory(): string`: Returns the absolute path for log storage.
+    * `sanitizationConfig(): SanitizationConfigInterface`: Returns the sanitization-specific configuration.
+    * `validationConfig(): ValidationConfigInterface`: Returns the validation-specific configuration.
+    * `assemblerConfig(): AssemblerConfigInterface`: Returns the configuration for the log entry assembler.
 
-#### 10.
+##### AssemblerConfigInterface
 
-#### 11.
+Defines the configuration needed by the `LogEntryAssembler` to construct log entries, especially when information is missing.
 
-#### ◦
+* **Key Methods:**
+    * `defaultLevel(): ?string`: The log level to use if none is provided.
+    * `defaultContext(): ?array`: The context array to use if none is provided.
+    * `defaultChannel(): ?string`: The channel name to use if none is provided.
+    * `customLogLevels(): ?array`: The complete list of log levels accepted by the system.
+    * `maskToken(): ?string`: A specific token for masking messages based on the channel context.
 
-#### ◦
+##### SanitizationConfigInterface
 
+Defines the contract for all rules and parameters required by the sanitization services.
 
-```
-is). It stores the message. (If the message were empty or too long, an
-InvalidLogMessageException could be thrown here).
-Creates a LogContext object: calls new LogContext(["user" => "tester"],
-$logSecurity). The LogContext will iterate over the context array and for each key/
-value:
-Validate the key "user" (e.g., ensure it's a string, not too long – it's fine).
-Validate the value "tester" (e.g., if it’s a string, ensure length < 256 – it is).
-Use the Sanitizer to check if the key is sensitive or value matches a pattern. "user" is likely
-not in the sensitive keys list by default, and "tester" probably doesn't match a sensitive
-pattern. So the context might remain ["user" => "tester"] with no masking. If
-there were sensitive data (say the key was "password"), the Sanitizer would replace the
-actual value with "[MASKED]". The LogContext would then contain ["password" =>
-"[MASKED]"].
-If any context key/value failed validation (too long, or key has forbidden chars), an
-InvalidLogContextException would be thrown.
-Otherwise, the sanitized context is stored in the LogContext object.
-Creates a LogChannel object: calls new LogChannel("application",
-$logSecurity). The LogChannel validates the channel string "application" (should be
-fine: it’s not empty, likely all alphabetic). If someone had passed a weird channel name
-with slashes or .., this would throw InvalidLogChannelException, but "application"
-is safe. It might also sanitize the channel (e.g., trim whitespace).
-Retrieves the timestamp from input (already a DateTimeImmutable, which likely doesn’t
-need validation beyond maybe ensuring it’s not in the future or something – generally not
-checked, since future logs are not invalid).
-If all the above succeed, the assembler now calls
-new LogEntry($logLevel, $logMessage, $logContext, $logChannel,
-$timestamp). The LogEntry’s constructor simply assigns these to its properties (it trusts they
-are already validated by their own classes). The LogEntry is now an immutable representation of
-this event.
-The assembler returns the LogEntry object. If any exception was thrown in the process, the
-assembler would either propagate it or wrap it in a LogEntryAssemblyException
-(depending on implementation). In our module, an assembly failure likely throws
-LogEntryAssemblyException with the original error as cause, indicating that something in
-input was invalid despite LoggableInput’s initial check.
-Logging (Writing) the Entry: Back in the facade, we now have a LogEntry object. The
-LoggingFacade proceeds to hand this off to the Logger service:
-```
-```
-$this->logger->log($entry);
-```
-```
-Inside Logger::log(LogEntry $entry):
-It calls the LogFilePathResolver :
-```
-```
-$filepath = $this->pathResolver->resolve($entry);
-```
-```
-The resolver takes the entry’s channel and level. The entry’s channel is "application", level is
-"info". With the base path (say, /var/log/myapp provided in config), it constructs:
-/var/log/myapp/application/info.log. It returns that path as a string. (If directory or file
-doesn’t exist yet, that’s fine – resolver doesn’t check).
-It calls the LogLineFormatter :
-```
-#### ◦ ◦ ◦ ◦ ◦ ◦ ◦ ◦
+* **Key Methods:**
+    * `sensitiveKeys(): array`: Returns a list of keys whose values must be masked.
+    * `sensitivePatterns(): array`: Returns a list of regex patterns for identifying sensitive data within values.
+    * `maxDepth(): int`: The maximum recursion depth for sanitizing nested structures.
+    * `maskToken(): string`: The default string to use as a replacement for masked data.
+    * `maskTokenForbiddenPattern(): string`: A regex to validate the mask token itself against forbidden content.
 
-#### 12.
+##### ValidationConfigInterface
 
-#### 13.
+Defines the contract for all rules and parameters required by the validation services.
 
-#### 14.
+* **Key Methods:**
+    * `defaultStringMaxLength(): int`: Max length for generic strings.
+    * `stringForbiddenCharsRegex(): string`: Regex for forbidden characters.
+    * `contextKeyMaxLength(): int`: Max length for context keys.
+    * `contextValueMaxLength(): int`: Max length for context values.
+    * `channelMaxLength(): int`: Max length for channel names.
+    * `directoryRootString(): string`: String representing the root directory (e.g., "/").
+    * `directoryTraversalString(): string`: String for detecting directory traversal (e.g., "..").
+    * `logMessageMaxLength(): int`: Max length for log messages.
+    * `logMessageTerminalPunctuationRegex(): string`: Regex to validate terminal punctuation.
 
-#### 15.
-
-#### 16.
-
-
-```
-$line = $this->formatter->format($entry);
-```
-```
-The formatter retrieves the timestamp from the entry, formatting it as an ISO8601 string (e.g.,
-2025-06-20T16:42:05-03:00). It gets the channel ("application"), level ("info" –
-likely uppercased to "INFO"), message ("User login successful"), and context array
-(["user"=>"tester"]). It then produces a single line string. Following our assumed format,
-that line might look like:
-```
-```
-[2025-06-20T16:42:05-03:00] application.INFO: User login successful
-{"user":"tester"}
-```
-```
-(There might be a newline character appended at the end of the line, depending on
-implementation, to ensure each log entry is on its own line in the file.)
-Next, it calls the LogFileWriter to actually write this line to the file:
-```
-```
-$this->writer->write($filepath, $line);
-```
-```
-The writer sees $filepath = "/var/log/myapp/application/info.log". It checks if /
-var/log/myapp/application directory exists. If not, it attempts to create it. Suppose this is
-the first time we log anything; it will create /var/log/myapp (if not existing) and then /var/
-log/myapp/application. On success, it then opens/creates info.log in append mode and
-writes the formatted line to it, followed by a newline. If writing succeeds, great – the log entry is
-now persisted. If it fails (for example, if the directory cannot be created due to permissions), the
-LogFileWriter will throw a LogWriteException. The Logger does not catch this, so it bubbles
-up to the LoggingFacade call. The facade also does not explicitly catch exceptions in this design,
-so ultimately the info() call in user code would throw. In a well-set environment, this should
-not happen; but if it does, the exception message plus the fact that error_log was called would
-help diagnose the issue (like "could not create directory" or "could not write file").
-If no exception, the Logger returns void, and the LoggingFacade’s logInput method
-completes.
-Completion: The logging call from the client returns (implicitly, since info() is void). The
-message has been logged. On disk, you will find a new file at .../application/info.log
-with a line containing the timestamp, channel, level, message, and context. If multiple log
-entries were written, they would appear on separate lines in that file.
-Subsequent calls: If later another call is made, e.g. $logger->error("File not found",
-["file" => "abc.txt"]), the same process repeats:
-Possibly a different channel or level directs it to a different file (for "error", it would target .../
-application/error.log in the "application" channel).
-The context ["file"=>"abc.txt"] would be included in the log line. If "file" were considered
-sensitive (not by default), it would be masked. But it's not sensitive by default, so it prints as
-"file":"abc.txt" in context.
-The module ensures even error messages are sanitized for control characters or forbidden
-content.
-The file writer will create the error.log file if it doesn’t exist.
-Channel usage: If you explicitly log to a different channel via logInput or a custom method,
-e.g.:
-```
-#### 17.
-
-#### 18.
-
-#### 19.
-
-#### 20.
-
-#### 21.
-
-#### 22.
-
-#### 23.
-
-#### 24.
-
-#### 25.
-
-
-```
-$logger->logInput("Admin password changed", "notice", "security",
-["admin_user" => "alice"]);
-```
-```
-Then:
-The default channel is overridden with "security".
-The path resolver will put this in .../security/notice.log.
-If "admin_user" isn’t in sensitive keys, its value "alice" remains. If the message or context had
-something sensitive (say the message contained "password"), depending on config it might or
-might not be masked (the word "password" in the message text might not be automatically
-masked unless explicitly coded, typically the sanitizer focuses on context values and maybe full
-message if needed).
-The rest of the flow is identical. This way, channels can separate log output (perhaps for different
-subsystems).
-```
-```
-The mask token "[SANITIZED_BY_CHANNEL]" suggests that if entire messages need to be
-hidden based on channel, one could implement such logic. For example, one might decide that
-any log in channel "security" should mask certain details in the message, and use that token. By
-default, no such automatic per-channel masking is implemented beyond context values.
-```
-```
-Error handling & exceptions: Throughout the flow:
-```
-```
-Domain exceptions (invalid input) are thrown early, preventing bad data from reaching files. This
-is intentional: better to not log than to log incorrect or unsafe data. The caller should catch these
-if they anticipate possible invalid inputs.
-The module does not catch exceptions except where it can add context (like wrapping an
-assembly exception). It assumes the application may either handle them or they’ll be noticed
-during development. In production, such exceptions would indicate a misuse or environment
-problem (and should be fixed).
-One built-in fallback is the use of error_log() in the writer. If the file system is not writable, it
-uses PHP’s own logging to at least record that it tried to log something but failed. This prevents
-silent failures.
-```
-```
-The module does not swallow exceptions about logging; it propagates them, because failing to
-log might be critical for auditing. However, in some cases, you might choose to catch
-LogWriteException around your logging calls if you want to handle logging failures
-gracefully (e.g., notify an admin or switch to an alternative logging mechanism temporarily).
-```
-```
-Test verification (as seen in LoggingTest): After such logging calls, one could inspect the
-filesystem:
-```
-```
-The expected file (e.g., application/info.log) should exist.
-Its contents should contain the message, context keys, and a timestamp. For instance,
-the test checked that the year (from the current timestamp) appears in the log line, to
-ensure the timestamp was written. It also checked that the message substring and
-context key were present.
-Each call to log at a different level produces or appends to the corresponding file
-(info.log, error.log, etc.), thanks to the path resolution scheme.
-```
-#### 26.
-
-#### 27.
-
-#### 28.
-
-#### 29.
-
-#### 30.
-
-#### 31.
-
-#### 32.
-
-#### 33.
-
-#### 34.
-
-#### 35.
-
-#### 36.
-
-#### ◦
-
-#### ◦
-
-#### ◦
-
-
-This flow illustrates how the module ensures that a log entry goes through multiple stages (validation,
-sanitization, assembly, formatting, writing) seamlessly. Each stage has specific responsibilities and error
-handling, making the overall process robust and the code easier to maintain.
+---
 
 ## Requirements and Dependencies
 
-**Environment Requirements:**
+---
 
-```
-PHP Version: The module requires PHP 8.1 or higher. It makes use of PHP 8+ features such as
-readonly properties in value objects, typed properties , union types (e.g., string|
-Stringable type hints in the interface), and Enums for config default values. PHP 8.1
-introduced the enum construct and readonly properties, hence 8.1 is the minimum version for
-full compatibility.
-PHP Extensions: No special extensions are needed for basic functionality aside from standard
-PHP extensions. However, the module uses the Normalizer class from the PHP Intl
-(Internationalization) extension in the Sanitizer (for Unicode normalization of strings). In most
-PHP distributions, Intl is enabled by default. Ensure that the intl extension (which provides
-Normalizer) is available. If you plan to use the sanitization features on Unicode text (e.g., user
-names with accents), the normalizer will help unify character representations.
-File System Access: The module writes log files to disk. It assumes the PHP process has write
-permissions to the configured base log directory. Before using the module in production,
-ensure that the directory you specify (and its parent directories) are writable by the web server
-or CLI user. For example, if logs go to /var/log/myapp, set proper ownership or permissions
-for that path.
-No External Libraries: This is a pure PHP solution. It does not require any external composer
-packages. (Even PSR-3 compliance is handled internally without needing psr/log). Therefore,
-you can use it without additional installs. It’s self-contained as long as your autoloader can load
-its classes.
-```
-**Dependencies Between Components:**
+### Environment Requirements
 
-```
-The module is self-contained; its components depend on each other as described (Facade
-depends on Assembler and Logger, Logger on Writer etc.), but no outside library integration is
-required out of the box.
-If integrated into a larger project, it will depend on that project’s autoloading mechanism (PSR-4
-autoload for the namespaces Logging\*, PublicContracts\Logging\*, and
-Config\Modules\Logging\*).
-PSR-3 Interop: If you do use the psr/log package or type hints from it, note that
-PublicContracts\Logging\PsrLoggerInterface is functionally equivalent. You may cast
-or wrap accordingly. The module’s PsrLoggerAdapter can be used wherever a
-Psr\Log\LoggerInterface is expected.
-```
-**Performance Considerations:**
+- **PHP Version:**  
+  The module requires **PHP 8.1 or higher**. It uses PHP 8+ features such as:
+  - `readonly` properties in value objects
+  - Typed properties
+  - Union types (e.g., `string|Stringable` type hints)
+  - Enums for config default values  
+  PHP 8.1 introduced enums and readonly properties, so 8.1 is the minimum version for full compatibility.
 
-```
-Writing logs is I/O bound. For high-frequency logging, ensure the storage medium can handle
-frequent small writes. The module appends to files; if extremely high log volume is expected,
-consider using a RAM disk for logs or batching log writes (not currently built-in).
-The default validation and sanitization checks (string lengths, regex) are lightweight and will not
-significantly impact performance for normal log message sizes. The most expensive operations
-might be the regex replacements for sanitization and the JSON encoding for context, but these
-are negligible for small context data.
-```
-#### • • • • • • • • •
+- **PHP Extensions:**  
+  No special extensions are needed for basic functionality, except:
+  - The module uses the `Normalizer` class from the PHP **Intl (Internationalization)** extension in the Sanitizer (for Unicode normalization of strings).
+  - In most PHP distributions, Intl is enabled by default.  
+    **Ensure the `intl` extension is available** if you plan to use sanitization features on Unicode text (e.g., user names with accents).
 
+- **File System Access:**  
+  The module writes log files to disk.  
+  - The PHP process must have **write permissions** to the configured base log directory.
+  - Before using in production, ensure the directory (and its parents) are writable by the web server or CLI user.
+  - Example: If logs go to `/var/log/myapp`, set proper ownership or permissions for that path.
 
-```
-The module does not implement log rotation. If you run a long-running application, log files will
-grow indefinitely. It’s recommended to use external log rotation tools (e.g., logrotate on Linux or
-custom scripts) to rotate or archive logs periodically. The Logging Module will continue
-appending to whatever file name is configured; if an external rotation renames the file and
-creates a new empty file with the same name, the module will seamlessly start writing to the
-new file.
-```
-In summary, ensure PHP 8.1+, proper file permissions, and optionally Intl extension for full
-functionality. There are no other software dependencies, making the module easy to drop into many
-environments.
+- **No External Libraries:**  
+  This is a **pure PHP solution**.  
+  - No external Composer packages are required (even PSR-3 compliance is handled internally).
+  - You can use it without additional installs, as long as your autoloader can load its classes.
+
+---
+
+### Dependencies Between Components
+
+- The module is **self-contained**; its components depend on each other as described (e.g., Facade depends on Assembler and Logger, Logger on Writer, etc.), but **no outside library integration is required** out of the box.
+- If integrated into a larger project, it will depend on that project’s autoloading mechanism (**PSR-4 autoload** for the namespaces `Logging\*`, `PublicContracts\Logging\*`, and `Config\Modules\Logging\*`).
+- **PSR-3 Interop:**  
+  If you use the `psr/log` package or type hints from it, note that `PublicContracts\Logging\PsrLoggerInterface` is functionally equivalent.  
+  The module’s `PsrLoggerAdapter` can be used wherever a `Psr\Log\LoggerInterface` is expected.
+
+---
+
+### Performance Considerations
+
+- **Writing logs is I/O bound.**  
+  For high-frequency logging, ensure the storage medium can handle frequent small writes.
+- The module **appends to files**; for extremely high log volume, consider using a RAM disk for logs or batching log writes (not currently built-in).
+- **Validation and sanitization checks** (string lengths, regex) are lightweight and will not significantly impact performance for normal log message sizes.
+- The most expensive operations are regex replacements for sanitization and JSON encoding for context, but these are negligible for small context data.
+
+- **Log Rotation:**  
+  The module does **not implement log rotation**.  
+  - For long-running applications, log files will grow indefinitely.
+  - Use external log rotation tools (e.g., `logrotate` on Linux or custom scripts) to rotate or archive logs periodically.
+  - The Logging Module will continue appending to whatever file name is configured; if an external rotation renames the file and creates a new empty file with the same name, the module will seamlessly start writing to the new file.
+
+---
 
 ## Installation
 
-Installing the Logging Module in your project can be done in a couple of ways. Since it’s a standalone
-module without external dependencies, you can integrate it manually or via Composer.
+Installing the Logging Module in your project is straightforward. As a standalone module with no external dependencies, you can integrate it manually.
 
-**1. Using Composer (if available as a package):** If the module is packaged for Composer (check
-packagist or repository), you would run something like:
+---
 
+### Manual Integration
+
+You can add the module manually by following these steps:
+
+1. **Download or copy the source code**, preserving the folder structure:
+  - `Logging/` (with `Domain/`, `Application/`, `Infrastructure/`)
+  - `PublicContracts/Logging/` (interfaces)
+  - `Config/Modules/Logging/` (configuration classes)
+
+2. **Place these directories** in your project, such as under `src/` or `modules/`.
+
+3. **Set up PSR-4 autoloading** in your `composer.json`:
+
+  ```json
+  "autoload": {
+    "psr-4": {
+    "Logging\\": "src/modules/Logging/",
+    "PublicContracts\\": "src/modules/PublicContracts/",
+    "Config\\Modules\\Logging\\": "src/modules/Config/Modules/Logging/"
+    }
+  }
+  ```
+
+  Adjust the paths as needed for your project structure.
+
+4. **Update Composer’s autoloader**:
+
+  ```bash
+  composer dump-autoload
+  ```
+
+  Alternatively, if not using Composer, ensure your own autoloader or manual includes can load the classes according to PSR-4 (e.g., `Logging\Infrastructure\LoggingKernel` should be in `Logging/Infrastructure/LoggingKernel.php`).
+
+5. **Verify autoloading** by writing a simple script that creates a `LoggingConfig` and `LoggingKernel`. If no "class not found" errors occur, your setup is correct.
+
+---
+
+### Directory Permissions
+
+Before first use, decide where your log files will be stored. Common practice is a dedicated `logs/` directory in your project or a system log directory. Ensure this path is writable by the PHP process. For example, on Linux:
+
+```bash
+mkdir /var/www/myapp/logs
+chown www-data:www-data /var/www/myapp/logs
 ```
-composer require your-vendor/logging-module
-```
-This would install the module and its classes. You’d then include Composer’s autoloader and be ready to
-use the module’s classes. The Logging\, PublicContracts\Logging\, and
-Config\Modules\Logging\ namespaces should be autoloaded by Composer.
 
-_(If the module is not on packagist, skip to manual installation.)_
+Then use `/var/www/myapp/logs` as the base path in `LoggingConfig`.
 
-**2. Manual Integration:** You can also add the module to your project manually: - Download or copy the
-module’s source code, preserving the folder structure: - The Logging/ directory containing Domain,
-Application, Infrastructure subfolders. - The PublicContracts/Logging/ directory for interfaces. -
-The Config/Modules/Logging/ directory for configuration classes. - Place these directories in an
-appropriate location in your project (for example, under a src/ or modules/ directory in your
-project). - Set up PSR-4 autoloading for these namespaces. For instance, if you placed the Logging
-folder under src/modules/, your composer autoload section might look like:
-
-#### {
-
-```
-"autoload": {
-"psr-4": {
-"Logging\\":"src/modules/Logging/",
-"PublicContracts\\": "src/modules/PublicContracts/",
-"Config\\Modules\\Logging\\": "src/modules/Config/Modules/Logging/"
-}
-}
-}
-```
-Then run composer dump-autoload to update the autoloader. (Adjust the paths according to where
-you put the files.) - Alternatively, if not using Composer’s autoloader, you can manually include the files
-or write your own simple autoloader. The key is that when you use a class like
-
-#### •
-
-
-Logging\Infrastructure\LoggingKernel, PHP knows how to load the file. Following PSR-4,
-LoggingKernel would be in Logging/Infrastructure/LoggingKernel.php. - **Verify Autoload:**
-Test by writing a small script that creates a LoggingConfig and LoggingKernel (see Usage
-examples below). If no “class not found” errors occur, your autoload is set up correctly.
-
-Once the classes are available to your application, proceed to configuration and initialization.
-
-**Directory Permissions:** Before first use, decide where your log files will reside. Common practice is a
-dedicated logs/ directory in your project or a system log directory. Ensure this path is writable. For
-example, if using Linux and your web server runs as user www-data, you might:
-
-```
-mkdir/var/www/myapp/logs
-chownwww-data:www-data/var/www/myapp/logs
-```
-and then use /var/www/myapp/logs as the base path in LoggingConfig.
-
-**Integration in Application:** Typically, you will create the LoggingKernel early in your application’s
-initialization (for example, in a bootstrap file or a service container configuration). You might register
-the LoggingFacade in a central place (so other components can request a logger). The usage section
-provides a concrete code example of this.
-
-After installation, you don’t need to perform any additional setup beyond creating a LoggingKernel with
-appropriate config. The module doesn’t require any database migrations or external service setups.
+---
 
 ## Configuration
 
-Configuring the Logging Module is straightforward, as most defaults are sensible. The primary
-configuration you must provide is the **log directory path**. Additional configuration is optional and
-involves tweaking the default values through code.
+Configuring the Logging Module is straightforward, as most defaults are sensible. The primary configuration you must provide is the **log directory path**. Additional configuration is optional and involves tweaking the default values through code.
 
-**Basic Configuration via LoggingConfig:**
+---
 
-To configure, instantiate the LoggingConfig class with your chosen log directory. For example:
+### Basic Configuration via `LoggingConfig`
 
-```
+To configure, instantiate the `LoggingConfig` class with your chosen log directory. For example:
+
+```php
 use Config\Modules\Logging\LoggingConfig;
 use Logging\Infrastructure\LoggingKernel;
-```
-```
-$logDir = __DIR__. '/logs'; // directory where log files will be
-stored
+
+$logDir = __DIR__ . '/logs'; // directory where log files will be stored
 $config = new LoggingConfig($logDir);
 $kernel = new LoggingKernel($config);
 $logger = $kernel->logger();
 ```
-In this snippet: - $logDir is set to a “logs” directory in the current directory. You can change this to
-any path (absolute or relative). If relative, it will be resolved relative to the current working directory of
-the script. - new LoggingConfig($logDir) creates the config. It will throw an exception if
-$logDir is an empty string. If $logDir does not exist on disk, that’s okay at this point; it will be
 
+- `$logDir` is set to a `logs` directory in the current directory. You can change this to any path (absolute or relative). If relative, it will be resolved relative to the current working directory of the script.
+- `new LoggingConfig($logDir)` creates the config. It will throw an exception if `$logDir` is an empty string. If `$logDir` does not exist on disk, that’s okay at this point; it will be created later by the writer as needed.
+- `new LoggingKernel($config)` boots the module using that configuration. The kernel now knows about the base path and uses default values for everything else.
 
-created later by the writer as needed. - new LoggingKernel($config) boots the module using that
-configuration. The kernel now knows about the base path and uses default values for everything else.
+After these steps, `$logger` (the LoggingFacade) is ready to use. This is essentially the minimal configuration needed: just the log directory.
 
-After these steps, $logger (the LoggingFacade) is ready to use. This is essentially the minimal
-configuration needed: just the log directory.
+---
 
-**Customizing Validation and Sanitization:**
+### Customizing Validation and Sanitization
 
-If you want to customize the behavior: - **Add/Remove Log Levels:** Edit
-Config\Modules\Logging\CustomLogLevels::list(). For example, to add a "verbose" level, you
-could modify it:
+You can customize the module’s behavior by editing the relevant config classes:
 
-```
-public static function list(): array {
-return [
-'debug', 'info', 'notice', 'warning', 'error', 'critical', 'alert',
-'emergency',
-'verbose' // added custom level
-];
-}
-```
-Now the Validator will accept "verbose" as a valid level. You should also handle how to call it (e.g., via
-$logger->log('verbose', '...') since there's no dedicated method for it). - **Sensitive Keys:**
-Update CustomSensitiveKeys::list() to include any context keys your application considers
-sensitive. For instance:
+- **Add/Remove Log Levels:**  
+  Edit `Config\Modules\Logging\CustomLogLevels::list()`. For example, to add a `"verbose"` level:
 
-```
-public static function list(): array {
-return ['password', 'passwd', 'secret', 'api_key', 'ssn', 'credit_card'];
-}
-```
-Now if any context is logged with keys "ssn" or "credit_card", their values will be masked. -
-**Sensitive Patterns:** Update CustomSensitivePatterns::list() with regex patterns for sensitive
-info. Example:
+  ```php
+  public static function list(): array {
+      return [
+          'debug', 'info', 'notice', 'warning', 'error', 'critical', 'alert', 'emergency',
+          'verbose' // added custom level
+      ];
+  }
+  ```
+  Now the Validator will accept `"verbose"` as a valid level. You can call it via `$logger->log('verbose', '...')`.
 
-```
-public static function list(): array {
-return [
-'/\d{3}-\d{2}-\d{4}/' // pattern for US SSN (###-##-#### format)
-];
-}
-```
-If any context value matches that pattern, it will be replaced by the mask token. - **Mask Token:** You can
-change the mask token globally by editing the default in
-DefaultSanitizationValues::MASK_TOKEN. For example, you might prefer "***" instead of
-"[MASKED]". Change the enum case return:
+- **Sensitive Keys:**  
+  Update `CustomSensitiveKeys::list()` to include any context keys your application considers sensitive:
 
-```
-self::MASK_TOKEN => '***',
-```
+  ```php
+  public static function list(): array {
+      return ['password', 'passwd', 'secret', 'api_key', 'ssn', 'credit_card'];
+  }
+  ```
+  Any context logged with keys like `"ssn"` or `"credit_card"` will have their values masked.
 
-Similarly, the Assembler’s mask token (for entire messages) could be changed via
-AssemblerDefaultValues::DEFAULT_MASK_TOKEN. If you don’t plan to use channel-specific mask
-notes, you might ignore that. - **Length Limits and Regex:** If 2000 chars is too short or long for log
-messages, adjust DefaultValidationValues::LOG_MESSAGE_MAX_LENGTH. If you want to allow
-newline characters in log messages (currently disallowed by the control char regex), you could modify
-STRING_FORBIDDEN_CHARS_REGEX (though caution: multi-line log entries can break the one-line-per-
-entry format). - **Time Zone:** The timestamp uses the server’s default timezone when formatting with
-DateTimeInterface::ATOM. Ensure your PHP timezone configuration is correct (date.timezone
-in php.ini) to get accurate local times in logs. Alternatively, you could modify LogLineFormatter to use
-UTC or another timezone explicitly if required by your logging policies.
+- **Sensitive Patterns:**  
+  Update `CustomSensitivePatterns::list()` with regex patterns for sensitive info:
 
-**Environment-based Config:**
+  ```php
+  public static function list(): array {
+      return [
+          '/\d{3}-\d{2}-\d{4}/' // pattern for US SSN (###-##-#### format)
+      ];
+  }
+  ```
+  If any context value matches that pattern, it will be replaced by the mask token.
 
-You might use different log directories or settings for different environments (development, production,
-testing): - For example, in development you might set the log directory to __DIR__.'/logs/dev' and
-in production to /var/log/myapp. - You might also choose to lower the log level threshold in dev
-(logging debug messages) but not in prod. This module doesn’t have an internal threshold filter (it logs
-whatever you call it with). To implement a threshold, you would need to conditionally call logging
-methods based on environment, or extend the Logger to drop entries below a certain level.
+- **Mask Token:**  
+  Change the mask token globally by editing the default in `DefaultSanitizationValues::MASK_TOKEN`:
 
-**Integration with Frameworks:**
+  ```php
+  self::MASK_TOKEN => '***',
+  ```
+  The assembler’s mask token (for entire messages) can be changed via `AssemblerDefaultValues::DEFAULT_MASK_TOKEN`.
 
-If integrating with a framework (Laravel, Symfony, etc.), you could wrap this module in a service
-provider: - In Laravel, for instance, you might bind LoggingFacadeInterface in the service
-container to an instance created as shown above. - In Symfony, you might configure a service and inject
-the path from parameters.
+- **Length Limits and Regex:**  
+  Adjust `DefaultValidationValues::LOG_MESSAGE_MAX_LENGTH` if 2000 chars is too short or long for log messages.  
+  To allow newline characters in log messages (currently disallowed by the control char regex), modify `STRING_FORBIDDEN_CHARS_REGEX`.  
+  **Caution:** Multi-line log entries can break the one-line-per-entry format.
 
-But outside of a framework, using the LoggingKernel directly as shown is perfectly fine.
+- **Time Zone:**  
+  The timestamp uses the server’s default timezone when formatting with `DateTimeInterface::ATOM`.  
+  Ensure your PHP timezone configuration is correct (`date.timezone` in `php.ini`).  
+  Alternatively, modify `LogLineFormatter` to use UTC or another timezone if required.
 
-**Testing Configuration:**
+---
 
-If running in a test environment, you might want logs to go to a temporary directory or memory: - Set
-the log directory to something like /tmp/myapp_test_logs for tests, so you can easily clean it up
-between runs. - The LoggingConfig could be reused across tests, or you instantiate a fresh kernel for
-each test class.
+### Integration with Frameworks
 
-Remember that aside from the base path and the static config classes, there isn’t a lot of dynamic
-config. If more complex configuration needs arise (like toggling sanitization off, or using a different
-format), you’d have to implement those changes in code (for example, by subclassing components or
-altering config classes). The structure is flexible to allow that, but not via .ini or .xml files — it’s all PHP
-code configuration.
+If integrating with a framework (Laravel, Symfony, etc.), you can wrap this module in a service provider:
+
+- **Laravel:** Bind `LoggingFacadeInterface` in the service container to an instance created as above.
+- **Symfony:** Configure a service and inject the path from parameters.
+
+Outside of a framework, using the `LoggingKernel` directly as shown is perfectly fine.
+
+---
 
 ## Examples of Use
 
-Below are some practical examples demonstrating how to use the Logging Module in a PHP application.
-These include initialization, basic logging calls, using context data, and leveraging different channels.
+Below are practical examples demonstrating how to use the Logging Module in a PHP application, including initialization, basic logging calls, context data, and channels.
 
-**Example 1: Basic Setup and Logging**
-This example shows the typical setup in an application and logs messages of various levels:
+---
 
+### Example 1: Basic Setup and Logging
 
-```
+This example shows typical setup and logging at various levels:
+
+```php
 <?php
-useConfig\Modules\Logging\LoggingConfig;
-useLogging\Infrastructure\LoggingKernel;
-```
-```
+use Config\Modules\Logging\LoggingConfig;
+use Logging\Infrastructure\LoggingKernel;
+
 // 1. Configuration: specify the directory for log files.
-$logDir= __DIR__. '/logs'; // ensure this directory is writable
-$config= newLoggingConfig($logDir);
-```
-```
+$logDir = __DIR__ . '/logs'; // ensure this directory is writable
+$config = new LoggingConfig($logDir);
+
 // 2. Boot the logging kernel with the configuration.
-$kernel= newLoggingKernel($config);
-```
-```
+$kernel = new LoggingKernel($config);
+
 // 3. Get the logging facade (implements LoggingFacadeInterface).
-$logger= $kernel->logger();
-```
-```
+$logger = $kernel->logger();
+
 // 4. Log messages at various levels with context data.
-$logger->info("User logged in", ["user" =>"alice"]);
-$logger->warning("Disk space low", ["disk" =>"/dev/sda1","free_percent"=>
-5]);
-$logger->error("File not found", ["file" =>"/path/to/file.txt", "error_code"
-=> 404]);
-```
-```
+$logger->info("User logged in", ["user" => "alice"]);
+$logger->warning("Disk space low", ["disk" => "/dev/sda1", "free_percent" => 5]);
+$logger->error("File not found", ["file" => "/path/to/file.txt", "error_code" => 404]);
+
 // 5. Use the generic log method for a custom level (if allowed in config).
-$logger->log("notice", "User profile updated", ["user" =>"alice"]);
-```
-```
+$logger->log("notice", "User profile updated", ["user" => "alice"]);
+
 // 6. Logging with a different channel (using logInput to specify channel).
-$logger->logInput("Admin privileges granted", "critical", "security",
-["admin"=> "bob"]);
+$logger->logInput("Admin privileges granted", "critical", "security", ["admin" => "bob"]);
 ```
+
 **What happens in the above code:**
 
-- After setup, calling $logger->info(...) writes an entry to logs/application/info.log by
-default. The line will include a timestamp, application.INFO, the message "User logged in", and the
-context {"user":"alice"}. If "alice" were sensitive (not in this case), it would be masked. - The
-    warning call goes to logs/application/warning.log. Context shows which disk and free space.
-- The error call goes to logs/application/error.log. It logs an error message with a file path
-and code. If the file path contained forbidden chars, the module might sanitize them (though file paths
-usually just get logged verbatim). - The log("notice", ...) call demonstrates using the generic
-method with a string level. It will result in an entry in logs/application/notice.log. If "notice"
-wasn’t an allowed level, this call would throw an exception – but "notice" is standard, so it works. - The
-    logInput(..., "security", ...) call logs to channel "security". So instead of the default
-application channel, it goes to logs/security/critical.log. The context notes which admin was
-granted privileges. If "admin" were a key in sensitive keys list (it’s not by default), "bob" would be
-masked as "[MASKED]".
+- After setup, `$logger->info(...)` writes to `logs/application/info.log` by default. The line includes a timestamp, channel, level, message, and context.
+- The `warning` and `error` calls go to their respective files (`warning.log`, `error.log`) under the `application` channel.
+- The `log("notice", ...)` call demonstrates using the generic method with a string level.
+- The `logInput(..., "security", ...)` call logs to the `security` channel (`logs/security/critical.log`).
 
-After running this, your logs directory would have subfolders application/ and security/,
-each containing log files for the levels used (info.log, warning.log, error.log, notice.log in application,
-and critical.log in security).
+After running this, your `logs` directory will have subfolders (`application/`, `security/`), each containing log files for the levels used.
 
-**Example 2: Using the PSR-3 Adapter**
+---
+
+### Example 2: Using the PSR-3 Adapter
+
 If you need to supply a logger to a library that expects a PSR-3 logger:
 
-
-```
+```php
 use Logging\Infrastructure\LoggingKernel;
-use Psr\Log\LoggerInterface; // assuming you have psr/log in your project
-for type hints
-```
-```
+use Config\Modules\Logging\LoggingConfig;
+// use Psr\Log\LoggerInterface; // if you have psr/log for type hints
+
 $kernel = new LoggingKernel(new LoggingConfig('/var/log/myapp'));
-$psrLogger = $kernel->psrLogger(); // This implements PsrLoggerInterface,
-which mirrors Psr\Log\LoggerInterface
-```
-```
+$psrLogger = $kernel->psrLogger(); // Implements PsrLoggerInterface
+
 // Now $psrLogger can be used wherever a PSR-3 LoggerInterface is required.
 SomeLibrary::setLogger($psrLogger);
-```
-```
+
 // For demonstration, using psrLogger directly:
 $psrLogger->error("Payment failed", ["orderId" => 1001, "amount" => 50.00]);
-$psrLogger->debug("Payment response", ["responsePayload" => "<xml>...</
-xml>"]);
+$psrLogger->debug("Payment response", ["responsePayload" => "<xml>...</xml>"]);
 ```
-Here, SomeLibrary::setLogger() could be any function that expects a
-Psr\Log\LoggerInterface. Our $psrLogger qualifies. When the library logs through it, the
-adapter will internally create log entries and write to files just as our facade would. The calls in the
-example would produce: - An entry in logs/application/error.log for the payment failed (with
-context showing order and amount). - A debug entry in logs/application/debug.log for the
-response payload. (If the payload contains lots of data or sensitive info, note that the Sanitizer will strip
-control characters but won’t automatically remove XML tags unless they match a pattern. If this is a
-concern, consider logging a summarized payload or adding a pattern to mask certain XML content.)
 
-**Example 3: Handling Exceptions from Logging**
-Generally, you can assume logging will succeed and not wrap it in try-catch every time. However, for
-completeness, if you wanted to handle a potential exception (say you want to avoid your app crashing if
-logs can’t be written):
+- The above will produce entries in `logs/application/error.log` and `logs/application/debug.log`.
+- If the context contains sensitive data, it will be masked according to configuration.
 
-```
+---
+
+### Example 3: Handling Exceptions from Logging
+
+You can handle exceptions if you want to avoid your app crashing if logs can't be written:
+
+```php
 try {
-$logger->critical("Service outage", ["service" => "database", "duration"
-=> "5m"]);
+  $logger->critical("Service outage", ["service" => "database", "duration" => "5m"]);
 } catch (\Logging\Infrastructure\Exception\LogWriteException $e) {
-// If writing to file failed (disk full or permission issue), handle
-gracefully
-error_log("Failed to write to application logs: ". $e->getMessage());
-// We could also fallback to an alternate logging mechanism here
+  // Handle gracefully if writing to file failed
+  error_log("Failed to write to application logs: " . $e->getMessage());
+  // Optionally, fallback to an alternate logging mechanism
 }
 ```
-In this snippet, if the log cannot be written to disk, it catches the exception and at least logs the error to
-PHP’s system logger (which might go to web server error log). In most cases, this won’t be necessary if
-the environment is set up correctly. But it’s an example of using the exception classes for error
-handling.
 
-**Example 4: Unit Testing a Component with Logging (using the interface):**
-Suppose you have a class in your app that uses a LoggingFacadeInterface to log events. For
-testing that class without actually writing logs, you might mock the interface:
+In most cases, this won't be necessary if the environment is set up correctly, but it's an example of using the exception classes for error handling.
 
-
-```
-use PublicContracts\Logging\LoggingFacadeInterface;
-```
-```
-class OrderService {
-private LoggingFacadeInterface $logger;
-public function __construct(LoggingFacadeInterface $logger) {
-$this->logger = $logger;
-}
-public function placeOrder($orderData) {
-// ... order placement logic ...
-$this->logger->info("Order placed", ["orderId" => $orderData->id]);
-}
-}
-```
-```
-// In a PHPUnit test for OrderService:
-$loggerMock = $this->createMock(LoggingFacadeInterface::class);
-$loggerMock->expects($this->once())
-->method('info')
-->with(
-$this->stringContains("Order placed"),
-$this->arrayHasKey("orderId")
-);
-```
-```
-$service = new OrderService($loggerMock);
-$service->placeOrder($dummyOrder);
-```
-This shows how the LoggingFacadeInterface allows injection of a mock logger. The test can verify that
-info("Order placed", ...) was called exactly once with the expected parameters, without
-needing to actually create files. This demonstrates the advantage of coding against the interface for
-high-level code.
-
-These examples cover typical usage patterns. In practice, you will mostly initialize the logger once (as a
-singleton or a shared service) and then use $logger->level() methods throughout your app
-wherever you need to log. The module ensures all such calls result in consistent, well-formatted log
-entries in the designated files.
-
-## Tests
-
-The Logging Module is designed with testability in mind. Each layer’s components can be tested in
-isolation, and an integration test can verify the end-to-end logging flow.
-
-**Included Tests (if any):** The structure of the module suggests an integration test class (e.g.,
-LoggingTest) was used during development to validate functionality. This test likely created a
-LoggingKernel with a temporary directory, then ran through creating LoggableInputs, assembling
-entries, and writing logs, asserting that files were created and contain expected content. While that test
-class might not be distributed with the production module, it serves as a reference for how to
-programmatically verify each component.
-
-**Running Module Tests:** If the module is accompanied by a PHPUnit test suite: - Make sure you’ve
-installed PHPUnit (composer require --dev phpunit/phpunit if it’s not already in your project). -
-
-
-The test files would be under a Tests namespace (for example,
-Tests\Persistence\LoggingTest as seen in context). Ensure the test files are autoloadable (they
-might be in a separate tests/ directory). - Run phpunit targeting the Logging module’s tests. For
-instance:
-
-```
-vendor/bin/phpunit --testdox tests/LoggingTest.php
-```
-This would execute the test case. - The tests will create and delete temporary files (the integration test
-uses a tmp directory under its folder to write logs and then cleans up).
-
-If no test suite is included, you can manually test the module with a script: - **Domain Tests:** Instantiate
-domain objects with known inputs to ensure they behave:
-
-```
-new LogMessage("Test", $logSecurity); // should succeed
-new LogMessage("", $logSecurity); // should throw
-InvalidLogMessageException
-new LogLevel("INFO", $logSecurity, $customLevels); // case insensitive
-check, should succeed if allowed
-new LogLevel("INVALID", $logSecurity, $customLevels);// should throw
-InvalidLogLevelException
-```
-Similarly, test LogContext with a variety of contexts (nested arrays, including a sensitive key to see if it
-masks, etc.). - **Security Tests:** Test Validator methods directly if needed:
-
-```
-$validator->validateMessage("Hello"); // returns "Hello"
-$validator->validateMessage(""); // throws exception
-$validator->validateLevel("info", ["info","error"]); // returns "info"
-$validator->validateLevel("verbose", ["info","error"]); // exception
-```
-And Sanitizer:
-
-```
-$sanitizer->sanitize(["password" => "secret"]); // returns ["password" =>
-"[MASKED]"]
-$sanitizer->sanitize(["note" => "hello"]); // returns ["note" =>
-"hello"]
-```
-- **Integration Test:** Simulate a full log write:
-
-```
-$config = new LoggingConfig(sys_get_temp_dir(). "/logtest");
-$kernel = new LoggingKernel($config);
-$logger = $kernel->logger();
-$logger->info("Integration test message", ["foo" => "bar"]);
-// Now check that file exists:
-$logFile = sys_get_temp_dir(). "/logtest/application/info.log";
-assert(file_exists($logFile));
-$contents = file_get_contents($logFile);
-assert(strpos($contents, "Integration test message") !== false);
-```
-
-```
-assert(strpos($contents, "foo") !== false && strpos($contents, "bar") !==
-false);
-```
-This will write a log and verify its content contains expected substrings. Clean up by removing the
-created file and directory. - **Concurrency Test (optional):** If you want to test the module under
-concurrent writes (though PHP scripts usually run sequentially), you could simulate with multiple
-threads or processes writing to the log at once. The file locking behavior of file_put_contents in
-append mode should handle atomicity of writes to some extent (each call is atomic, but interleaving
-lines can occur if not using locks; however, for log lines which are relatively short, usually it writes one
-line fully then the next). Typically, this is not tested via unit tests but worth noting in a stress test
-scenario.
-
-**Testing Considerations:** - When testing file outputs, always clean up the files to avoid cluttering the
-system (the provided LoggingTest’s cleanupLogs() method shows an approach to remove the test
-log directory). - Use dependency injection and interface mocking for unit tests of any class that uses the
-logger, to avoid touching the filesystem during those tests. - The module’s separation of concerns
-means you can test domain logic without involving file writes, and test the file writing with known
-strings rather than constructing a whole facade call (for example, directly call LogFileWriter with a path
-to see if it creates a file).
-
-By following these testing practices, you can ensure the Logging Module works correctly in your
-environment and continues to do so as you upgrade or modify it. The clear contracts and pure functions
-of the domain layer make unit testing straightforward, whereas the integration tests give confidence
-that everything works together as expected.
+---
 
 ## Best Practices and Limitations
 
-To make the most of the Logging Module and avoid common pitfalls, consider the following best
-practices and be aware of the module’s limitations:
+To make the most of the Logging Module and avoid common pitfalls, follow these best practices and be aware of the module’s limitations.
 
-**Best Practices:**
+---
 
-```
-Use the Facade or PSR Interface: Always prefer using LoggingFacadeInterface (via the
-facade instance from the kernel) or the provided PSR logger interface over directly instantiating
-lower-level components. The facade ensures the proper sequence of operations (assemble then
-log) and maintains the integrity of the log entries. Directly using LogEntryAssembler or
-Logger in client code is possible but not recommended, as it bypasses the simplicity and safety
-checks the facade provides.
-Log Sufficient Context: Take advantage of the context parameter to include relevant data with
-each log. Instead of concatenating variables into the message, pass them in the context array.
-For example:
-```
-```
-$logger->error("Payment failed", ["orderId" => $order->id, "amount" =>
-$order->amount]);
-```
-```
-This produces structured context in the log, which is easier to parse later. The module will handle
-formatting it as JSON. Avoid logging extremely large context data (like a whole image in binary
-or a huge text blob); log references or summaries instead.
-```
-#### •
+### Best Practices
 
-#### •
+- **Use the Facade or PSR Interface:**  
+  Always use `LoggingFacadeInterface` (via the facade instance from the kernel) or the provided PSR logger interface. These ensure the proper sequence of operations (assemble then log) and maintain log entry integrity. Avoid directly using lower-level components like `LogEntryAssembler` or `Logger` in client code, as this bypasses important safety checks.
 
+- **Log Sufficient Context:**  
+  Use the context parameter to include relevant data with each log. Instead of concatenating variables into the message, pass them in the context array.  
+  **Example:**
+  ```php
+  $logger->error("Payment failed", [
+      "orderId" => $order->id,
+      "amount" => $order->amount
+  ]);
+  ```
+  This produces structured context in the log, which is easier to parse later. Avoid logging extremely large context data (such as images or large blobs); log references or summaries instead.
+  
+* **Handling Sensitive Data in Log Messages**
 
-```
-Avoid Sensitive Data in Messages: Try to put sensitive info in context values rather than the
-message. The Sanitizer primarily looks at context. If you log a password or personal info directly
-in the message string, the module currently will not mask it (it doesn’t scan message content
-against patterns by default). If you must log something sensitive, put it in context with an
-appropriate key (so it gets masked), or improve the sanitization patterns to scan messages too.
-For example:
-```
-```
-// Not recommended:
-$logger->warning("User entered password: $pass"); // password in
-message, won't be masked by default
-// Better:
-$logger->warning("User entered password", ["password" => $pass]); //
-'password' value will be masked
-```
-```
-Review and Update Sensitive Patterns: Ensure the default sensitive keys and patterns align
-with your application’s data. Add entries as needed (API keys, tokens, etc.). This prevents
-accidental leakage of secrets in logs. It’s easier to add them upfront than to find out later that
-something was logged in plain text.
-Manage Log File Size: Since the module writes to files and doesn’t rotate them, plan for log
-maintenance:
-Use an external log rotation tool (like Linux’s logrotate) to rotate logs daily or when they
-reach a certain size. Make sure to copy/truncate instead of move if you do so, or else the module
-might continue writing to a moved file handle (in our case, since we open fresh each time,
-moving the file between writes would actually result in a new file being created next write –
-which is fine).
-Alternatively, implement a simple check in the LogFileWriter to rotate (not provided by default,
-but you could subclass or modify it to, say, start a new file when size > X).
-Clean up old logs regularly if retention isn’t needed. This prevents disk space issues.
-Thread Safety / Parallel Usage: In standard PHP web SAPI usage, each request gets its own
-instances, so no issues. If using in a multi-threaded CLI or ReactPHP (event loop) scenario, the
-module should still behave (file writes are atomic per call). However, if two processes log at the
-exact same time to the same file, their writes might intermix at a byte level (one could start
-writing, then another, resulting in interwoven text) because file_put_contents with
-FILE_APPEND is not explicitly locking. This is usually rare and small interleaving (within one disk
-block). For critical logs, consider using file locks (flock) in LogFileWriter when appending, to
-serialize writes. This is a possible enhancement if needed.
-Exception Handling: Decide how you want to handle exceptions thrown by the logger in
-production. You may wrap logging calls in a try-catch if the logging itself should not break the
-application. On the other hand, an exception in logging often signals something serious (invalid
-data or disk problem), so you might let it bubble up during development to fix the root cause.
-Extend with Caution: If you need to extend the module (e.g., override how formatting works or
-integrate with a cloud logging API), prefer composition over modification:
-You could write a new class implementing LoggerInterface that sends logs to an API instead of
-file, and then either swap it in the kernel (by modifying LoggingKernel or subclassing it to
-instantiate your logger) or use LoggingFacade to call both (file and API).
-If modifying core classes, ensure you maintain the validation and sanitization steps; those are
-crucial for security.
-Security of Log Files: Logs can contain sensitive information (even if masked, they might still
-contain some user data). Protect the log directory:
-Set proper filesystem permissions (no public read access on a web server, for instance).
-```
-#### • • • • • • • • • • • • •
+  For maximum security and reliability, sensitive information should **always be placed within the log context array** rather than directly in the message string. This approach allows for robust, key-based masking, which is the most effective way to ensure data is consistently redacted.
 
+  However, the logging module provides defense-in-depth mechanisms to detect and sanitize sensitive data that may inadvertently appear in free-form message strings. These protections are handled by two specialized sanitizers:
 
-```
-If logs are in a web-accessible directory, ensure there’s no direct access (e.g., use an .htaccess to
-deny access, or place logs outside the web root).
-Regularly review logged data to ensure sanitization is working as intended.
-```
-**Known Limitations:**
+  * **Pattern-Based Sanitization (`SensitivePatternSanitizer`)**
+    This sanitizer scans strings for values that match a configured list of regular expressions. To be effective, developers must populate the `CustomSensitivePatterns` configuration with regex patterns that correspond to sensitive data formats specific to the application (e.g., credit card numbers, custom API tokens, or national ID numbers).
 
-```
-No Log Level Filtering: The module does not have a built-in mechanism to ignore logs below a
-certain level. If you call $logger->debug() it will always log. In some systems, you might
-want to turn off debug or info logs in production. With this module, you’d need to implement
-that logic in your usage (for example, only call debug when in dev environment). Alternatively,
-you could extend LoggingFacade to check a config setting before actually logging.
-No Built-in Rotation/Archiving: As mentioned, logs will grow indefinitely. This module focuses
-on writing, not managing log lifecycle. Plan external solutions for log rotation/cleanup.
-Synchronous I/O: Logging happens in-line with your code execution. For web apps under heavy
-load, writing to disk can become a bottleneck (especially if the disk is slow). There is no
-asynchronous or buffering mechanism in place. In extremely performance-sensitive contexts,
-consider pointing the module to a tmpfs (in-memory filesystem) or modifying it to queue logs
-and flush in background (which would be a significant custom change).
-Single Destination (Files): The current design logs to local files only. If you need to log to
-multiple destinations (file + remote, or multiple files for the same message), you would have to
-extend the Logger or add additional calls. There’s no multi-handler support like Monolog
-provides. That said, you can instantiate multiple kernels with different directories if you wanted
-separate sets of logs, but you’d have to call both loggers in code to duplicate messages.
-Formatting is Fixed: The log line format can’t be configured at runtime. If your organization
-requires a different log format (say, CSV or a specific text layout), you must modify
-LogLineFormatter accordingly. The current format is a reasonable default but may not suit
-everyone.
-Context Serialization Simplicity: The context is JSON-encoded via json_encode in the
-formatter. This means objects in context that are not JSON-serializable will be output as {} or
-might trigger a notice. Also, large arrays will produce large JSON strings. If you have binary data
-in context, it won’t be human-readable (and could bloat the log file). The system doesn’t attempt
-to pretty-print or limit context size beyond the validation limits. A custom formatter or
-preprocessing of context in your application might be needed for complex data.
-Internationalization of Logs: The module doesn’t provide multiple language support for log
-messages (that’s usually not needed – log messages are typically in English or the developer’s
-language). It also doesn’t format timestamps in localized formats (sticking to ISO8601, which is
-generally good practice for logs).
-Memory usage: The module has a small memory footprint. Even so, be mindful when logging
-extremely large data (the context length limits help mitigate this). Logging huge data structures
-could temporarily use a lot of memory to format to JSON or to copy arrays in Sanitizer.
-Upgradability: Because this is a custom module, upgrading it means merging custom changes
-if you made any. If you treat it as a vendor library, try not to edit its core files; instead extend via
-subclassing, so that if a new version of the module is released, you can drop it in and adjust your
-subclass if needed. (This point is more relevant if the module were maintained by a third party –
-in a private context, it may not apply.)
-```
-By adhering to these practices and understanding the limitations, you can use the Logging Module
-effectively and reliably. It’s a powerful foundation for logging in a PHP application, and with mindful
-usage, it will greatly aid in monitoring and debugging your system without introducing security risks
-from sensitive data exposure.
+  * **Credential Phrase Detection (`CredentialPhraseSanitizer`)**    
+    This sanitizer uses advanced heuristics to identify and mask common credential-like phrases, such as `"password: value"` or `"token = abc123"`. Its effectiveness depends on the sensitive keys configured, the separators defined (such as `:`, `=`, `-`), and the number of words allowed between the sensitive key and the separator. The sanitizer supports flexible word order to increase detection accuracy. The content following the separator will be masked. If a separator is not found after the sensitive key, the sanitizer will also search before the key to identify possible exposed credentials. This helps catch accidental leaks in messages, even when credentials are embedded in free-form text.
 
-#### • • • • • • • • • • •
+  **Recommended**
 
+  Place all variable and potentially sensitive data in the context array. The value associated with a recognized sensitive key (like `'password'`) will be reliably masked.
 
-## Contributing
+  ```php
+  // The value of 'password' will be masked automatically by key.
+  $logger->warning("User password validation failed", ["password" => $pass]);
+  ```
 
-Contributions to the Logging Module are welcome! Whether you want to fix a bug, add a new feature,
-or improve documentation, here are some guidelines to follow:
+  **Avoid**
 
-```
-Development Standards: The code follows modern PHP standards (PSR-12 coding style, PSR-4
-autoloading). Please keep code style consistent. Use strict types
-(declare(strict_types=1); at the top of PHP files) as seen in module files, and add type
-hints and return types for all functions/methods.
-Branch and Commit: If the project is on a version control repository (e.g., GitHub):
-Fork the repository and clone your fork.
-Create a new branch for your feature/fix:
-```
-```
-git checkout -b feature/add-rotation
-```
-```
-Make your changes on that branch.
-Write clear commit messages explaining the why and what of the changes.
-Write Tests: If you add a feature or fix a bug, please add corresponding tests. For example, if
-you implement log rotation, add tests to simulate log files reaching a size and ensure rotation
-logic works. Running ./vendor/bin/phpunit should pass all tests before and after your
-changes.
-Documentation: Update the README (or separate docs) if your change affects usage. For
-instance, if a new configuration option is introduced, document it under Configuration section.
-Pull Request: Push your branch to your fork and open a Pull Request to the main repository.
-Provide a descriptive title and description. Explain why the change is needed (e.g., what problem
-it solves) and summarize how your implementation works. If it’s a large change, the maintainers
-might discuss it with you for clarity or request adjustments.
-Code Review: Be open to feedback. Project maintainers may suggest improvements or edits.
-This is part of the review process to maintain code quality and consistency.
-Issue Reporting: If you’re not coding a change but want to report a bug or request a feature,
-open an issue on the repository’s issue tracker. Provide as much detail as possible: steps to
-reproduce the bug, environment (PHP version, OS), and any relevant log output or error
-messages. For feature requests, explain your use-case and why the feature would be beneficial.
-Community Conduct: Interact respectfully with other contributors and maintainers. Use clear,
-professional language in discussions. We aim for a collaborative environment where ideas can
-be exchanged constructively.
-Scope: Try to keep each pull request focused on one topic. This makes it easier to review and
-increases the likelihood of quick merging. For example, avoid bundling an unrelated bug fix with
-a new feature in the same PR.
-Testing Your Changes: Before submitting, test the module in a real scenario if possible.
-Integrate your modified module into a sample project and ensure everything works as expected
-(this is in addition to automated tests).
-```
-By following these guidelines, you help ensure that contributions are handled smoothly and the module
-remains reliable. We appreciate the time and effort of contributors in improving the Logging Module.
+  Avoid embedding sensitive data directly into the message string. While the `CredentialPhraseSanitizer` or a custom pattern might catch it, this method is inherently less reliable than key-based masking.
 
-#### • • • • • • • • • • • • • •
+  ```php
+  // AVOID: This message will likely not be sanitized.
+  // Heuristic phrase detection can fail if this phrase is not configured,
+  // or if the number of words between the key ("password") and its separator exceeds the search limit.
+  $logger->warning("Password has been defined as: $pass");
+  ```
 
+  While the sanitization engine offers powerful tools for scanning message strings, the primary strategy for protecting sensitive data is to **structure it within the context array**. If logging sensitive information in messages is absolutely unavoidable, you must ensure that your `CustomSensitivePatterns` and credential phrase detection rules are comprehensive enough to provide adequate protection. For advanced scenarios, the core `StringSanitizer` can also be extended with custom logic to meet specific security requirements.
 
-## Contact and Support
+- **Review and Update Sensitive Patterns:**  
+  Ensure the default sensitive keys and patterns match your application’s data. Add entries as needed (API keys, tokens, etc.) to prevent accidental leakage of secrets in logs.
 
-If you need help with the Logging Module or have questions:
+- **Manage Log File Size:**  
+  The module does not rotate logs. Use external tools (like Linux’s `logrotate`) to rotate logs daily or by size.  
+  - If you implement your own rotation, ensure the module writes to the correct file after rotation.
+  - Clean up old logs regularly to prevent disk space issues.
 
-```
-Project Repository: Check the repository’s README or wiki for additional documentation. The
-issue tracker is a good place to search for known issues or to ask questions.
-Issues and Bug Reports: If you encounter a bug, please open an issue on the repository
-providing details (as described in the Contributing section). Maintainers will respond as soon as
-possible.
-Discussion: For general questions or troubleshooting, you might find a discussion forum or a
-chat channel (if the project has one, e.g., Slack or Discord) where developers discuss the module.
-Refer to the project documentation for any such community channels.
-Email: If a direct support contact is provided by the maintainers, you can reach out via email. For
-example, the maintainers might have a support email like support@loggingmodule.dev (this
-is an example; use the actual contact if given).
-Professional Support: If this module is used in a company project and there are internal
-maintainers, reach out to the designated team or individual within your organization responsible
-for the logging system.
-FAQ: Look out for a FAQ section in the documentation or wiki. It may already address common
-questions (like "How do I log to a database?" or "How to change log format?").
-Stack Overflow: If the project is open-source and widely used, questions tagged for it might
-appear on Stack Overflow. You can search there for "php logging-module" or similar terms. Be
-mindful to refer only to authoritative answers or the official docs, as implementations can vary.
-```
-When seeking support, provide context: - The version of the module you are using (if versioned) or the
-date of the commit. - Environment details (PHP version, platform, how you integrated it). - Relevant
-code snippets of how you initialize and call the logger. - The exact issue or error message you’re facing.
+- **Thread Safety / Parallel Usage:**  
+  In standard PHP web usage, each request is isolated. For CLI or event-loop scenarios, file writes are atomic per call, but simultaneous writes may interleave at the byte level. For critical logs, consider using file locks (`flock`) in `LogFileWriter` to serialize writes.
 
-The maintainers aim to help users integrate and use the Logging Module effectively. Response times
-may vary depending on the community activity, but the goal is to ensure any user of the module can
-resolve issues and fully utilize the features.
+- **Exception Handling:**  
+  Decide how to handle exceptions thrown by the logger in production. You may wrap logging calls in try-catch blocks if logging failures should not break the application. During development, let exceptions bubble up to fix root causes.
+
+- **Extend with Caution:**  
+  If you need to extend the module (e.g., to change formatting or integrate with a cloud API), prefer composition over modification.  
+  - Implement a new class for `LoggerInterface` if needed.
+  - If modifying core classes, maintain validation and sanitization steps for security.
+
+- **Security of Log Files:**  
+  Logs may contain sensitive information.  
+  - Set proper filesystem permissions (no public read access).
+  - If logs are in a web-accessible directory, deny direct access (e.g., via `.htaccess` or by placing logs outside the web root).
+  - Regularly review logged data to ensure sanitization is working as intended.
+
+---
+
+### Known Limitations
+
+- **No Log Level Filtering:**  
+  The module does not filter logs by level. All log calls (e.g., `$logger->debug()`) will write to disk. If you want to suppress certain levels in production, implement that logic in your application or extend the facade.
+
+- **No Built-in Rotation/Archiving:**  
+  Logs grow indefinitely. Use external solutions for log rotation and cleanup.
+
+- **Synchronous I/O:**  
+  Logging is synchronous. For high-load web apps, disk writes can be a bottleneck. There is no built-in asynchronous or buffering mechanism.
+
+- **Single Destination (Files):**  
+  The module logs only to local files. To log to multiple destinations, extend the logger or call multiple loggers in your code. There is no multi-handler support.
+
+- **Fixed Formatting:**  
+  The log line format is not configurable at runtime. To change the format, modify `LogLineFormatter`.
+
+- **Simple Context Serialization:**  
+  Context is JSON-encoded. Non-serializable objects will be output as `{}` or may trigger notices. Large arrays produce large JSON strings. For complex data, consider custom formatting or preprocessing.
+
+- **No Internationalization:**  
+  The module does not support multiple languages for log messages or localized timestamp formats. Timestamps use ISO8601.
+
+- **Memory Usage:**  
+  The module has a small footprint, but logging very large data structures can increase memory usage temporarily.
+
+- **Upgradability:**  
+  If you modify core files, upgrading may require merging changes. Prefer subclassing or composition to ease upgrades.
+
+---
 
 ## License
 
-The Logging Module is open-source software, released under the **MIT License**. This means you are free
-to use, modify, and distribute the module in your own projects, including commercial applications, as
-long as you include the license notice.
+The Logging Module is open-source software, released under the **MIT License**.
 
-The MIT License is a permissive license with limited restrictions – primarily requiring preservation of
-copyright notices and the license text in any redistribution.
+You are free to **use**, **modify**, and **distribute** this module in your own projects, including commercial applications, provided that you include the license notice.
 
-For the full license text, see the LICENSE file distributed with the module. In summary, the module is
-provided "as is" without warranty of any kind, express or implied. The authors or copyright holders are
-not liable for any claims or damages arising from its use.
+The MIT License is a permissive license with limited restrictions—primarily requiring preservation of copyright notices and the license text in any redistribution.
+
+For the full license text, see the `LICENSE` file distributed with the module.
+
+> The module is provided "as is", without warranty of any kind, express or implied. The authors or copyright holders are not liable for any claims or damages arising from its use.
 
 By using this module, you agree to the terms of the MIT License.
 
+---
+
 _End of README_
-
-#### • • • • • • •
-
-
-(Note: This README is intended to provide comprehensive documentation for the Logging Module. For
-any further details or updates, refer to the official repository or contact the maintainers as described
-above.)
-
-
