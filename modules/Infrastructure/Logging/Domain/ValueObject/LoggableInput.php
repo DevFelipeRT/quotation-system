@@ -216,30 +216,20 @@ final class LoggableInput implements LoggableInputInterface
     }
 
     /**
-     * Serializes any non-scalar value in the context array to string.
+     * Serializes values in the context array to string.
      *
      * Arrays and objects are converted to JSON; other types to string.
      *
      * @param array<string, mixed> $context
-     * @return array<string, string|int|float|bool|null>
+     * @return array<string, string>
      */
     private function serializeContextValues(array $context): array
     {
         foreach ($context as $key => $value) {
-            if (
-                is_string($value) ||
-                is_int($value) ||
-                is_float($value) ||
-                is_bool($value) ||
-                is_null($value)
-            ) {
-                continue;
-            }
-            if (is_array($value) || is_object($value)) {
-                $context[$key] = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PARTIAL_OUTPUT_ON_ERROR);
+            if (is_string($value)) {
+                $context[$key] = $value;
             } else {
-                // Fallback for resources, etc.
-                $context[$key] = (string)$value;
+                $context[$key] = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PARTIAL_OUTPUT_ON_ERROR);
             }
         }
         return $context;
