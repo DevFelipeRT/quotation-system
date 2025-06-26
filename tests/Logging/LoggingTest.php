@@ -15,10 +15,7 @@ use Logging\Domain\Security\Contract\LogSecurityInterface;
 use Logging\Domain\Security\Contract\SanitizerInterface;
 use Logging\Domain\Security\Contract\ValidatorInterface;
 use Logging\Domain\ValueObject\Contract\LoggableInputInterface;
-use Logging\Domain\ValueObject\Contract\LogEntryInterface;
 use Logging\Domain\Security\LogSecurity;
-use Logging\Domain\Security\Sanitizer;
-use Logging\Domain\Security\Validator;
 use Logging\Domain\ValueObject\LoggableInput;
 use Logging\Infrastructure\LoggingKernel;
 use Logging\Infrastructure\LogEntryAssembler;
@@ -29,14 +26,13 @@ use Logging\Infrastructure\LogLineFormatter;
 use DateTimeImmutable;
 use Logging\Domain\ValueObject\LogDirectory;
 use Logging\Domain\ValueObject\LogEntry;
+use Logging\Security\SecurityKernel;
 
 final class LoggingTest extends IntegrationTestHelper
 {
     private ?LoggingConfigInterface $config = null;
     // Data
     private string $testLogDir;
-    private ?string $resolvedPath = null;
-    private ?string $formattedLogLine = null;
     private ?array $logFilePathCollection = null;
     private ?array $logLineCollection = null;
     // Value Objects
@@ -87,6 +83,7 @@ final class LoggingTest extends IntegrationTestHelper
         $this->runSteps(
             'Log Security Component',
             [
+                'Security Kernel' => 'testSecurityKernel',
                 'Security Validator' => 'testValidator',
                 'Security Sanitizer' => 'testSanitizer',
                 'Security LogSecurity' => 'testLogSecurity',
@@ -95,18 +92,75 @@ final class LoggingTest extends IntegrationTestHelper
         );
     }
 
+    public function testSecurityKernel()
+    {
+        $securityKernel = new SecurityKernel(
+            $this->config->sanitizationConfig(),
+            $this->config->validationConfig()
+        );
+
+        $this->sanitizer = $securityKernel->sanitizer();
+        $this->validator = $securityKernel->validator();
+    }
+
     public function testValidator()
     {
-        $this->validator = new Validator($this->config->validationConfig());
         //return $this->validator;
     }
 
     public function testSanitizer()
     {
-        $this->sanitizer = new Sanitizer($this->config->sanitizationConfig());
-        return $this->sanitizer->sanitize(
-            'Sensitive data: Password: 12345678900. CPF: 12345678900. Channel: password.'
-        );
+        $stringOutput = $this->sanitizer->sanitize('Sensitive data string: Password: 12345678900. CPF: 12345678900. Channel: password.');
+
+        
+        $arrayData = [
+            "Sensitive data array: Password 12345678900 CPF: 12345678900 Channel: password.",
+            "Password has been difined as: mypassword",
+            [
+                "User password: password1234 CPF: 98765432100 Channel: password.",
+                "credentials" => [
+                    "password" => "mypassword",
+                    "cpf" => "12345678900",
+                    "token" => "abcde12345token",
+                ],
+                "profile" => [
+                    "name" => "Alice",
+                    "contact" => [
+                        "email" => "alice@example.com",
+                        "phone" => "+55 11 91234-5678",
+                        "password" => "qwerty2024",
+                    ],
+                    "notes" => [
+                        "This user password is qwerty2024 and CPF is 12345678900."
+                    ],
+                ],
+                "sessions" => [
+                    [
+                        "session_id" => "app_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+                        "ip" => "192.168.1.100",
+                        "details" => "Token: abcde12345token",
+                    ],
+                    [
+                        "session_id" => "app_z9y8x7w6v5u4t3s2r1q0p9o8n7m6l5k4",
+                        "ip" => "192.168.1.101",
+                        "details" => "Password for access: password123!",
+                    ],
+                ],
+                "is_active" => true,
+                "login_count" => 7,
+                ]
+        ];
+        $arrayOutput = $this->sanitizer->sanitize($arrayData);
+            
+        $circularArray = [];
+        $circularArray['self'] = &$circularArray;
+
+        $outputCircular = $this->sanitizer->sanitize($circularArray);
+
+        $objectData = require_once 'CircularReferenceObject.php';
+        $objectOutput = $this->sanitizer->sanitize($objectData);
+
+        return [$stringOutput, $arrayOutput, $objectOutput, $outputCircular];
     }
 
     public function testLogSecurity()
@@ -211,7 +265,10 @@ final class LoggingTest extends IntegrationTestHelper
         $this->loggableInput = new LoggableInput(
             'Sensitive context data',
             'info',
-            ['cpf' => '12345678900'],
+            [
+                'cpf' => '12345678900',
+                'password' => 'password is 12345678900',
+            ],
             'channel',
             new DateTimeImmutable(),
         );
