@@ -15,8 +15,6 @@ use Logging\Domain\Security\Contract\LogSecurityInterface;
 use Logging\Application\Contract\LogEntryAssemblerInterface;
 use Logging\Application\Contract\LoggerInterface;
 use Logging\Domain\Security\LogSecurity;
-use Logging\Domain\Security\Sanitizer;
-use Logging\Domain\Security\Validator;
 use Logging\Application\LoggingFacade;
 use Logging\Domain\ValueObject\LogDirectory;
 use Logging\Infrastructure\LogFileWriter;
@@ -25,6 +23,7 @@ use Logging\Infrastructure\LogLineFormatter;
 use Logging\Infrastructure\Logger;
 use Logging\Infrastructure\LogEntryAssembler;
 use Logging\Infrastructure\PsrLoggerAdapter;
+use Logging\Security\SecurityKernel;
 
 /**
  * LoggingKernel
@@ -85,7 +84,7 @@ final class LoggingKernel implements LoggingKernelInterface
 
     private function bootComponents(): void
     {
-        $this->security     = $this->createSecurity();
+        $this->security     = $this->bootSecurity();
         $this->logDirectory = $this->createLogDirectory();
         $this->assembler    = $this->createAssembler();
         $this->pathResolver = $this->createLogFilePathResolver();
@@ -96,10 +95,11 @@ final class LoggingKernel implements LoggingKernelInterface
         $this->facade       = $this->createFacade();
     }
 
-    private function createSecurity(): LogSecurityInterface
+    private function bootSecurity(): LogSecurityInterface
     {
-        $sanitizer = new Sanitizer($this->sanitizationConfig);
-        $validator = new Validator($this->validationConfig);
+        $securityKernel = new SecurityKernel($this->sanitizationConfig, $this->validationConfig);
+        $sanitizer = $securityKernel->sanitizer();
+        $validator = $securityKernel->validator();
         return new LogSecurity($validator, $sanitizer);
     }
 
