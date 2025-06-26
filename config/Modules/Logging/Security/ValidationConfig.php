@@ -33,6 +33,11 @@ final class ValidationConfig implements ValidationConfigInterface
     {
         return DefaultValidationValues::CONTEXT_VALUE_MAX_LENGTH->getValue();
     }
+    
+    public function channelMaxLength(): int
+    {
+        return DefaultValidationValues::CHANNEL_MAX_LENGTH->getValue();
+    }
 
     public function directoryRootString(): string
     {
