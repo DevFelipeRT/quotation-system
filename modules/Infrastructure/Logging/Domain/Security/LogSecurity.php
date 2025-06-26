@@ -75,27 +75,6 @@ final class LogSecurity implements LogSecurityInterface
     }
 
     /**
-     * Validates and normalizes a generic domain string.
-     *
-     * Ensures the string is valid according to domain rules,
-     * including non-emptiness, maximum length, and whitespace policy.
-     *
-     * @param string    $value
-     * @param bool      $allowEmpty
-     * @param int|null  $maxLength
-     * @param bool      $allowWhitespace
-     * @return string
-     */
-    public function validateString(
-        string $value,
-        bool $allowEmpty = false,
-        ?int $maxLength = null,
-        bool $allowWhitespace = true
-    ): string {
-        return $this->validator->validateString($value, $allowEmpty, $maxLength, $allowWhitespace);
-    }
-
-    /**
      * Validates and normalizes a channel name.
      *
      * Ensures the channel is non-empty and contains only valid characters.
@@ -155,11 +134,11 @@ final class LogSecurity implements LogSecurityInterface
      * Ensures the message is non-empty, within the allowed length, and follows
      * formatting and normalization conventions defined by the domain.
      *
-     * @param string $message
-     * @param int    $maxLength
+     * @param string   $message
+     * @param int|null $maxLength
      * @return string
      */
-    public function validateMessage(string $message, int $maxLength = 2000): string
+    public function validateMessage(string $message, ?int $maxLength = null): string
     {
         return $this->validator->validateMessage($message, $maxLength);
     }
