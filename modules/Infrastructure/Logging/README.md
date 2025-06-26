@@ -329,7 +329,7 @@ A strictly immutable Data Transfer Object (DTO) for carrying validated log reque
   * If provided, must be an associative array where both keys and values are non-empty strings.
   * Any invalid key or value triggers `InvalidLoggableInputException::invalidContextKey($key)` or `::invalidContextValue($key)` respectively.
   * If omitted, defaults to an empty array.
-  * **Automatic Serialization:** Any non-string value (array or object) is automatically converted to JSON; other types are cast to string before validation.
+  * **Automatic Serialization:** Any non-string value (array or object) is automatically converted to JSON.
 
 * **Channel:**
 
