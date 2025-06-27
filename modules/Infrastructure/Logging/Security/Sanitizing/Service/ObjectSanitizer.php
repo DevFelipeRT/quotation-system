@@ -19,6 +19,7 @@ use Logging\Security\Sanitizing\Contract\StringSanitizerInterface;
  */
 final class ObjectSanitizer implements ObjectSanitizerInterface
 {
+    private const DEFAULT_PRIVATE_TOKEN = '[PRIVATE_PROPERTIES]';
     private CircularReferenceDetectorInterface $circularDetector;
     private SensitiveKeyDetectorInterface $keyDetector;
     private StringSanitizerInterface $stringSanitizer;
@@ -27,10 +28,10 @@ final class ObjectSanitizer implements ObjectSanitizerInterface
 
     /**
      * @param CircularReferenceDetectorInterface $circularDetector    Detects circular references to prevent infinite loops.
-     * @param SensitiveKeyDetectorInterface     $keyDetector         Detects property names requiring masking.
-     * @param StringSanitizerInterface          $stringSanitizer     Performs string-level sanitization (partial masking).
-     * @param string                            $maskToken           Token used for masking sensitive data.
-     * @param int                               $maxDepth            Maximum recursion depth permitted.
+     * @param SensitiveKeyDetectorInterface      $keyDetector         Detects property names requiring masking.
+     * @param StringSanitizerInterface           $stringSanitizer     Performs string-level sanitization (partial masking).
+     * @param string                             $maskToken           Token used for masking sensitive data.
+     * @param int                                $maxDepth            Maximum recursion depth permitted.
      */
     public function __construct(
         CircularReferenceDetectorInterface $circularDetector,
@@ -81,7 +82,13 @@ final class ObjectSanitizer implements ObjectSanitizerInterface
         $this->circularDetector->markSeen($object);
 
         $properties = get_object_vars($object);
-        $sanitized = [];
+
+        if (empty($properties)) {
+            $className = get_class($object);
+            return ['object_class' => $className . self::DEFAULT_PRIVATE_TOKEN];
+        }
+        
+        $sanitized = ['object_class' => get_class($object)];
 
         foreach ($properties as $property => $value) {
             $sanitized[$property] = $this->sanitizeElement($property, $value, $depth);
