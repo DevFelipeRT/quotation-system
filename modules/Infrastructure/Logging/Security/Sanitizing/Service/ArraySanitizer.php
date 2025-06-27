@@ -36,12 +36,12 @@ final class ArraySanitizer implements ArraySanitizerInterface
     /**
      * Constructs the ArraySanitizer.
      *
-     * @param StringSanitizerInterface         $stringSanitizer           Performs partial masking of string values.
-     * @param SensitiveKeyDetectorInterface    $keyDetector               Detects keys that require full value masking.
-     * @param ObjectSanitizerInterface         $objectSanitizer           Performs sanitization on object values.
+     * @param StringSanitizerInterface           $stringSanitizer           Performs partial masking of string values.
+     * @param SensitiveKeyDetectorInterface      $keyDetector               Detects keys that require full value masking.
+     * @param ObjectSanitizerInterface           $objectSanitizer           Performs sanitization on object values.
      * @param CircularReferenceDetectorInterface $circularReferenceDetector Detects and handles circular references.
-     * @param string                           $maskToken                 The string to use for masking sensitive data.
-     * @param int                              $maxDepth                  The maximum recursion depth to traverse.
+     * @param string                             $maskToken                 The string to use for masking sensitive data.
+     * @param int                                $maxDepth                  The maximum recursion depth to traverse.
      */
     public function __construct(
         StringSanitizerInterface $stringSanitizer,
@@ -135,12 +135,7 @@ final class ArraySanitizer implements ArraySanitizerInterface
         }
 
         if (is_object($value)) {
-            // Handle objects: check for circularity before delegating.
-            if ($this->circularReferenceDetector->isCircularReference($value)) {
-                return $this->circularReferenceDetector->handleCircularReference();
-            }
-            $this->circularReferenceDetector->markSeen($value);
-            
+            // Circular checks are handled within the called method.
             return $this->objectSanitizer->sanitizeObject($value);
         }
 
