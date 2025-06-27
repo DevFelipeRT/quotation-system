@@ -176,21 +176,17 @@ final class LoggableInput implements LoggableInputInterface
 
     /**
      * Validates the log context array.
-     * Keys and values must be non-empty strings.
+     * Keys must be non-empty strings.
      *
      * @param array $context
      * @return array<string, string>
-     * @throws InvalidLoggableInputException If any key or value is invalid.
+     * @throws InvalidLoggableInputException If any key is invalid.
      */
     private function validateContext(array $context): array
     {
-        $context = $this->serializeContextValues($context);
         foreach ($context as $key => $value) {
             if (!is_string($key) || trim($key) === '') {
                 throw InvalidLoggableInputException::invalidContextKey($key);
-            }
-            if (!is_string($value) || trim($value) === '') {
-                throw InvalidLoggableInputException::invalidContextValue($key);
             }
         }
         return $context;
@@ -213,25 +209,5 @@ final class LoggableInput implements LoggableInputInterface
             throw InvalidLoggableInputException::emptyChannel();
         }
         return $trimmed;
-    }
-
-    /**
-     * Serializes values in the context array to string.
-     *
-     * Arrays and objects are converted to JSON; other types to string.
-     *
-     * @param array<string, mixed> $context
-     * @return array<string, string>
-     */
-    private function serializeContextValues(array $context): array
-    {
-        foreach ($context as $key => $value) {
-            if (is_string($value)) {
-                $context[$key] = $value;
-            } else {
-                $context[$key] = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PARTIAL_OUTPUT_ON_ERROR);
-            }
-        }
-        return $context;
     }
 }
