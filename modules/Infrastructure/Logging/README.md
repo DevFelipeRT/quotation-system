@@ -6,9 +6,178 @@ A **Logging Module** for PHP 8 that provides structured, secure log writing to f
 
 ## General Description
 
-This module’s primary purpose is to offer a robust logging solution in pure PHP. It addresses common logging needs such as categorizing logs by level (info, warning, error, etc.), including contextual data with log messages, and writing outputs to log files. Additionally, it tackles security concerns by validating inputs and masking sensitive information (like passwords or personal identifiers) before writing to disk.
+This Logging Module is a comprehensive, security-focused solution for PHP 8+ applications, engineered as a pure PHP module with no external library dependencies. It provides a robust and structured mechanism for writing logs to the local filesystem, built upon a layered architecture that enforces a strict separation of concerns between domain logic, application services, and infrastructure. A primary focus of the module is security, featuring automated sanitization of sensitive data and rigorous input validation to ensure data integrity and prevent information leaks. It is fully PSR-3 compliant, ensuring seamless integration with third-party libraries and modern frameworks. The module offers developers a reliable, maintainable, and secure logging foundation, centralizing logging logic and promoting best practices for data handling.
 
-In context, the Logging Module can be used in web applications, CLI scripts, or any PHP project that requires structured logging. It helps developers track events and debug issues by creating timestamped log entries in an organized file structure (for example, separate files per log level or channel). By using this module, applications gain a consistent logging interface and avoid scattering file write logic and data sanitation code throughout the codebase.
+#### Features
+
+* **Advanced Security & Sanitization:** Automatically sanitizes log data by masking sensitive keys (e.g., `password`, `api_key`) and values matching configurable regex patterns (e.g., PII, credit cards). Includes advanced credential phrase detection to redact secrets from free-form messages.
+* **Domain-Driven & Immutable Architecture:** Utilizes a multi-layer architecture with immutable Value Objects to guarantee that only validated, sanitized, and secure data enters the logging pipeline. This fail-fast design prevents data corruption and enforces strict domain invariants.
+* **PSR-3 Compatibility:** Includes a PSR-3 compliant adapter, allowing the module to be used as a drop-in replacement wherever a `Psr\Log\LoggerInterface` is expected, ensuring seamless integration with frameworks and third-party libraries.
+* **Structured File Organization:** Automatically organizes log files into a clean directory structure based on channel and severity level (e.g., `/logs/security/critical.log`), making logs easy to navigate and analyze.
+* **Robust Context & Data Handling:** Supports rich contextual data with every log entry. The sanitization engine can recursively process deeply nested arrays and objects, featuring built-in circular reference detection to prevent infinite loops and ensure stability.
+* **Zero-Dependency & Configurable:** Operates as a pure PHP 8+ module with no external Composer dependencies. Configuration is streamlined, requiring only a base log directory to get started, while allowing deep customization of validation rules, sensitive data patterns, and log levels.
+
+---
+
+### Examples of Use
+
+Below are practical examples demonstrating how to use the Logging Module in a PHP application, including initialization, basic logging calls, context data, and channels.
+
+---
+
+#### **Example 1: Basic Setup and Logging**
+
+This example shows the typical setup process and how to log messages at various severity levels.
+
+```php
+<?php
+use Config\Modules\Logging\LoggingConfig;
+use Logging\Infrastructure\LoggingKernel;
+
+// 1. Configuration: specify the directory for log files.
+$logDir = __DIR__ . '/logs'; // ensure this directory is writable
+$config = new LoggingConfig($logDir);
+
+// 2. Boot the logging kernel with the configuration.
+$kernel = new LoggingKernel($config);
+
+// 3. Get the logging facade (implements LoggingFacadeInterface).
+$logger = $kernel->logger();
+
+// 4. Log messages at various levels with context data.
+$logger->info("User logged in", ["user" => "alice"]);
+$logger->warning("Disk space low", ["disk" => "/dev/sda1", "free_percent" => 5]);
+$logger->error("File not found", ["file" => "/path/to/file.txt", "error_code" => 404]);
+
+// 5. Use the generic log method for a custom level (if allowed in config).
+$logger->log("notice", "User profile updated", ["user" => "alice"]);
+
+// 6. Logging with a different channel (using logInput to specify channel).
+$logger->logInput("Admin privileges granted", "critical", "security", ["admin" => "bob"]);
+```
+
+**Execution Flow and Output:**
+
+  * **Initialization:** The process begins by instantiating `LoggingConfig` with the desired path for log storage (`$logDir`). This configuration is then passed to the `LoggingKernel`, which bootstraps the entire module.
+  * **Facade Access:** The primary logging interface is retrieved via the `$kernel->logger()` method, which returns a pre-configured facade.
+  * **Standard Logging:** When methods like `$logger->info(...)` are called, they write to a log file corresponding to their level under the default `application` channel. The log entry includes a timestamp, channel, level, message, and the provided context data.
+  * **Channel-Specific Logging:** The `logInput()` method allows for specifying a custom channel, such as `"security"`. This directs the log entry to a different subdirectory, enabling logical separation of logs.
+  * **File Structure:** After running this code, the `logs` directory will contain subfolders for each channel used (`application/`, `security/`), and within them, log files for each level (e.g., `info.log`, `critical.log`). For instance, the first log call creates `logs/application/info.log`, while the last one creates `logs/security/critical.log`.
+
+---
+
+#### **Example 2: Using the PSR-3 Adapter**
+
+For interoperability with external libraries or frameworks that expect a standard `Psr\Log\LoggerInterface`, the module provides a PSR-3 compatible adapter.
+
+```php
+use Logging\Infrastructure\LoggingKernel;
+use Config\Modules\Logging\LoggingConfig;
+// use Psr\Log\LoggerInterface; // if you have psr/log for type hints
+
+$kernel = new LoggingKernel(new LoggingConfig('/var/log/myapp'));
+$psrLogger = $kernel->psrLogger(); // Implements PsrLoggerInterface
+
+// Now $psrLogger can be used wherever a PSR-3 LoggerInterface is required.
+SomeLibrary::setLogger($psrLogger);
+
+// For demonstration, using psrLogger directly:
+$psrLogger->error("Payment failed", ["orderId" => 1001, "amount" => 50.00]);
+$psrLogger->debug("Payment response", ["responsePayload" => "<xml>...</xml>"]);
+```
+
+**Integration and Benefits:**
+
+  * **Seamless Integration:** The `$kernel->psrLogger()` method returns an adapter that implements `PsrLoggerInterface`, allowing it to be used wherever a standard PSR-3 logger is required.
+  * **Centralized Security:** All log calls made through the PSR-3 adapter are processed by the module's internal pipeline. This ensures that any sensitive data passed in the context array is automatically masked according to the central configuration before being written to disk.
+  * **Consistent Output:** The log entries from the example above will be written to `logs/application/error.log` and `logs/application/debug.log`, following the same structured file organization.
+
+---
+
+#### **Example 3: Handling Exceptions from Logging**
+
+To build a more resilient application, you can gracefully handle exceptions that may occur during file write operations, such as when file permissions are incorrect.
+
+```php
+try {
+  $logger->critical("Service outage", ["service" => "database", "duration" => "5m"]);
+} catch (\Logging\Infrastructure\Exception\LogWriteException $e) {
+  // Handle gracefully if writing to file failed
+  error_log("Failed to write to application logs: " . $e->getMessage());
+  // Optionally, fallback to an alternate logging mechanism
+}
+```
+
+**Robust Error Handling Strategy:**
+
+  * By wrapping logging calls in a `try...catch` block, you can prevent the application from crashing if a log cannot be written.
+  * The module throws a specific `\Logging\Infrastructure\Exception\LogWriteException` for file writing failures, which can be caught to trigger contingency logic.
+  * A fallback mechanism, such as using PHP's native `error_log()`, can be implemented in the `catch` block to ensure that critical error information is not silently lost.
+  * While not always necessary in a properly configured environment, this pattern is a best practice for production systems where logging failures should not impact core application availability.
+
+---
+
+### Automated Data Sanitization
+
+A core security feature of the Logging Module is its ability to automatically sanitize data before it is written to disk. This process is designed to prevent the accidental leakage of sensitive information, such as passwords, API keys, or personally identifiable information (PII). Sanitization is transparently applied to all log calls, inspecting both free-form messages and structured context arrays.
+
+The sanitization engine employs a defense-in-depth approach, using several techniques to detect and mask sensitive data:
+
+1.  **Key-Based Masking:** The most reliable method, where values associated with predefined sensitive context keys (e.g., `'password'`, `'secret'`) are fully masked.
+2.  **Pattern-Based Detection:** Values that match configured regular expression patterns (e.g., credit card numbers, national IDs) are identified and masked.
+3.  **Credential Phrase Analysis:** Free-text log messages are scanned for phrases that resemble credentials (e.g., `"password: somevalue"`), and the sensitive part of the phrase is masked.
+
+The following example demonstrates these features in action.
+
+#### **Sanitization Code Example**
+
+```php
+<?php
+use Config\Modules\Logging\LoggingConfig;
+use Logging\Infrastructure\LoggingKernel;
+
+// Standard setup
+$logDir = __DIR__ . '/logs';
+$config = new LoggingConfig($logDir);
+$kernel = new LoggingKernel($config);
+$logger = $kernel->logger();
+
+// --- Sanitization Examples ---
+
+// 1. Logging with sensitive keys in the context array.
+$logger->warning("User authentication attempt failed", [
+    "username" => "j.doe",
+    "password" => "S3cr3t-P@ss!",
+    "apiKey" => "sk_123abc456def"
+]);
+
+// 2. Logging with a value that matches a sensitive pattern.
+$logger->info("Payment transaction processed", [
+    "transactionId" => "txn_78910",
+    "creditCard" => "4987654321098765" 
+]);
+
+// 3. Logging a message containing a credential phrase.
+$logger->error("Legacy system connection error: password: oldsystempassword was rejected", [
+    "system" => "legacy_crm"
+]);
+```
+
+#### **Sanitization in Action**
+
+  * **In the first log (`warning`):** The context array contains the keys `"password"` and `"apiKey"`. The sanitization engine recognizes these as sensitive keys based on the module's configuration and replaces their corresponding values with the default mask token. The `"username"` value remains untouched.
+  * **In the second log (`info`):** The value provided for the `"creditCard"` key (`"4987654321098765"`) matches a configured regular expression pattern for detecting credit card numbers. As a result, the value is fully masked.
+  * **In the third log (`error`):** The message string itself contains the phrase `"password: oldsystempassword"`. The `CredentialPhraseSanitizer` detects this structure and masks the value that follows the key and separator. This provides a layer of protection even when sensitive data is not properly structured in the context.
+
+#### **Expected Log Output**
+
+The resulting content written to the log files (`warning.log`, `info.log`, `error.log`) would look similar to the following, demonstrating that the sensitive data has been replaced with the `[MASKED]` token:
+
+```log
+[2025-06-26T16:55:35-03:00] [application] [WARNING] User authentication attempt failed. | Context: {"username":"j.doe","password":"[MASKED]","apiKey":"[MASKED]"}
+[2025-06-26T16:55:35-03:00] [application] [INFO] Payment transaction processed. | Context: {"transactionId":"txn_78910","creditCard":"[MASKED]"}
+[2025-06-26T16:55:35-03:00] [application] [ERROR] Legacy system connection error: password: [MASKED] was rejected. | Context: {"system":"legacy_crm"}
+```
 
 ---
 
@@ -301,69 +470,71 @@ A strictly immutable Data Transfer Object (DTO) for carrying validated log reque
 
 ###### **Responsibilities:**
 
-* Encapsulates all attributes required to represent a loggable event:
+  * Encapsulates all attributes required to represent a loggable event:
 
-  * `message` (required, non-empty string)
-  * `level` (optional, string)
-  * `context` (optional, associative array with string keys and values)
-  * `channel` (optional, string)
-  * `timestamp` (optional, `DateTimeImmutable` instance; defaults to current time)
-* Enforces strict validation on all fields at construction time, ensuring immutability and reliability.
-* Throws `InvalidLoggableInputException` for any violation of property requirements or data integrity.
+      * `message` (required, non-empty string)
+      * `level` (optional, non-empty string)
+      * `context` (optional, associative array with non-empty string keys and mixed values)
+      * `channel` (optional, non-empty string)
+      * `timestamp` (optional, `DateTimeImmutable` instance; defaults to current time)
+
+  * Enforces strict validation on all fields at construction time, ensuring immutability and reliability.
+
+  * Throws `InvalidLoggableInputException` for any violation of property requirements.
 
 ###### **Construction and Validation Logic:**
 
-* **Message:**
+  * **Message:**
 
-  * Must be a non-empty string after trimming.
-  * An empty or whitespace-only string triggers `InvalidLoggableInputException::emptyMessage()`.
+      * Must be a non-empty string after trimming. The trimmed value is stored.
+      * An empty or whitespace-only string triggers `InvalidLoggableInputException::emptyMessage()`.
 
-* **Level:**
+  * **Level:**
 
-  * If provided, must be a non-empty string.
-  * An empty string triggers `InvalidLoggableInputException::emptyLevel()`.
-  * If omitted (`null`), no default is set at this stage.
+      * If provided, must be a non-empty string after trimming. The trimmed value is stored.
+      * An empty string triggers `InvalidLoggableInputException::emptyLevel()`.
+      * If omitted (`null`), the property remains `null`.
 
-* **Context:**
+  * **Context:**
 
-  * If provided, must be an associative array where both keys and values are non-empty strings.
-  * Any invalid key or value triggers `InvalidLoggableInputException::invalidContextKey($key)` or `::invalidContextValue($key)` respectively.
-  * If omitted, defaults to an empty array.
-  * **Automatic Serialization:** Any non-string value (array or object) is automatically converted to JSON.
+      * If provided, must be an associative array.
+      * Keys must be of type `string` and must not be empty after trimming. An invalid key triggers `InvalidLoggableInputException::invalidContextKey($key)`.
+      * **Values are not validated or modified.** They are stored as-is (`mixed`).
+      * If omitted, defaults to an empty array (`[]`).
 
-* **Channel:**
+  * **Channel:**
 
-  * If provided, must be a non-empty string.
-  * An empty string triggers `InvalidLoggableInputException::emptyChannel()`.
-  * If omitted (`null`), no default is set.
+      * If provided, must be a non-empty string after trimming. The trimmed value is stored.
+      * An empty string triggers `InvalidLoggableInputException::emptyChannel()`.
+      * If omitted (`null`), the property remains `null`.
 
-* **Timestamp:**
+  * **Timestamp:**
 
-  * If omitted, defaults to the current date and time (`new DateTimeImmutable()`).
+      * If omitted, defaults to the current date and time (`new DateTimeImmutable()`).
 
 ###### **Usage Pattern:**
 
-* `LoggableInput` is instantiated internally by the logging subsystem, typically by the facade responsible for receiving and preprocessing raw log input.
-* Each logging call results in a new instance, ensuring every log event is validated and timestamped before reaching downstream processing.
-* The object provides type-safe, readonly accessors for each attribute, preventing any mutation post-construction.
-* Intended for internal use—application code should not instantiate this DTO directly.
+  * `LoggableInput` is instantiated internally by the logging subsystem, typically by the facade responsible for receiving and preprocessing raw log input.
+  * Each logging call results in a new instance, ensuring every log event is validated and timestamped before reaching downstream processing.
+  * The object provides type-safe, readonly accessors for each attribute, preventing any mutation post-construction.
+  * Intended for internal use—application code should not instantiate this DTO directly.
 
 ###### **Immutability Guarantee:**
 
-* All properties are declared as `private readonly`.
-* No setters or mutator methods are present; values are established exclusively during instantiation and never altered thereafter.
+  * All properties are declared as `private readonly`.
+  * No setters or mutator methods are present; values are established exclusively during instantiation and never altered thereafter.
 
 ###### **Interface:**
 
-* `getMessage(): string`
-* `getLevel(): ?string`
-* `getContext(): array<string, string>`
-* `getChannel(): ?string`
-* `getTimestamp(): DateTimeImmutable`
+  * `getMessage(): string`
+  * `getLevel(): ?string`
+  * `getContext(): array<string, mixed>`
+  * `getChannel(): ?string`
+  * `getTimestamp(): DateTimeImmutable`
 
 ###### **Exception Handling:**
 
-* Any invalid parameter triggers a domain-specific exception from `InvalidLoggableInputException`, enforcing fail-fast semantics and maintaining system integrity.
+  * Any invalid parameter triggers a domain-specific exception from `InvalidLoggableInputException`, enforcing fail-fast semantics and maintaining system integrity.
 
 ###### **Example Construction**
 
@@ -377,7 +548,7 @@ $basicInput = new LoggableInput(
 $input = new LoggableInput(
     message: 'User login failed',
     level: 'error',
-    context: ['username' => 'admin'],
+    context: ['username' => 'admin', 'attempt' => 3, 'success' => false],
     channel: 'auth'
     // timestamp is optional
 );
@@ -1319,7 +1490,7 @@ All core functionality is defined via interfaces under `Contract/`, enabling dep
 * **MaskTokenValidator**: Enforces mask token security and formatting.
 * **UnicodeNormalizer**: Standardizes Unicode input for reliable matching.
 
-##### Limitations
+###### **Limitations**
 
 * Detection is as strong as the patterns and keys provided/configured.
 * Extremely nested or large data structures may require tuning of maximum recursion/depth.
@@ -1406,7 +1577,7 @@ The `SensitiveKeyDetector` is responsible for identifying sensitive keys in key-
 * Prepares an internal registry of sensitive keys using all supported detection heuristics.
 * Validates custom keys for correct format and absence of control characters.
 
-#### **Typical Usage**
+###### **Typical Usage**
 
 ```php
 use Logging\Security\Sanitizing\Detector\SensitiveKeyDetector;
@@ -1420,7 +1591,7 @@ if ($detector->isSensitiveKey('API_KEY')) {
 }
 ```
 
-#### **Detection Strategy**
+###### **Detection Strategy**
 
 * **Lowercasing**: Case-insensitive comparison.
 * **Unicode Normalization**: Handles accents and diacritics.
@@ -1488,27 +1659,36 @@ Designed for use as a dependency in higher-level sanitizers, such as string or a
 
 ##### CredentialPhraseSanitizer
 
-The `CredentialPhraseSanitizer` is responsible for detecting and masking credential phrases within free-form text, such as log messages or configuration files.
-It targets values that are clearly associated with sensitive keys (e.g., `"password: mySecret"` or `"token = abc123"`), supporting a wide range of separator formats and flexible word order, both forward (`key → value`) and backward (`value ← key`).
+The `CredentialPhraseSanitizer` is responsible for detecting and masking credential phrases within free-form text, such as log messages. It targets values clearly associated with sensitive keys (e.g., `"password: mySecret"` or `"token = abc123"`), supporting a wide range of separator formats and a configurable word tolerance between the key and its value.
 
 ###### **Features**
 
-* **Sensitive Key Detection:**
-  Integrates with a `SensitiveKeyDetectorInterface` to obtain and use all normalized/fuzzy representations of sensitive keys.
-* **Flexible Separator Support:**
-  Recognizes and customizes separators (`:`, `=`, words like `"is"`, `"é"`, `"foi"`, arrows, and more) between keys and values.
-* **Bidirectional Analysis:**
-  Detects and masks both `key → separator → value` and `value ← separator ← key` phrases.
-* **Tolerance for Intermediate Words:**
-  Allows a configurable number of neutral/intermediate words between the key and value (e.g., `"password is currently: abc123"`).
-* **Preserves Formatting:**
-  Masks only the sensitive value, preserving original whitespace, punctuation, and phrase structure.
+  * **Sensitive Key Detection:**
+    Integrates with a `SensitiveKeyDetectorInterface` to obtain and use all normalized representations of sensitive keys.
+  * **Flexible Separator Support:**
+    Uses a default list of separators (`:`, `=`, `is`, `foi`, `é`, etc.) and allows for valid custom separators to be merged.
+  * **Bidirectional Analysis:**
+    Detects and masks both `key → separator → value` (forward) and `value ← separator ← key` (backward) phrases.
+  * **Tolerance for Intermediate Words:**
+    Allows for a fixed number of intermediate words (currently **3**) between the key, separator, and value, matching phrases like `"password is now: mySecret"`.
+  * **Preserves Formatting:**
+    Masks only the sensitive value, preserving original whitespace, punctuation, and phrase structure by reconstructing the surrounding components.
 
-###### **Responsibilities**
+###### **Workflow**
 
-* Masks values associated with sensitive credential keys using robust, locale-agnostic phrase patterns.
-* Supports customization of both the set of separators and the detection tolerance for more precise or broader coverage.
-* Throws precise configuration exceptions when invalid custom separators are supplied.
+The sanitization process follows a specific "forward-first" order to prevent incorrect masking:
+
+1.  When `sanitizePhrase` is called, it first attempts to find and mask all **forward** phrases (`key → value`).
+2.  If one or more forward matches are found and replaced, the process stops, and the sanitized string is returned.
+3.  Only if **no** forward matches are found does the sanitizer proceed to find and mask **backward** phrases (`value ← key`).
+4.  The final string is then returned.
+
+###### **Key Logic and Configuration**
+
+  * **Default Separators:** The class includes a built-in list of common separators: `':', '=', '-', '->', '=>', '|', '/', ';', ',', 'is', 'foi', 'é'`.
+  * **Custom Separators:** You can provide an array of custom separators during construction. These are merged with the default list.
+  * **Separator Validation:** All custom separators are strictly validated. They must be non-empty strings and **must not contain any whitespace**. An invalid separator will throw an `InvalidSanitizationConfigException`.
+  * **Intermediate Word Limit:** The number of words allowed between a key and its value is defined by the internal constant `MAX_INTERMEDIATE_WORDS` (set to `3`).
 
 ###### **Usage Example**
 
@@ -1516,22 +1696,25 @@ It targets values that are clearly associated with sensitive keys (e.g., `"passw
 use Logging\Security\Sanitizing\Service\CredentialPhraseSanitizer;
 use Logging\Security\Sanitizing\Detector\SensitiveKeyDetector;
 
-$keyDetector = new SensitiveKeyDetector(['my_custom_key']);
-$sanitizer = new CredentialPhraseSanitizer($keyDetector, ['::']);
+// Key detector is required
+$keyDetector = new SensitiveKeyDetector(['password', 'secret']);
 
-$input = 'Database password: hunter2';
-$masked = $sanitizer->sanitizePhrase($input, '[MASKED]');
-// Output: 'Database password: [MASKED]'
+// Custom separators are optional and are merged with the defaults
+$sanitizer = new CredentialPhraseSanitizer($keyDetector, ['is:', 'was']);
+
+$input = 'the old secret was: hunter2';
+$masked = $sanitizer->sanitizePhrase($input, '[REDACTED]');
+// Output: 'the old secret was: [REDACTED]'
 ```
 
 ###### **Integration**
 
-Designed for use by string sanitizers, the `CredentialPhraseSanitizer` is suitable for processing logs, environment variables, configuration files, or any context where sensitive phrases may appear.
+Designed for use by higher-level string sanitizers, the `CredentialPhraseSanitizer` is suitable for processing log messages, configuration files, or any free-form text where credentials might appear in natural language.
 
 ###### **Security Considerations**
 
-* Effectively prevents accidental exposure of credentials or secrets, even when logged in natural-language or non-standard formats.
-* Custom separators and word-tolerance settings can be tuned to balance coverage and false-positive rates.
+  * Effectively prevents accidental exposure of credentials, even when logged in non-standard formats. The forward-first logic helps reduce false positives where a value might resemble a sensitive key.
+  * The set of sensitive keys, provided by the `SensitiveKeyDetectorInterface`, is the most critical factor for effective sanitization.
 
 ---
 
@@ -1642,38 +1825,48 @@ Implements `StringSanitizerInterface` and is typically used within higher-level 
 
 ---
 
-#### ObjectSanitizer
+##### ObjectSanitizer
 
-The `ObjectSanitizer` is responsible for **recursively sanitizing objects** for secure logging or data exposure. It systematically traverses all properties of a given object, applying masking and sanitization rules to any data identified as sensitive, while also handling arrays, nested objects, recursion limits, and circular references.
+The `ObjectSanitizer` is responsible for **recursively sanitizing objects** for secure logging or data exposure. It systematically converts an object into a sanitized associative array by traversing its public properties, applying masking and sanitization rules, and handling complex structures like nested arrays, recursion limits, and circular references.
 
-##### **Features**
+###### **Features**
 
-* **Recursive Sanitization:**
-  Traverses and sanitizes all object properties, including deeply nested arrays and objects.
-* **Sensitive Property Masking:**
-  Entirely masks values of properties whose names are detected as sensitive by a `SensitiveKeyDetectorInterface`.
-* **Partial String Sanitization:**
-  Uses a `StringSanitizerInterface` to mask only sensitive fragments within string property values.
-* **Array Support:**
-  Recursively processes arrays found in properties, applying the same masking and depth policies.
-* **Recursion Depth Control:**
-  Enforces a maximum recursion depth to avoid performance issues or infinite descent.
-* **Circular Reference Detection:**
-  Utilizes a `CircularReferenceDetectorInterface` to safely handle self-referential or cyclic data structures.
+  * **Public Property Traversal:**
+    Sanitizes objects by converting them into associative arrays based on their **public properties**, as determined by `get_object_vars()`.
+  * **Class Name Identification:**
+    The resulting sanitized array always includes an `object_class` key containing the name of the original object's class.
+  * **Sensitive Property Masking:**
+    Entirely masks values of properties whose names are detected as sensitive by a `SensitiveKeyDetectorInterface`.
+  * **Partial String Sanitization:**
+    Uses a `StringSanitizerInterface` to sanitize fragments within string property values.
+  * **Array and Nested Object Support:**
+    Recursively processes arrays and nested objects found in properties, applying the same sanitization policies.
+  * **Recursion Depth Control:**
+    Enforces a maximum recursion depth. If the limit is reached, the representation of the object or array is replaced with a single-element array containing the mask token (e.g., `['[MASKED]']`).
+  * **Circular Reference Detection:**
+    Utilizes a `CircularReferenceDetectorInterface` to safely handle self-referential or cyclic data structures.
+  * **Private Property Handling:**
+    Objects with no public properties are represented as a special array indicating their class and that their properties are private (e.g., `['object_class' => 'ClassName[PRIVATE_PROPERTIES]']`).
 
-##### **Workflow**
+###### **Workflow**
 
-1. **Resets** the circular reference tracker before each top-level sanitization call.
-2. **Recursively traverses** each property:
+The sanitization process follows a strict order of operations to ensure security and stability:
 
-   * If the property name is sensitive, the value is fully masked.
-   * If the value is an array or object, it is processed recursively.
-   * If the value is a string, it is partially sanitized using the configured string sanitizer.
-   * Otherwise, the value is returned as-is.
-3. **Enforces a maximum depth**: If the limit is reached, values are replaced with the mask token.
-4. **Handles circular references**: If a previously visited object or array is encountered, returns a standardized marker.
+1.  The main `sanitizeObject` method **resets the circular reference detector** to begin a fresh run.
+2.  It then starts the recursive process, which for each object checks for structural hazards in a specific order:
+    * **Is the max depth reached?** If so, recursion stops, and an array containing only the mask token is returned.
+    * **Is it a circular reference?** If an object has already been seen, it is replaced with a standardized marker provided by the detector.
+3.  If the object is safe to process, it is converted to an array:
+    * The object's class name is added under the `object_class` key.
+    * If the object has no public properties, a special token is appended to the class name, and the process for this object stops.
+    * Otherwise, it iterates through each public property and sanitizes its value based on a clear priority:
+        * **Sensitive Key:** The entire value is replaced with the mask token.
+        * **Array Value:** The sanitization process recurses into the nested array.
+        * **Object Value:** The sanitization process recurses into the nested object.
+        * **String Value:** The string is passed to the `StringSanitizerInterface`.
+        * **Other Types:** The value is returned as-is.
 
-##### **Usage Example**
+###### **Usage Example**
 
 ```php
 use Logging\Security\Sanitizing\Service\ObjectSanitizer;
@@ -1683,25 +1876,26 @@ use Logging\Security\Sanitizing\Service\StringSanitizer;
 
 $objectSanitizer = new ObjectSanitizer(
     new CircularReferenceDetector(),
-    new SensitiveKeyDetector(),
-    new StringSanitizer(...), // Pass appropriate dependencies
+    new SensitiveKeyDetector(...),
+    new StringSanitizer(...),
     '[MASKED]',
     8 // Maximum recursion depth
 );
 
 $sanitized = $objectSanitizer->sanitizeObject($someObject);
-// $sanitized is a fully sanitized associative array ready for logging
+// $sanitized is a fully sanitized associative array ready for logging,
+// including an 'object_class' key.
 ```
 
-##### **Integration**
+###### **Integration**
 
 This class implements `ObjectSanitizerInterface` and is typically used as a dependency within higher-level logging or audit modules that require secure serialization and masking of potentially sensitive objects.
 
-##### **Security Considerations**
+###### **Security Considerations**
 
-* Ensures sensitive information is not leaked in logs, error traces, or serialized outputs.
-* Prevents stack overflows and performance issues by enforcing a maximum recursion depth and circular reference detection.
-* Can be composed with custom key detectors or string sanitizers for project-specific policies.
+  * Ensures sensitive information from an object's **public properties** is not leaked in logs, error traces, or serialized outputs.
+  * Prevents stack overflows and performance issues by enforcing a maximum recursion depth and detecting circular references.
+  * Can be composed with custom key detectors or string sanitizers for project-specific policies.
 
 ---
 
@@ -1714,9 +1908,9 @@ The `ArraySanitizer` provides robust, **recursive sanitization for arrays**, ens
   * **Sensitive Key Masking:**
     Fully masks values for keys identified as sensitive by a `SensitiveKeyDetectorInterface`.
   * **Partial String Sanitization:**
-    Delegates string values to a `StringSanitizerInterface` for partial masking, which can preserve non-sensitive context while redacting specific patterns.
+    Delegates string values to a `StringSanitizerInterface` for sanitization, which can perform tasks like partial masking.
   * **Circular Reference Handling:**
-    Leverages a `CircularReferenceDetectorInterface` to safely traverse data structures with circular dependencies, preventing infinite recursion and application crashes.
+    Leverages a `CircularReferenceDetectorInterface` to safely traverse data structures with circular dependencies, preventing infinite recursion. It passes arrays by reference for accurate detection.
   * **Object Sanitization Support:**
     Delegates the sanitization of any objects found in array values to an `ObjectSanitizerInterface`.
   * **Maximum Depth Control:**
@@ -1724,18 +1918,18 @@ The `ArraySanitizer` provides robust, **recursive sanitization for arrays**, ens
 
 ###### **Workflow**
 
-The sanitization process follows a strict order of operations to ensure security and stability:
+The sanitization process follows a strict order of operations within its recursive methods to ensure security and stability:
 
-1.  The main `sanitizeArray` method is called, which first **resets the circular reference detector** to begin a fresh run.
-2.  As it traverses the array, it processes each element by first checking for structural hazards:
-      * **Is it a circular reference?** If an array or object has already been seen in the current run, it is replaced with a `[CIRCULAR_REFERENCE_DETECTED]` marker.
-      * **Is the max depth reached?** If so, recursion stops, and a `[MAX_DEPTH_REACHED]` marker is returned.
-3.  If the element is safe to process, it is handled based on its type:
-      * **Sensitive key:** The entire value is replaced with the mask token.
-      * **Array value:** The sanitization process recurses into the nested array.
-      * **Object value:** The object is passed to the `ObjectSanitizerInterface` for processing.
-      * **String value:** The string is passed to the `StringSanitizerInterface` for partial masking.
-      * **Other types (int, bool, etc.):** The value is returned as-is.
+1.  The main `sanitizeArray` method is called, which first **resets the circular reference detector** to begin a fresh run before calling the internal recursive sanitizer.
+2.  Within the recursive process, it checks for structural hazards for each array it processes:
+    * **Is it a circular reference?** If an array has already been seen in the current run, the `CircularReferenceDetectorInterface` is used to handle it, preventing an infinite loop.
+    * **Is the max depth reached?** If the current depth exceeds the limit, recursion stops, and an array with a `['[SANITIZATION_HALTED]' => 'MAX_DEPTH_REACHED']` marker is returned.
+3.  If the element is safe to process, the `sanitizeElement` method handles each key-value pair based on a clear priority:
+    * **Sensitive key:** If the key is identified as sensitive, the entire value is replaced with the mask token, regardless of its type.
+    * **Array value:** The sanitization process recurses into the nested array.
+    * **Object value:** The object is passed to the `ObjectSanitizerInterface` for processing.
+    * **String value:** The string is passed to the `StringSanitizerInterface` for sanitization.
+    * **Other types (int, float, bool, null):** The value is returned as-is.
 
 ###### **Usage Example**
 
@@ -1763,11 +1957,11 @@ $sanitized = $arraySanitizer->sanitizeArray($dataArray);
 
 ###### **Integration**
 
-The `ArraySanitizer` implements the `ArraySanitizerInterface` and is designed for composition. It acts as a central orchestrator, delegating specific tasks to specialized components, making the system modular and easy to test.
+The `ArraySanitizer` implements the `ArraySanitizerInterface` and is designed for composition. It acts as a central orchestrator, delegating specific tasks to specialized components (for strings, objects, sensitive key detection, and circular references), making the system modular and easy to test.
 
 ###### **Security and Robustness**
 
-  * **Prevents Data Leakage:** Ensures that sensitive information does not leak into logs, API responses, or other outputs.
+  * **Prevents Data Leakage:** Ensures that sensitive information does not leak into logs, API responses, or other outputs by masking data based on keys.
   * **Denial-of-Service Prevention:** Prevents application crashes and resource exhaustion by correctly handling infinite recursion in circular data structures. The maximum depth limit serves as an additional layer of protection.
   * **Extensibility:** Its behavior can be customized via dependency injection, allowing for different detection strategies, sanitization rules, or masking tokens.
 
@@ -2112,31 +2306,33 @@ Validates log channel names to ensure they are well-formed and adhere to the app
 
 ###### **ContextValidator**
 
-Performs a comprehensive validation of associative arrays used for logging context, examining both keys and values.
+Performs a comprehensive validation of associative arrays used for logging context, examining both keys and values, including recursive validation of nested arrays.
 
 * **Key Validation Rules:**
     * Keys must be of type `string`.
     * Keys must not be empty after trimming.
-    * Keys must not have duplicate names (comparison is performed on the cleaned key).
+    * Keys must not have duplicate names at the same array level (comparison is performed on the cleaned key).
     * Key length must not exceed the configured `contextKeyMaxLength`.
     * Keys must not contain characters matching `stringForbiddenCharsRegex`.
 
 * **Value Validation Rules:**
-    * Values must be of a scalar type (`string`, `int`, `float`, `bool`) or `null`.
-    * When cast to a string, the value must not be empty (unless the original value was `0` or `false`).
+    * Values can be of a scalar type (`string`, `int`, `float`, `bool`), `null`, or an `array`.
+    * For scalar types, when cast to a string, the value must not be empty (unless the original value was `0`, `false`, or `null`).
     * The string-cast value's length must not exceed `contextValueMaxLength`.
     * The string-cast value must not contain characters matching `stringForbiddenCharsRegex`.
+    * Values of type `array` are recursively validated, applying the same key and value rules to each of their elements.
 
 * **Normalization Steps:**
     * Keys are trimmed of whitespace.
-    * Values are cast to their `string` representation.
+    * Scalar and `null` values are cast to their `string` representation.
+    * Array values are processed recursively to normalize their keys and values.
 
 * **Configuration Dependencies:**
     * `contextKeyMaxLength()`: Maximum length for a context key.
     * `contextValueMaxLength()`: Maximum length for a string-cast context value.
     * `stringForbiddenCharsRegex()`: Regex for disallowed characters in both keys and values.
 
-* **Exception Thrown:** `InvalidLogContextException` on violation.
+* **Exception Thrown:** `InvalidLogContextException` on any violation.
 
 ###### **DirectoryValidator**
 
@@ -2840,97 +3036,6 @@ If integrating with a framework (Laravel, Symfony, etc.), you can wrap this modu
 - **Symfony:** Configure a service and inject the path from parameters.
 
 Outside of a framework, using the `LoggingKernel` directly as shown is perfectly fine.
-
----
-
-## Examples of Use
-
-Below are practical examples demonstrating how to use the Logging Module in a PHP application, including initialization, basic logging calls, context data, and channels.
-
----
-
-### Example 1: Basic Setup and Logging
-
-This example shows typical setup and logging at various levels:
-
-```php
-<?php
-use Config\Modules\Logging\LoggingConfig;
-use Logging\Infrastructure\LoggingKernel;
-
-// 1. Configuration: specify the directory for log files.
-$logDir = __DIR__ . '/logs'; // ensure this directory is writable
-$config = new LoggingConfig($logDir);
-
-// 2. Boot the logging kernel with the configuration.
-$kernel = new LoggingKernel($config);
-
-// 3. Get the logging facade (implements LoggingFacadeInterface).
-$logger = $kernel->logger();
-
-// 4. Log messages at various levels with context data.
-$logger->info("User logged in", ["user" => "alice"]);
-$logger->warning("Disk space low", ["disk" => "/dev/sda1", "free_percent" => 5]);
-$logger->error("File not found", ["file" => "/path/to/file.txt", "error_code" => 404]);
-
-// 5. Use the generic log method for a custom level (if allowed in config).
-$logger->log("notice", "User profile updated", ["user" => "alice"]);
-
-// 6. Logging with a different channel (using logInput to specify channel).
-$logger->logInput("Admin privileges granted", "critical", "security", ["admin" => "bob"]);
-```
-
-**What happens in the above code:**
-
-- After setup, `$logger->info(...)` writes to `logs/application/info.log` by default. The line includes a timestamp, channel, level, message, and context.
-- The `warning` and `error` calls go to their respective files (`warning.log`, `error.log`) under the `application` channel.
-- The `log("notice", ...)` call demonstrates using the generic method with a string level.
-- The `logInput(..., "security", ...)` call logs to the `security` channel (`logs/security/critical.log`).
-
-After running this, your `logs` directory will have subfolders (`application/`, `security/`), each containing log files for the levels used.
-
----
-
-### Example 2: Using the PSR-3 Adapter
-
-If you need to supply a logger to a library that expects a PSR-3 logger:
-
-```php
-use Logging\Infrastructure\LoggingKernel;
-use Config\Modules\Logging\LoggingConfig;
-// use Psr\Log\LoggerInterface; // if you have psr/log for type hints
-
-$kernel = new LoggingKernel(new LoggingConfig('/var/log/myapp'));
-$psrLogger = $kernel->psrLogger(); // Implements PsrLoggerInterface
-
-// Now $psrLogger can be used wherever a PSR-3 LoggerInterface is required.
-SomeLibrary::setLogger($psrLogger);
-
-// For demonstration, using psrLogger directly:
-$psrLogger->error("Payment failed", ["orderId" => 1001, "amount" => 50.00]);
-$psrLogger->debug("Payment response", ["responsePayload" => "<xml>...</xml>"]);
-```
-
-- The above will produce entries in `logs/application/error.log` and `logs/application/debug.log`.
-- If the context contains sensitive data, it will be masked according to configuration.
-
----
-
-### Example 3: Handling Exceptions from Logging
-
-You can handle exceptions if you want to avoid your app crashing if logs can't be written:
-
-```php
-try {
-  $logger->critical("Service outage", ["service" => "database", "duration" => "5m"]);
-} catch (\Logging\Infrastructure\Exception\LogWriteException $e) {
-  // Handle gracefully if writing to file failed
-  error_log("Failed to write to application logs: " . $e->getMessage());
-  // Optionally, fallback to an alternate logging mechanism
-}
-```
-
-In most cases, this won't be necessary if the environment is set up correctly, but it's an example of using the exception classes for error handling.
 
 ---
 
