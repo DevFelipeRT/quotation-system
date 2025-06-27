@@ -10,158 +10,204 @@ use Logging\Security\Sanitizing\Contract\SensitiveKeyDetectorInterface;
 /**
  * CredentialPhraseSanitizer
  *
- * Responsible for detecting and masking sensitive credential phrases in strings.
- * Applies masking only to values clearly associated with sensitive keys,
- * supporting bidirectional analysis, tolerance for intermediate words,
- * and a customizable set of separators.
+ * Service responsible for detecting and masking sensitive credential phrases in strings.
+ * Supports both forward (key → separator → value) and backward (value ← separator ← key) masking.
  */
 final class CredentialPhraseSanitizer
 {
-    /**
-     * Default separators used to distinguish key-value pairs in credential phrases.
-     * This set can be extended via constructor.
-     */
     private const DEFAULT_SEPARATORS = [
-        ':', '=', 'is', 'foi', 'é', '-', '->'
+        ':', '=', '-', '->', '=>', '|', '/', ';', ',', 'is', 'foi', 'é'
     ];
 
-    /**
-     * Maximum number of allowed intermediate words/segments between the key and the separator.
-     * Higher values increase coverage but may introduce false positives.
-     */
-    private const INTERMEDIATE_WORD_LIMIT = 3;
+    private const MAX_INTERMEDIATE_WORDS = 3;
 
-    /**
-     * Sensitive key detector used to obtain prepared sensitive keys.
-     *
-     * @var SensitiveKeyDetectorInterface
-     */
-    private SensitiveKeyDetectorInterface $keyDetector;
+    private const FORWARD_PATTERN_TEMPLATE =
+        '/\b(%s)\b'                      // [1] Sensitive key
+        . '((?:\s+\w+){0,%d})'           // [2] Optional intermediate words
+        . '(\s*)'                        // [3] Spaces before separator
+        . '(%s)'                         // [4] Separator(s)
+        . '(\s*)'                        // [5] Spaces after separator
+        . '([^\s,;:."]+)/iu';            // [6] Value
 
-    /**
-     * List of recognized separators between key and value.
-     *
-     * @var string[]
-     */
-    private array $separators;
+    private const BACKWARD_PATTERN_TEMPLATE =
+        '/([^\s,;:."]+)'                 // [1] Value to be masked
+        . '(\s+)'                        // [2] Spaces after value (required)
+        . '(%s)'                         // [3] Separator(s)
+        . '(\s*(?:\w+\s*){0,%d})'        // [4] Optional intermediates (with spaces)
+        . '(\s+)'                        // [5] Spaces before key (required)
+        . '(\b%s\b)/iu';                 // [6] Sensitive key
 
-    /**
-     * @param SensitiveKeyDetectorInterface $keyDetector
-     * @param string[]|null                $customSeparators (optional) Custom separators to merge with defaults.
-     */
+    private SensitiveKeyDetectorInterface $sensitiveKeyDetector;
+    private array $separatorList;
+
     public function __construct(
-        SensitiveKeyDetectorInterface $keyDetector,
+        SensitiveKeyDetectorInterface $sensitiveKeyDetector,
         ?array $customSeparators = null
     ) {
-        $this->keyDetector = $keyDetector;
-        $this->separators = self::initializeSeparators($customSeparators);
+        $this->sensitiveKeyDetector = $sensitiveKeyDetector;
+        $this->separatorList = self::initializeSeparatorList($customSeparators);
     }
 
     /**
-     * Detects and masks sensitive credential phrases in the input,
-     * preserving all spacing and punctuation for original formatting fidelity.
-     * Applies forward (key → separator → value) pattern first;
-     * only if no substitution is made, applies the backward (value ← separator ← key) pattern.
+     * Masks sensitive credential values in a phrase.
+     * Applies forward masking first. If no match, applies backward masking.
      *
-     * @param string $input
+     * @param string $text Input string to process.
+     * @param string $maskToken Masking token to use (e.g., '[MASKED]').
+     * @return string The sanitized string with sensitive values masked.
+     */
+    public function sanitizePhrase(string $text, string $maskToken): string
+    {
+        $preparedSensitiveKeys = $this->sensitiveKeyDetector->getPreparedKeys();
+        if (empty($preparedSensitiveKeys)) {
+            return $text;
+        }
+
+        $replacementCount = 0;
+        $sanitized = $this->maskForwardPhrase(
+            $text,
+            $maskToken,
+            $preparedSensitiveKeys,
+            $replacementCount
+        );
+
+        if ($replacementCount > 0) {
+            return $sanitized;
+        }
+        return $this->maskBackwardPhrase(
+            $text,
+            $maskToken,
+            $preparedSensitiveKeys
+        );
+    }
+
+    /**
+     * Applies forward masking: key [optionals] separator value.
+     *
+     * @param string   $text
+     * @param string   $maskToken
+     * @param string[] $sensitiveKeys
+     * @param int|null $replacementCount
+     * @return string
+     */
+    private function maskForwardPhrase(
+        string $text,
+        string $maskToken,
+        array $sensitiveKeys,
+        ?int &$replacementCount = null
+    ): string {
+        $pattern = $this->buildForwardPattern($sensitiveKeys);
+
+        return preg_replace_callback(
+            $pattern,
+            fn($match) => $this->replaceForwardMatch($match, $maskToken, $replacementCount),
+            $text,
+            -1,
+            $replacementCount
+        );
+    }
+
+    /**
+     * Applies backward masking: value separator [optionals] key.
+     *
+     * @param string   $text
+     * @param string   $maskToken
+     * @param string[] $sensitiveKeys
+     * @return string
+     */
+    private function maskBackwardPhrase(
+        string $text,
+        string $maskToken,
+        array $sensitiveKeys
+    ): string {
+        $pattern = $this->buildBackwardPattern($sensitiveKeys);
+
+        return preg_replace_callback(
+            $pattern,
+            fn($match) => $this->replaceBackwardMatch($match, $maskToken),
+            $text
+        );
+    }
+
+    /**
+     * Builds the regex for the forward pattern.
+     *
+     * @param string[] $sensitiveKeys
+     * @return string
+     */
+    private function buildForwardPattern(array $sensitiveKeys): string
+    {
+        $separatorRegex = implode('|', array_map(
+            static fn($sep) => preg_quote($sep, '/'), $this->separatorList
+        ));
+        $keysRegex = implode('|', array_map(
+            static fn($key) => preg_quote($key, '/'), $sensitiveKeys
+        ));
+        return sprintf(
+            self::FORWARD_PATTERN_TEMPLATE,
+            $keysRegex,
+            self::MAX_INTERMEDIATE_WORDS,
+            $separatorRegex
+        );
+    }
+
+    /**
+     * Builds the regex for the backward pattern.
+     *
+     * @param string[] $sensitiveKeys
+     * @return string
+     */
+    private function buildBackwardPattern(array $sensitiveKeys): string
+    {
+        $separatorRegex = implode('|', array_map(
+            static fn($sep) => preg_quote($sep, '/'), $this->separatorList
+        ));
+        $keysRegex = implode('|', array_map(
+            static fn($key) => preg_quote($key, '/'), $sensitiveKeys
+        ));
+        return sprintf(
+            self::BACKWARD_PATTERN_TEMPLATE,
+            $separatorRegex,
+            self::MAX_INTERMEDIATE_WORDS,
+            $keysRegex
+        );
+    }
+
+    /**
+     * Handles the replacement for forward matches.
+     *
+     * @param array $match
+     * @param string $maskToken
+     * @param int &$replacementCount
+     * @return string
+     */
+    private function replaceForwardMatch(array $match, string $maskToken, ?int &$replacementCount = null): string
+    {
+        ++$replacementCount;
+        // [1]=key, [2]=intermediates, [3]=spaces before sep, [4]=sep, [5]=spaces after sep, [6]=value
+        return $match[1] . $match[2] . $match[3] . $match[4] . $match[5] . $maskToken;
+    }
+
+    /**
+     * Handles the replacement for backward matches.
+     *
+     * @param array $match
      * @param string $maskToken
      * @return string
      */
-    public function sanitizePhrase(string $input, string $maskToken): string
+    private function replaceBackwardMatch(array $match, string $maskToken): string
     {
-        $keys = $this->keyDetector->getPreparedKeys();
-        if (empty($keys)) {
-            return $input;
-        }
-
-        $forwardResult = $this->maskForwardPattern($input, $maskToken, $keys, $matchesCount);
-
-        if ($matchesCount > 0) {
-            return $forwardResult;
-        }
-
-        return $this->maskBackwardPattern($input, $maskToken, $keys);
+        // [1]=value, [2]=spaces after value, [3]=sep, [4]=intermediates, [5]=spaces before key, [6]=key
+        return $maskToken . $match[2] . $match[3] . $match[4] . $match[5] . $match[6];
     }
 
     /**
-     * Applies forward masking: key [optional intermediate] [spaces] separator [spaces] value.
-     *
-     * @param string   $input
-     * @param string   $maskToken
-     * @param string[] $keys
-     * @param int      $matchesCount Output: Number of matches performed
-     * @return string
-     */
-    private function maskForwardPattern(string $input, string $maskToken, array $keys, ?int &$matchesCount = null): string
-    {
-        $sepPattern = implode('|', array_map('preg_quote', $this->separators));
-        $intermediate = '(?:\s+\w+){0,' . self::INTERMEDIATE_WORD_LIMIT . '}?';
-
-        $regex = '/\b('
-            . implode('|', array_map('preg_quote', $keys))
-            . ')\b'                       // [1] sensitive key
-            . '(' . $intermediate . ')'    // [2] optional intermediate (with leading spaces)
-            . '(\s*)'                     // [3] spaces before separator
-            . '(' . $sepPattern . ')'     // [4] separator (including words)
-            . '(\s*)'                     // [5] spaces after separator
-            . '([^\s,;:."]+)/iu';         // [6] value
-
-        $matchesCount = 0;
-        $result = preg_replace_callback(
-            $regex,
-            static function ($matches) use ($maskToken, &$matchesCount) {
-                ++$matchesCount;
-                return $matches[1]
-                    . $matches[2]
-                    . $matches[3]
-                    . $matches[4]
-                    . $matches[5]
-                    . $maskToken;
-            },
-            $input
-        );
-        return $result;
-    }
-
-    /**
-     * Applies backward masking: value [spaces] separator [optional intermediate] key.
-     *
-     * @param string   $input
-     * @param string   $maskToken
-     * @param string[] $keys
-     * @return string
-     */
-    private function maskBackwardPattern(string $input, string $maskToken, array $keys): string
-    {
-        $sepPattern = implode('|', array_map('preg_quote', $this->separators));
-        $intermediate = '(?:\s+\w+){0,' . self::INTERMEDIATE_WORD_LIMIT . '}?';
-
-        $regex = '/([^\s,;:."]+)'        // [1] value
-            . '(\s*)'                    // [2] spaces after value
-            . '(' . $sepPattern . ')'    // [3] separator
-            . '(' . $intermediate . ')'  // [4] optional intermediate (with leading spaces)
-            . '\b(' . implode('|', array_map('preg_quote', $keys)) . ')\b/iu'; // [5] key
-
-        return preg_replace_callback(
-            $regex,
-            static function ($matches) use ($maskToken) {
-                return $maskToken
-                    . $matches[2]
-                    . $matches[3]
-                    . $matches[4]
-                    . $matches[5];
-            },
-            $input
-        );
-    }
-
-    /**
-     * Initializes and validates the separators, merging custom with default values.
+     * Initializes and validates the separator list.
      *
      * @param string[]|null $customSeparators
      * @return string[]
      */
-    private static function initializeSeparators(?array $customSeparators): array
+    private static function initializeSeparatorList(?array $customSeparators): array
     {
         $validatedCustom = $customSeparators !== null
             ? self::validateSeparators($customSeparators)
@@ -170,17 +216,16 @@ final class CredentialPhraseSanitizer
     }
 
     /**
-     * Validates the given separators array.
-     * Each separator must be a non-empty string without whitespace.
+     * Validates that all separators are non-empty strings and do not contain whitespace.
      *
-     * @param array $separators
+     * @param array $separatorCandidates
      * @return array
-     * @throws InvalidSanitizationConfigException If any separator is invalid.
+     * @throws InvalidSanitizationConfigException
      */
-    private static function validateSeparators(array $separators): array
+    private static function validateSeparators(array $separatorCandidates): array
     {
         $validated = [];
-        foreach ($separators as $separator) {
+        foreach ($separatorCandidates as $separator) {
             if (!is_string($separator) || trim($separator) === '' || preg_match('/\s/', $separator)) {
                 throw InvalidSanitizationConfigException::forSeparator($separator);
             }
