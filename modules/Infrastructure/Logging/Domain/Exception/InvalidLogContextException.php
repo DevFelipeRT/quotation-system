@@ -60,7 +60,7 @@ final class InvalidLogContextException extends InvalidArgumentException
     public static function invalidValueType(string $key, $value): self
     {
         return new self(
-            "Log context value for key '{$key}' must be scalar or null. Type: " . gettype($value)
+            "Log context value for key '{$key}' must be scalar, array, or null. Type: " . gettype($value)
         );
     }
 
