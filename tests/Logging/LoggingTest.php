@@ -116,6 +116,7 @@ final class LoggingTest extends IntegrationTestHelper
         $arrayData = [
             "Sensitive data array: Password 12345678900 CPF: 12345678900 Channel: password.",
             "Password has been difined as: mypassword",
+            "Gereneric message. 123abc is password.",
             [
                 "User password: password1234 CPF: 98765432100 Channel: password.",
                 "credentials" => [
