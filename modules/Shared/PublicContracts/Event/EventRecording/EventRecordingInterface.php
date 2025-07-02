@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace PublicContracts\EventRecording;
+namespace PublicContracts\Event\EventRecording;
 
 /**
  * Interface for components that record domain or infrastructure events.

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace EventRecording;
+namespace Event\EventRecording;
 
 /**
  * Trait for recording domain or infrastructure events

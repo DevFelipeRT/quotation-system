@@ -1,6 +1,6 @@
 <?php
 
-namespace PublicContracts\EventRecording;
+namespace PublicContracts\Event\EventRecording;
 
 /**
  * Interface EventInterface
