@@ -12,7 +12,8 @@ Thumbs.db
 # Logs e arquivos temporários
 /storage/logs/*
 !/storage/logs/.gitkeep
-/tmp/
+**/[cC]ache/
+**/[tT]mp/
 *.log
 *.cache
 *.tmp
