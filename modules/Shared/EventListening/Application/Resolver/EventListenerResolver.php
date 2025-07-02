@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace EventListening\Application\Resolver;
 
 use EventListening\Domain\Contracts\EventListenerInterface;
-use Container\Domain\Contracts\ContainerInterface;
 use App\Shared\Event\Contracts\EventListenerLocatorInterface;
 use InvalidArgumentException;
+use PublicContracts\Container\ContainerInterface;
 
 /**
  * EventListenerResolver
