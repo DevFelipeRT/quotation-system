@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Routing\Infrastructure;
 ;
 
+use PublicContracts\Container\ContainerInterface;
 use Routing\Infrastructure\Contracts\ControllerFactoryInterface;
-use Container\Domain\Contracts\ContainerInterface;
 use Routing\Infrastructure\Exceptions\RouteDispatchException;
 use Routing\Infrastructure\Exceptions\InvalidRouteDefinitionException;
 use ReflectionClass;
