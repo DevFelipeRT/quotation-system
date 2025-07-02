@@ -5,36 +5,34 @@ declare(strict_types=1);
 namespace Rendering\Domain\Contract;
 
 /**
- * ViewInterface
+ * Defines the contract for a primary View object.
  *
- * Contract for immutable view representations delivered to the rendering layer.
- * Designed for Value Objects that encapsulate all required data for rendering,
- * regardless of the presentation format (HTML, JSON, XML, etc).
+ * A View represents the main, variable content for a specific application route
+ * or action. It serves as the core content that is placed within a surrounding
+ * page layout.
  *
- * Implementations must guarantee immutability and value-based comparison.
- *
- * @author
+ * This interface's primary purpose is to create a clear type distinction from
+ * a `PartialViewInterface`, ensuring that methods designed to render main
+ * content can only accept the correct type of view object.
  */
 interface ViewInterface
 {
     /**
-     * Returns the template or resource file name for the view.
+     * Returns the unique identifier for the view's template file.
      *
-     * @return string
+     * This path is typically relative to a base views directory.
+     *
+     * @return string For example, 'pages/product-details.phtml'
      */
     public function fileName(): string;
 
     /**
-     * Returns the encapsulated view data as an object.
+     * Returns the data container for the view.
      *
-     * @return object
-     */
-    public function data(): object;
-
-    /**
-     * Exports the view as an array for serialization or debugging.
+     * This object encapsulates all variables that will be made available
+     * to the template's scope during the rendering process.
      *
-     * @return array<string, mixed>
+     * @return ViewDataInterface
      */
-    public function toArray(): array;
+    public function data(): ViewDataInterface;
 }

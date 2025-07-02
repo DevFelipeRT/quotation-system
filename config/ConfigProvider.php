@@ -8,6 +8,7 @@ use Config\Database\DatabaseSchemaConfig;
 use Config\Env\EnvLoader;
 use Config\Kernel\KernelConfig;
 use Config\Modules\Logging\LoggingConfig;
+use Config\Modules\Rendering\RenderingConfig;
 use Config\Paths\PathsConfig;
 use Config\Session\SessionConfig;
 use InvalidArgumentException;
@@ -82,6 +83,15 @@ final class ConfigProvider
     public function loggingConfig(?string $customDirectory = null): LoggingConfig
     {
         return new LoggingConfig($customDirectory ?? $this->pathsConfig->getLogsDirPath());
+    }
+
+    /** @return RenderingConfig */
+    public function renderingConfig(
+        ?string $customViewsDirectory = null, 
+        ?string $customCacheDirectory = null,
+        ?string $customAssetsDirectory = null
+    ): RenderingConfig {
+        return new RenderingConfig($customViewsDirectory, $customCacheDirectory, $customAssetsDirectory);
     }
 
     /** @return SessionConfig */
