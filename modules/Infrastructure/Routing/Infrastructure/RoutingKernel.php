@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Routing\Infrastructure;
 
+use PublicContracts\ClassDiscovery\ClassDiscoveryFacadeInterface;
+use PublicContracts\Container\ContainerInterface;
 use Routing\Application\Contracts\RoutingServiceInterface;
 use Routing\Application\Service\RoutingService;
 use Routing\Infrastructure\Contracts\ControllerFactoryInterface;
@@ -16,8 +18,7 @@ use Routing\Infrastructure\DefaultRouteDispatcher;
 use Routing\Infrastructure\DefaultRouteResolver;
 use Routing\Infrastructure\InMemoryRouteRepository;
 use Routing\Infrastructure\RouteRegistrar;
-use Container\Domain\Contracts\ContainerInterface;
-use Discovery\Application\Contracts\ScannerFacadeInterface;
+
 
 /**
  * RoutingKernel
@@ -42,7 +43,7 @@ class RoutingKernel
      * Optionally allow injection of scanner and container for auto-discovery.
      */
     public function __construct(
-        ?ScannerFacadeInterface $scanner = null,
+        ?ClassDiscoveryFacadeInterface $scanner = null,
         ?ContainerInterface $container = null,
         ?string $providerNamespace = null
     ) {
@@ -165,13 +166,13 @@ class RoutingKernel
     }
 
     private function discoverProviders(
-        ScannerFacadeInterface $scanner,
+        ClassDiscoveryFacadeInterface $scanner,
         ?string $providerNamespace = null
     ): array {
             $providerFqcnCollection = $scanner->implementing(
                 RouteProviderInterface::class,
                 $providerNamespace
             );
-        return array_map(fn($fqcn) => new $fqcn(), $providerFqcnCollection->toArray());
+        return array_map(fn($fqcn) => new $fqcn(), $providerFqcnCollection);
     }
 }
