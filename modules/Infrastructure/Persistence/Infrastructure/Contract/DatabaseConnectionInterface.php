@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Persistence\Infrastructure\Contract;
 
 use PDO;
-use PublicContracts\EventRecording\EventRecordingInterface;
+use PublicContracts\Event\EventRecording\EventRecordingInterface;
 
 /**
  * Defines a contract for database connection providers.
