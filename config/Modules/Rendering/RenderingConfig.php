@@ -9,38 +9,51 @@ use PublicContracts\Rendering\RenderingConfigInterface;
 /**
  * A concrete implementation of the rendering configuration.
  *
- * This class holds the path settings required by the rendering module.
+ * This class holds all configuration settings required by the rendering module,
+ * including paths and copyright information.
  */
 final class RenderingConfig implements RenderingConfigInterface
 {
-    /**
-     * @var string The absolute path to the views directory.
-     */
+    /** Default values for rendering configuration. */
+    private const DEFAULT_VALUES = [
+        'copyrightOwner' => 'My Company',
+        'copyrightMessage' => 'All rights reserved.',
+    ];
+
+    /** The absolute path to the views directory. */
     private readonly string $viewsDirectory;
 
-    /**
-     * @var string The absolute path to the cache directory.
-     */
+    /** The absolute path to the cache directory. */
     private readonly string $cacheDirectory;
 
-    /**
-     * @var string The absolute path to the directory containing static assets (CSS, JS, images).
-     */
+    /** The absolute path to the directory containing static assets (CSS, JS, images). */
     private readonly string $assetsDirectory;
+
+    /** The copyright owner name. */
+    private readonly string $copyrightOwner;
+
+    /** The copyright message. */
+    private readonly string $copyrightMessage;
 
     /**
      * @param string $viewsDirectory The absolute path to the views directory.
      * @param string $cacheDirectory The absolute path to the cache directory.
+     * @param string $assetsDirectory The absolute path to the assets directory.
+     * @param string|null $copyrightOwner The copyright owner name (defaults to DEFAULT_VALUES).
+     * @param string|null $copyrightMessage The copyright message (defaults to DEFAULT_VALUES).
      */
     public function __construct(
         string $viewsDirectory,
         string $cacheDirectory,
-        string $assetsDirectory
+        string $assetsDirectory,
+        ?string $copyrightOwner = null,
+        ?string $copyrightMessage = null
     ) {
         $this->viewsDirectory = $viewsDirectory;
         $this->cacheDirectory = $cacheDirectory;
         $this->assetsDirectory = $assetsDirectory;
-
+        $this->copyrightOwner = $copyrightOwner ?? self::DEFAULT_VALUES['copyrightOwner'];
+        $this->copyrightMessage = $copyrightMessage ?? self::DEFAULT_VALUES['copyrightMessage'];
     }
 
     /**
@@ -72,7 +85,7 @@ final class RenderingConfig implements RenderingConfigInterface
      */
     public function copyrightOwner(): string
     {
-        return RenderingDefaultValues::COPYRIGHT_OWNER->getValue();
+        return $this->copyrightOwner;
     }
 
     /**
@@ -80,6 +93,6 @@ final class RenderingConfig implements RenderingConfigInterface
      */
     public function copyrightMessage(): string
     {
-        return RenderingDefaultValues::COPYRIGHT_MESSAGE->getValue();
+        return $this->copyrightMessage;
     }
 }

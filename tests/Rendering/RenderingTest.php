@@ -38,8 +38,9 @@ final class RenderingTest extends IntegrationTestHelper
 $testViewsDir = __DIR__ . DIRECTORY_SEPARATOR . 'templates';
 $testCacheDir = __DIR__ . DIRECTORY_SEPARATOR . 'cache';
 $testAssetsDir = __DIR__ . DIRECTORY_SEPARATOR . 'resources';
+$copyrightOwner = 'Felipe Ruiz Terrazas';
 
-$config = new RenderingConfig($testViewsDir, $testCacheDir, $testAssetsDir);
+$config = new RenderingConfig($testViewsDir, $testCacheDir, $testAssetsDir, $copyrightOwner);
 
 $kernel = new RenderingKernel($config);
 $renderer = $kernel->renderer();
@@ -101,6 +102,6 @@ $renderer
     ->addViewPartial('welcome-banner-3', 'partial/welcome-banner.phtml', $bannerData3, $bannerPartials)
     ->setCopyright('Felipe Ruiz Terrazas')
 ;
-
-$output = $renderer->render();
+$page = $renderer->buildPage();
+$output = $renderer->render($page);
 echo $output;
