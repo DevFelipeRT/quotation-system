@@ -43,4 +43,25 @@ interface TemplateCacheInterface
      * @throws RuntimeException if the file cannot be written.
      */
     public function write(string $compiledPath, string $content): void;
+
+    /**
+     * Removes all files and subdirectories from the cache directory.
+     *
+     * This method is useful for clearing the entire cache, for instance, during
+     * a new deployment or for troubleshooting purposes.
+     *
+     * @return bool True on success, false on failure.
+     */
+    public function clear(): bool;
+
+    /**
+     * Removes all cache files older than a specified lifetime.
+     *
+     * This method can be used in a scheduled task (cron job) to prevent the
+     * cache directory from growing indefinitely with stale, unused files.
+     *
+     * @param int $lifetime The maximum age of a file in seconds. Defaults to 30 days.
+     * @return int The number of files deleted.
+     */
+    public function prune(int $lifetime = 2592000): int;
 }
