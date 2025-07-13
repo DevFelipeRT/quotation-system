@@ -4,40 +4,39 @@ declare(strict_types=1);
 
 namespace Rendering\Infrastructure\Contract\Building\Partial;
 
-use Rendering\Domain\Contract\PartialViewInterface;
-use Rendering\Domain\Partial\ValueObject\Navigation\Navigation;
-use Rendering\Domain\Partial\ValueObject\Navigation\NavigationLink;
+use Rendering\Domain\Contract\Partial\Navigation\NavigationInterface;
 
 /**
  * Defines the contract for a Navigation component builder.
- *
- * This interface provides a fluent API to encapsulate the construction
- * logic of a Navigation object, including its links and any nested
- * partial sub-components.
+ * 
+ * This interface extends the PartialBuilderInterface to provide
+ * a fluent API for constructing a Navigation object,
+ * including its links and any nested partial sub-components.
  */
-interface NavigationBuilderInterface
+interface NavigationBuilderInterface extends PartialBuilderInterface
 {
     /**
-     * Adds a single NavigationLink object to the menu.
+     * Adds a single link to the navigation.
      *
-     * @param NavigationLink $link The link object to add.
-     * @return $this
+     * @param string $label    The text to display for the link.
+     * @param string $url      The URL the link points to.
+     * @param bool   $isActive Whether the link is currently active (e.g., for highlighting).
+     * @return self
      */
-    public function addLink(NavigationLink $link): self;
+    public function addLink(string $label, string $url, bool $isActive = false): self;
 
     /**
-     * Adds a named partial sub-component to the navigation.
+     * Adds multiple links to the navigation.
      *
-     * @param string $key The identifier for the partial (used with @partial).
-     * @param PartialViewInterface $partial The partial view object to add.
-     * @return $this
+     * @param array $links An array of associative arrays with 'label', 'url' and 'isActive' keys.
+     * @return self
      */
-    public function addPartial(string $key, PartialViewInterface $partial): self;
+    public function setLinks(array $links): self;
 
     /**
      * Assembles and returns the final, immutable Navigation object.
      *
-     * @return Navigation
+     * @return NavigationInterface
      */
-    public function build(): Navigation;
+    public function build(): NavigationInterface;
 }
