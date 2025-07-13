@@ -1,0 +1,32 @@
+{{--
+  The main layout template for the application.
+  Defines the HTML skeleton, <head>, and <body>, and includes the
+  header and footer partials. Page-specific content is injected via @yield.
+
+  @var \Rendering\Domain\Contract\Page\PageInterface $page The complete page object, for accessing global data.
+  @var \Rendering\Infrastructure\Contract\RenderingEngine\ViewApiInterface $view The view helper API.
+--}}
+
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ $page->title() }} - Minha Aplicação</title>
+
+    {{-- Bootstrap CSS --}}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    {{-- Render page-specific CSS assets --}}
+    @if ($page->assets())
+        @foreach ($page->assets()->cssLinks() as $stylePath)
+            <link rel="stylesheet" href="{{ $stylePath }}">
+        @endforeach
+    @endif
+</head>
+<body class="d-flex flex-column h-100">
+
+    @yield('content')
+
+</body>
+</html>

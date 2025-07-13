@@ -1,0 +1,41 @@
+@extends('layout/main-layout.phtml')
+
+{{--
+  Main view template for the application, extending the main layout.
+  This template includes the main content area and can inject additional
+  sections or partials as needed.
+
+  @var \Rendering\Domain\Contract\Page\PageInterface $page The complete page object, for accessing global data.
+  @var \Rendering\Infrastructure\Contract\RenderingEngine\ViewApiInterface $view The view helper API.
+    @var string $pageTitle   The main title to be displayed on the page.
+    @var string $pageSubtitle The subtitle or description for the page.
+    @var string $pageContent  The main content of the page.
+    @var string $pageFooter   The footer content for the page.
+--}}
+
+@section('content')
+    {{-- Render the header if it exists, passing its specific data --}}
+    @if ($page->header())
+        @include($page->header()->fileName(), $page->header()->data() ? $page->header()->data()->all() : [])
+    @endif
+
+    {{-- Main content area that will be filled by the @section('content') directive --}}
+    <main class="container mt-5 pt-4 flex-shrink-0">
+        @yield('view-content')
+    </main>
+
+    {{-- Render the footer if it exists, passing its specific data --}}
+    @if ($page->footer())
+        @include($page->footer()->fileName(), $page->footer()->data() ? $page->footer()->data()->all() : [])
+    @endif
+    
+    {{-- Bootstrap JS --}}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    {{-- Render page-specific JS assets --}}
+    @if ($page->assets())
+        @foreach ($page->assets()->jsLinks() as $scriptPath)
+            <script src="{{ $scriptPath }}" defer></script>
+        @endforeach
+    @endif
+@endsection

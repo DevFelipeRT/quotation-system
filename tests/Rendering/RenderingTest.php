@@ -93,12 +93,13 @@ $assets = [
 
 $renderer
     ->setTitle('Test Page')
-    ->setView('view.phtml', $viewData)
-    ->setNavigationLinks($links)
-    ->addPartial('welcome-banner-1', 'partial/welcome-banner.phtml', $bannerData1, $bannerPartials)
-    ->addPartial('welcome-banner-2', 'partial/welcome-banner.phtml', $bannerData2, $bannerPartials)
-    ->addPartial('welcome-banner-3', 'partial/welcome-banner.phtml', $bannerData3, $bannerPartials)
     ->setAssets($assets)
+    ->setNavigationLinks($links)
+    ->setView('view/test-page', $viewData)
+    ->addViewPartial('welcome-banner-1', 'partial/welcome-banner.phtml', $bannerData1, $bannerPartials)
+    ->addViewPartial('welcome-banner-2', 'partial/welcome-banner.phtml', $bannerData2, $bannerPartials)
+    ->addViewPartial('welcome-banner-3', 'partial/welcome-banner.phtml', $bannerData3, $bannerPartials)
+    ->setCopyright('Felipe Ruiz Terrazas')
 ;
 
 $output = $renderer->render();

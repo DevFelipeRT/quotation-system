@@ -1,0 +1,50 @@
+@extends('layout/main-layout.phtml')
+
+{{--
+  Template for the main view content, styled with Bootstrap 5.
+
+  @var string $pageTitle   The main title to be displayed on the page.
+  @var string $pageContent The main paragraph of text for the page.
+  @var array  $featureList A list of items to demonstrate a loop.
+  @var \Rendering\Infrastructure\RenderingEngine\ViewApiInterface $view The view helper.
+--}}
+
+
+@section('content')
+<div class="row">
+    <div class="col-12">
+        <h1 class="display-5">{{ $pageTitle }}</h1>
+        <p class="lead">{{ $pageContent }}</p>
+        <hr class="my-4">
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <h3>Recursos Principais:</h3>
+        {{-- Using a Bootstrap "list-group" for a much cleaner presentation --}}
+        <ul class="list-group list-group-flush">
+            @foreach ($featureList as $item)
+                <li class="list-group-item">
+                    <div class="fw-bold">{{ $item['title'] }}</div>
+                    {{ $item['description'] }}
+                </li>
+            @endforeach
+        </ul>
+    </div>
+    
+    {{-- Injectable partials --}}
+    <div class="col-md-4 pt-4">
+        @partial('welcome-banner-1')
+    </div>
+    <div class="col-md-4 pt-4">
+        @partial('welcome-banner-2')
+    </div>
+    <div class="col-md-4 pt-4">
+        @partial('welcome-banner-3')
+    </div>
+</div>
+
+@yield('additional')
+
+@endsection
