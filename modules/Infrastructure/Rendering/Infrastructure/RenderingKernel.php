@@ -4,29 +4,17 @@ declare(strict_types=1);
 
 namespace Rendering\Infrastructure;
 
-use PublicContracts\Rendering\RenderingConfigInterface;
-use PublicContracts\Rendering\RenderingFacadeInterface;
-use PublicContracts\Rendering\RenderingKernelInterface;
-use Rendering\Application\Contract\PageBuildingServiceInterface;
-use Rendering\Application\Contract\PageRenderingServiceInterface;
-use Rendering\Application\RenderingFacade;
-use Rendering\Domain\Contract\SecurityServiceInterface;
-use Rendering\Domain\Shared\ValueObject\Directory;
-use Rendering\Infrastructure\Building\Page\AssetPathResolver;
-use Rendering\Infrastructure\Building\Page\PageBuilder;
-use Rendering\Infrastructure\Building\Page\PageBuildingService;
-use Rendering\Infrastructure\Building\Partials\FooterBuilder;
-use Rendering\Infrastructure\Building\Partials\HeaderBuilder;
-use Rendering\Infrastructure\Building\Partials\NavigationBuilder;
-use Rendering\Infrastructure\Building\Partials\PartialFactory;
+use Rendering\Infrastructure\Contract\RenderingKernelInterface;
+use Rendering\Infrastructure\Contract\RenderingConfigInterface;
+use Rendering\Domain\ValueObject\Shared\Directory;
+use Rendering\Domain\Contract\Service\RenderingServiceInterface;
+use Rendering\Domain\Contract\Service\BuildingServiceInterface;
+use Rendering\Domain\Contract\Service\RenderingFacadeInterface;
 use Rendering\Infrastructure\Contract\TemplateProcessing\TemplateProcessingServiceInterface;
-use Rendering\Infrastructure\RenderingEngine\PageRenderingService;
-use Rendering\Infrastructure\RenderingEngine\TemplateRenderer;
-use Rendering\Infrastructure\TemplateProcessing\TemplateCache;
-use Rendering\Infrastructure\TemplateProcessing\TemplateCompiler;
-use Rendering\Infrastructure\TemplateProcessing\TemplatePathResolver;
-use Rendering\Infrastructure\TemplateProcessing\TemplateProcessingService;
-use Rendering\Security\DirectorySecurityService;
+use Rendering\Infrastructure\Building\BuildingServiceFactory;
+use Rendering\Infrastructure\RenderingEngine\RenderingServiceFactory;
+use Rendering\Infrastructure\TemplateProcessing\ProcessingServiceFactory;
+use Rendering\Application\RenderingFacade;
 
 /**
  * A self-contained bootstrap for the Rendering module.
@@ -39,76 +27,43 @@ use Rendering\Security\DirectorySecurityService;
  */
 final class RenderingKernel implements RenderingKernelInterface
 {
-    /**
-     * The validated path to the directory containing view files.
-     * @var Directory
-     */
+    /** The validated path to the directory containing view files. */
     private readonly Directory $viewsDirectory;
     
-    /**
-     * The validated path to the cache directory for compiled templates.
-     * @var Directory
-     */
+    /** The validated path to the cache directory for compiled templates. */
     private readonly Directory $cacheDirectory;
 
-    /**
-     * The validated path to the directory containing static assets (CSS, JS, images).
-     * @var Directory
-     */
+    /** The validated path to the directory containing static assets (CSS, JS, images). */
     private readonly Directory $assetsDirectory;
 
-    /**
-     * The service for validating directory paths.
-     * @var SecurityServiceInterface
-     */
-    private readonly SecurityServiceInterface $securityService;
-
-    /**
-     * The high-level service for processing and compiling templates.
-     * @var TemplateProcessingServiceInterface
-     */
+    /** The high-level service for processing and compiling templates. */
     private readonly TemplateProcessingServiceInterface $templateProcessingService;
 
-    /**
-     * The high-level service for building a complete Page object.
-     * @var PageBuildingServiceInterface
-     */
-    private readonly PageBuildingServiceInterface $pageBuildingService;
+    /** The high-level service for building a complete Page object. */
+    private readonly BuildingServiceInterface $buildingService;
 
-    /**
-     * The high-level service for rendering a complete Page object into HTML.
-     * @var PageRenderingServiceInterface
-     */
-    private readonly PageRenderingServiceInterface $pageRenderingService;
+    /** The high-level service for rendering a complete Page object into HTML. */
+    private readonly RenderingServiceInterface $renderingService;
 
-    /**
-     * The public-facing facade for the entire rendering module.
-     * @var RenderingFacadeInterface
-     */
+    /** The public-facing facade for the entire rendering module. */
     private RenderingFacadeInterface $renderer;
 
-    /**
-     * The name of the copyright holder.
-     * @var string
-     */
+    /** The name of the copyright holder. */
     private readonly string $copyrightOwner;
 
-    /**
-     * The copyright message text.
-     * @var string
-     */
+    /** The copyright message text. */
     private readonly string $copyrightMessage;
 
     /**
      * Initializes the kernel and boots all subsystems in the correct order.
      *
      * @param RenderingConfigInterface $config A data object containing all necessary settings.
+     * @param bool $debugMode Whether to enable debug mode for template processing.
      */
-    public function __construct(RenderingConfigInterface $config)
+    public function __construct(RenderingConfigInterface $config, bool $debugMode = false)
     {
-        $this->bootSecurity();
         $this->initiateConfig($config);
-        $this->bootComponents();
+        $this->bootComponents($debugMode);
     }
 
     /**
@@ -120,14 +75,6 @@ final class RenderingKernel implements RenderingKernelInterface
     {
         return $this->renderer;
     }
-    
-    /**
-     * Instantiates the security service, a root dependency.
-     */
-    private function bootSecurity(): void
-    {
-        $this->securityService = new DirectorySecurityService();
-    }
 
     /**
      * Loads configuration from the config object and instantiates core value objects.
@@ -135,16 +82,13 @@ final class RenderingKernel implements RenderingKernelInterface
     private function initiateConfig(RenderingConfigInterface $config): void
     {
         $this->viewsDirectory = new Directory(
-            $config->viewsDirectory(),
-            $this->securityService
+            $config->viewsDirectory()
         );
         $this->cacheDirectory = new Directory(
-            $config->cacheDirectory(),
-            $this->securityService
+            $config->cacheDirectory()
         );
         $this->assetsDirectory = new Directory(
-            $config->assetsDirectory(),
-            $this->securityService
+            $config->assetsDirectory()
         );
         $this->copyrightOwner = $config->copyrightOwner();
         $this->copyrightMessage = $config->copyrightMessage();
@@ -153,27 +97,24 @@ final class RenderingKernel implements RenderingKernelInterface
     /**
      * Acts as the main bootstrap coordinator for all service subsystems.
      */
-    private function bootComponents(): void
+    private function bootComponents(bool $debugMode): void
     {
-        $this->bootTemplateProcessing();
+        $this->bootTemplateProcessing($debugMode);
         $this->bootPageBuilding();
         $this->bootRenderingEngine();
         $this->createRenderingFacade();
     }
 
+
     /**
      * Instantiates and wires the entire template processing subsystem.
      */
-    private function bootTemplateProcessing(): void
+    private function bootTemplateProcessing(bool $debugMode): void
     {
-        $pathResolver = new TemplatePathResolver($this->viewsDirectory);
-        $templateCompiler = new TemplateCompiler($pathResolver);
-        $templateCache = new TemplateCache($this->cacheDirectory); 
-        
-        $this->templateProcessingService = new TemplateProcessingService(
-            $pathResolver,
-            $templateCache,
-            $templateCompiler
+        $this->templateProcessingService = ProcessingServiceFactory::create(
+            $this->viewsDirectory,
+            $this->cacheDirectory,
+            $debugMode
         );
     }
 
@@ -182,25 +123,10 @@ final class RenderingKernel implements RenderingKernelInterface
      */
     private function bootPageBuilding(): void
     {
-        $pageBuilder = new PageBuilder();
-        $headerBuilder = new HeaderBuilder();
-        $navigationBuilder = new NavigationBuilder();
-        $footerBuilder = new FooterBuilder(
+        $this->buildingService = BuildingServiceFactory::create(
+            $this->assetsDirectory,
             $this->copyrightOwner,
             $this->copyrightMessage
-        );
-        $partialFactory = new PartialFactory();
-        $assetPathResolver = new AssetPathResolver(
-            $this->assetsDirectory
-        );
-        
-        $this->pageBuildingService = new PageBuildingService(
-            $pageBuilder,
-            $headerBuilder,
-            $footerBuilder,
-            $navigationBuilder,
-            $partialFactory,
-            $assetPathResolver
         );
     }
 
@@ -209,12 +135,8 @@ final class RenderingKernel implements RenderingKernelInterface
      */
     private function bootRenderingEngine(): void
     {
-        $templateRenderer = new TemplateRenderer(
+        $this->renderingService = RenderingServiceFactory::create(
             $this->templateProcessingService
-        );
-        
-        $this->pageRenderingService = new PageRenderingService(
-            $templateRenderer
         );
     }
 
@@ -224,8 +146,8 @@ final class RenderingKernel implements RenderingKernelInterface
     private function createRenderingFacade(): void
     {
         $this->renderer = new RenderingFacade(
-            $this->pageBuildingService,
-            $this->pageRenderingService
+            $this->buildingService,
+            $this->renderingService
         );
     }
 }
