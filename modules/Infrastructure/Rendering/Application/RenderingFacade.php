@@ -4,25 +4,28 @@ declare(strict_types=1);
 
 namespace Rendering\Application;
 
-use PublicContracts\Rendering\RenderingFacadeInterface;
-use Rendering\Application\Contract\PageBuildingServiceInterface;
-use Rendering\Application\Contract\PageRenderingServiceInterface;
+use Rendering\Domain\Contract\Page\PageInterface;
+use Rendering\Domain\Contract\RenderableInterface;
+use Rendering\Domain\Contract\Service\BuildingServiceInterface;
+use Rendering\Domain\Contract\Service\RenderingFacadeInterface;
+use Rendering\Domain\Contract\Service\RenderingServiceInterface;
 
 /**
  * The concrete implementation of the Rendering Facade.
  *
  * It orchestrates the page building and rendering services to provide a simple,
- * unified API for the application.
+ * unified API for the application. This is the primary entry point for all
+ * rendering tasks.
  */
 final class RenderingFacade implements RenderingFacadeInterface
 {
     /**
-     * @param PageBuildingServiceInterface $pageBuildingService The service responsible for assembling a Page object.
-     * @param PageRenderingServiceInterface $pageRenderingService The service responsible for rendering a Page object into HTML.
+     * @param BuildingServiceInterface $buildingService The service responsible for assembling a Page object.
+     * @param RenderingServiceInterface $renderingService The service responsible for rendering a Page object into HTML.
      */
     public function __construct(
-        private readonly PageBuildingServiceInterface $pageBuildingService,
-        private readonly PageRenderingServiceInterface $pageRenderingService
+        private readonly BuildingServiceInterface $buildingService,
+        private readonly RenderingServiceInterface $renderingService
     ) {
     }
 
@@ -31,7 +34,25 @@ final class RenderingFacade implements RenderingFacadeInterface
      */
     public function setTitle(string $title): self
     {
-        $this->pageBuildingService->setTitle($title);
+        $this->buildingService->setTitle($title);
+        return $this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function setHeader(string $templateFile, array $data = [], array $partials = []): self
+    {
+        $this->buildingService->setHeader($templateFile, $data, $partials);
+        return $this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function setFooter(string $templateFile, array $data = [], array $partials = []): self
+    {
+        $this->buildingService->setFooter($templateFile, $data, $partials);
         return $this;
     }
 
@@ -40,16 +61,16 @@ final class RenderingFacade implements RenderingFacadeInterface
      */
     public function setCopyright(string $owner, string $message = 'All rights reserved.'): self
     {
-        $this->pageBuildingService->setCopyright($owner, $message);
+        $this->buildingService->setCopyright($owner, $message);
         return $this;
     }
 
     /**
      * {@inheritDoc}
      */
-    public function setView(string $templateFile, array $data = []): self
+    public function setView(string $templateFile, array $data = [], array $partials = []): self
     {
-        $this->pageBuildingService->setView($templateFile, $data);
+        $this->buildingService->setView($templateFile, $data, $partials);
         return $this;
     }
 
@@ -58,43 +79,7 @@ final class RenderingFacade implements RenderingFacadeInterface
      */
     public function setNavigationLinks(array $links): self
     {
-        $this->pageBuildingService->setNavigationLinks($links);
-        return $this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public function addPartial(string $name, string $templateFile, array $data = [], array $nestedPartials = []): self
-    {
-        $this->pageBuildingService->addPagePartial($name, $templateFile, $data, $nestedPartials);
-        return $this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public function addHeaderPartial(string $name, string $templateFile, array $data = [], array $nestedPartials = []): self
-    {
-        $this->pageBuildingService->addHeaderPartial($name, $templateFile, $data, $nestedPartials);
-        return $this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public function addFooterPartial(string $name, string $templateFile, array $data = [], array $nestedPartials = []): self
-    {
-        $this->pageBuildingService->addFooterPartial($name, $templateFile, $data, $nestedPartials);
-        return $this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public function addNavigationPartial(string $name, string $templateFile, array $data = [], array $nestedPartials = []): self
-    {
-        $this->pageBuildingService->addNavigationPartial($name, $templateFile, $data, $nestedPartials);
+        $this->buildingService->setNavigationLinks($links);
         return $this;
     }
 
@@ -103,16 +88,60 @@ final class RenderingFacade implements RenderingFacadeInterface
      */
     public function setAssets(array $assets): self
     {
-        $this->pageBuildingService->setAssets($assets);
+        $this->buildingService->setAssets($assets);
         return $this;
     }
 
     /**
      * {@inheritDoc}
      */
-    public function render(): string
+    public function addPagePartial(string $name, string $templateFile, array $data = [], array $nestedPartials = []): self
     {
-        $page = $this->pageBuildingService->buildPage();
-        return $this->pageRenderingService->renderPage($page);
+        $this->buildingService->addPagePartial($name, $templateFile, $data, $nestedPartials);
+        return $this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function addHeaderPartial(string $name, string $templateFile, array $data = [], array $nestedPartials = []): self
+    {
+        $this->buildingService->addHeaderPartial($name, $templateFile, $data, $nestedPartials);
+        return $this;
+    }
+    
+    /**
+     * {@inheritDoc}
+     */
+    public function addViewPartial(string $name, string $templateFile, array $data = [], array $nestedPartials = []): self
+    {
+        $this->buildingService->addViewPartial($name, $templateFile, $data, $nestedPartials);
+        return $this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function addFooterPartial(string $name, string $templateFile, array $data = [], array $nestedPartials = []): self
+    {
+        $this->buildingService->addFooterPartial($name, $templateFile, $data, $nestedPartials);
+        return $this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function buildPage(): PageInterface
+    {
+        return $this->buildingService->buildPage();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function render(?RenderableInterface $page = null): string
+    {
+        $page = $page ?? $this->buildingService->buildPage();
+        return $this->renderingService->render($page);
     }
 }
