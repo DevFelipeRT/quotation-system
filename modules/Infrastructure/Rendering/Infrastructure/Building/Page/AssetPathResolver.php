@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace Rendering\Infrastructure\Building\Page;
 
+use Rendering\Domain\ValueObject\Shared\Directory;
 use Rendering\Infrastructure\Contract\Building\Page\AssetPathResolverInterface;
-use Rendering\Domain\Shared\ValueObject\Directory;
+
 use RuntimeException;
 
 /**
