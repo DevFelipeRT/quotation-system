@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Rendering\Domain\Shared\ValueObject;
+namespace Rendering\Domain\ValueObject\Shared;
 
-use Rendering\Domain\Contract\SecurityServiceInterface;
+use Rendering\Domain\Trait\Validation\DirectoryValidationTrait;
 
 /**
  * Represents a directory path as an immutable Value Object.
@@ -15,6 +15,8 @@ use Rendering\Domain\Contract\SecurityServiceInterface;
  */
 final class Directory
 {
+    use DirectoryValidationTrait;
+
     /**
      * @var string The normalized, validated directory path.
      */
@@ -22,11 +24,10 @@ final class Directory
 
     /**
      * @param string $path The raw path to the directory.
-     * @param SecurityServiceInterface $securityService The service used to validate the path.
      */
-    public function __construct(string $path, SecurityServiceInterface $securityService)
+    public function __construct(string $path)
     {
-        $securityService->validateDirectoryPath($path);
+        $this->validateDirectoryPath($path);
         $this->path = rtrim($path, '/');
     }
 
